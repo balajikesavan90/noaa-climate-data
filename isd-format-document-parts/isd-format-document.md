@@ -12,6 +12,41 @@ NOAA - National Centers for Environmental Information
     Asheville, NC 28801-5001 USA
 
 
+## Table of Contents
+- [Part 1 - Preface and Dataset Overview](#part-1---preface-and-dataset-overview)
+- [Part 2 - Control Data Section](#part-2---control-data-section)
+- [Part 3 - Mandatory Data Section](#part-3---mandatory-data-section)
+- [Part 4 - Additional Data Section](#part-4---additional-data-section)
+- [Precipitation Data](#precipitation-data)
+- [Part 5 - Weather Occurrence Data](#part-5---weather-occurrence-data)
+- [Part 6 - Climate Reference Network Unique Data](#part-6---climate-reference-network-unique-data)
+- [Part 7 - Network Metadata](#part-7---network-metadata)
+- [Part 8 - CRN Control Section](#part-8---crn-control-section)
+- [Part 9 - Subhourly Temperature Section](#part-9---subhourly-temperature-section)
+- [Part 10 - Hourly Temperature Section](#part-10---hourly-temperature-section)
+- [Part 11 - Hourly Temperature Extreme Section](#part-11---hourly-temperature-extreme-section)
+- [Part 12 - Subhourly Wetness Section](#part-12---subhourly-wetness-section)
+- [Part 13 - Hourly Geonor Vibrating Wire Summary Section](#part-13---hourly-geonor-vibrating-wire-summary-section)
+- [Part 14 - Runway Visual Range Data](#part-14---runway-visual-range-data)
+- [Part 15 - Cloud and Solar Data](#part-15---cloud-and-solar-data)
+- [Part 16 - Sunshine Observation Data](#part-16---sunshine-observation-data)
+- [Part 17 - Solar Irradiance Section](#part-17---solar-irradiance-section)
+- [Part 18 - Net Solar Radiation Section](#part-18---net-solar-radiation-section)
+- [Part 19 - Modeled Solar Irradiance Section](#part-19---modeled-solar-irradiance-section)
+- [Part 20 - Hourly Solar Angle Section](#part-20---hourly-solar-angle-section)
+- [Part 21 - Hourly Extraterrestrial Radiation Section](#part-21---hourly-extraterrestrial-radiation-section)
+- [Part 22 - Hail Data](#part-22---hail-data)
+- [Part 23 - Ground Surface Data](#part-23---ground-surface-data)
+- [Part 24 - Temperature Data](#part-24---temperature-data)
+- [Part 25 - Sea Surface Temperature Data](#part-25---sea-surface-temperature-data)
+- [Part 26 - Soil Temperature Data](#part-26---soil-temperature-data)
+- [Part 27 - Pressure Data](#part-27---pressure-data)
+- [Part 28 - Weather Occurrence Data (Extended)](#part-28---weather-occurrence-data-extended)
+- [Part 29 - Wind Data](#part-29---wind-data)
+- [Part 30 - Marine Data](#part-30---marine-data)
+
+## Part 1 - Preface and Dataset Overview
+
 ---
 
 Important notice: In order to accommodate a growing number of stations in the
@@ -70,6 +105,45 @@ Data Sequence - Data will be sequenced using the following data item order:
 
 
     2
+
+
+
+    ## Part 25 - Sea Surface Temperature Data
+
+
+    ## Part 24 - Temperature Data
+
+
+    ## Part 22 - Hail Data
+
+    ## Part 21 - Hourly Extraterrestrial Radiation Section
+
+
+    ## Part 19 - Modeled Solar Irradiance Section
+
+
+    ## Part 18 - Net Solar Radiation Section
+
+
+    ## Part 17 - Solar Irradiance Section
+
+
+    ## Part 16 - Sunshine Observation Data
+
+
+    ## Part 13 - Hourly Geonor Vibrating Wire Summary Section
+
+
+    ## Part 12 - Subhourly Wetness Section
+
+
+    ## Part 11 - Hourly Temperature Extreme Section
+
+
+    ## Part 10 - Hourly Temperature Section
+
+
+    ## Part 9 - Subhourly Temperature Section
 
 
 ---
@@ -146,6 +220,8 @@ hundredth of a degree with a 0 entered in the thousandth position.
 
 
 ---
+
+## Part 2 - Control Data Section
 
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
     Control Data Section
@@ -338,6 +414,8 @@ POS: 57-60
 
 
 ---
+
+## Part 3 - Mandatory Data Section
 
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
@@ -547,6 +625,9 @@ POS: 88-92
     10
 
 
+## Part 8 - CRN Control Section
+
+
 ---
 
 POS: 93-93
@@ -647,6 +728,8 @@ POS: 105-105
 
 ---
 
+## Part 4 - Additional Data Section
+
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
     Additional Data Section
@@ -676,7 +759,7 @@ FLD LEN: 3
     ADD Additional Data Section
 
 
-Precipitation Data
+### Precipitation Data
 FLD LEN: 3
     LIQUID-PRECIPITATION occurrence identifier
     The identifier that represents an episode of LIQUID-PRECIPITATION.
@@ -1745,6 +1828,8 @@ FLD LEN: 1
 
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
+## Part 5 - Weather Occurrence Data
+
 Weather Occurrence Data
 FLD LEN: 3
     PRESENT-WEATHER-OBSERVATION automated occurrence identifier for ASOS/AWOS data
@@ -2281,6 +2366,8 @@ FLD LEN: 1
     9 = Passed gross limits check if element is present
 
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+## Part 6 - Climate Reference Network Unique Data
 
 Climate Reference Network Unique Data
 
@@ -3046,6 +3133,8 @@ FLD LEN: 1
 
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
+## Part 7 - Network Metadata
+
 Network Metadata
 
 FLD LEN: 3
@@ -3604,6 +3693,8 @@ FLD LEN: 1
 
 ---
 
+## Part 14 - Runway Visual Range Data
+
 Runway Visual Range Data
 
 FLD LEN: 3
@@ -3662,6 +3753,8 @@ FLD LEN: 1
 
 
 ---
+
+## Part 15 - Cloud and Solar Data
 
 Cloud and Solar Data
 
@@ -5159,6 +5252,9 @@ FLD LEN: 3
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
 
+## Part 20 - Hourly Solar Angle Section
+
+
 FLD LEN: 3
     Hourly Solar Angle Section identifier
     The identifier that denotes the start of the Hourly Solar angle data section.
@@ -5325,6 +5421,8 @@ FLD LEN: 1
 
 
 ---
+
+## Part 23 - Ground Surface Data
 
 Ground Surface Data
 
@@ -6259,6 +6357,8 @@ FLD LEN: 1
 
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
+## Part 27 - Pressure Data
+
 Pressure Data
 FLD LEN: 3
     ATMOSPHERIC-PRESSURE-OBSERVATION identifier
@@ -6747,6 +6847,8 @@ FLD LEN: 1
 
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 
+## Part 28 - Weather Occurrence Data (Extended)
+
 Weather Occurrence Data
 
 FLD LEN: 3
@@ -6991,6 +7093,8 @@ FLD LEN: 1
     9 = Passed gross limits check if element is present
 
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+## Part 29 - Wind Data
 
 Wind Data
 
@@ -7481,6 +7585,8 @@ FLD LEN: 1
 
 ---
 
+## Part 26 - Soil Temperature Data
+
 Soil Temperature Data
 
 FLD LEN: 3
@@ -7596,6 +7702,8 @@ FLD LEN: 1
     9 = Passed gross limits check if element is present
 
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+## Part 30 - Marine Data
 
 Marine Data
 
