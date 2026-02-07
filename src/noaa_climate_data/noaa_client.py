@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
@@ -88,7 +89,31 @@ def count_years_per_file(
 
 
 def url_for(year: int | str, file_name: str) -> str:
-    return f"{BASE_URL}/{year}/{file_name}"
+    normalized = normalize_station_file_name(file_name)
+    return f"{BASE_URL}/{year}/{normalized}"
+
+
+def normalize_station_file_name(file_name: str) -> str:
+    """Normalize station file names to the Global Hourly CSV convention.
+
+    NOAA documentation notes filenames can use USAF and WBAN identifiers with
+    a dash and, for archive files, a year suffix (e.g., 723150-03812-2006).
+    The Global Hourly CSV access directory uses the concatenated identifier
+    without dashes and no year suffix. This helper accepts either style and
+    returns the access-compatible name ending in .csv.
+    """
+    name = Path(file_name).name.strip()
+    if name.lower().endswith(".csv"):
+        name = name[:-4]
+
+    parts = [part for part in name.split("-") if part]
+    if len(parts) >= 2 and parts[-1].isdigit() and len(parts[-1]) == 4:
+        parts = parts[:-1]
+
+    if parts:
+        name = "".join(parts)
+
+    return f"{name}.csv"
 
 
 def _url_exists(url: str, timeout: int = 20) -> bool:
@@ -101,7 +126,8 @@ def _url_exists(url: str, timeout: int = 20) -> bool:
 
 def fetch_station_metadata(file_name: str, year: int) -> StationMetadata | None:
     """Fetch station metadata by reading the first row of a CSV file."""
-    url = url_for(year, file_name)
+    normalized = normalize_station_file_name(file_name)
+    url = url_for(year, normalized)
     if not _url_exists(url):
         return None
     try:
@@ -124,5 +150,5 @@ def fetch_station_metadata(file_name: str, year: int) -> StationMetadata | None:
         longitude=_to_float(row.get("LONGITUDE")),
         elevation=_to_float(row.get("ELEVATION")),
         name=str(row.get("NAME")) if row.get("NAME") is not None else None,
-        file_name=file_name,
+        file_name=normalized,
     )

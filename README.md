@@ -35,7 +35,7 @@ poetry run python -m noaa_climate_data.cli location-ids \
 
 Download, clean, and aggregate a station:
 ```bash
-poetry run python -m noaa_climate_data.cli process-location 010010-99999.csv \
+poetry run python -m noaa_climate_data.cli process-location 01001099999.csv \
 	--start-year 2000 \
 	--end-year 2019 \
 	--output-dir output
