@@ -1,0 +1,23 @@
+[project]
+name = "noaa-climate-data"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Balaji Kesavan",email = "balajikesavan29@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pandas (>=3.0.0,<4.0.0)",
+    "requests (>=2.32.0,<3.0.0)",
+    "beautifulsoup4 (>=4.12.0,<5.0.0)",
+    "lxml (>=5.2.0,<6.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [{ include = "noaa_climate_data", from = "src" }]
