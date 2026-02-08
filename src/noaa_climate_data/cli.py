@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -22,18 +23,6 @@ def _parse_args() -> argparse.Namespace:
 
     file_list_parser = subparsers.add_parser("file-list", help="Build NOAA file list")
     file_list_parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("DataFileList.csv"),
-        help="Output CSV path",
-    )
-    file_list_parser.add_argument(
-        "--counts-output",
-        type=Path,
-        default=Path("DataFileList_YEARCOUNT_POST2000.csv"),
-        help="Output CSV path for year counts",
-    )
-    file_list_parser.add_argument(
         "--start-year",
         type=int,
         default=DEFAULT_START_YEAR,
@@ -42,27 +31,76 @@ def _parse_args() -> argparse.Namespace:
         "--end-year",
         type=int,
         default=DEFAULT_END_YEAR,
+    )
+    file_list_parser.add_argument(
+        "--sleep-seconds",
+        type=float,
+        default=0.0,
+        help="Delay between year directory requests",
+    )
+    file_list_parser.add_argument(
+        "--retries",
+        type=int,
+        default=3,
+        help="Retry count for NOAA listing requests",
+    )
+    file_list_parser.add_argument(
+        "--backoff-base",
+        type=float,
+        default=0.5,
+        help="Base delay (seconds) for exponential backoff",
+    )
+    file_list_parser.add_argument(
+        "--backoff-max",
+        type=float,
+        default=8.0,
+        help="Maximum delay (seconds) for exponential backoff",
     )
 
     location_parser = subparsers.add_parser(
         "location-ids", help="Build station metadata list"
     )
     location_parser.add_argument(
-        "--counts-input",
-        type=Path,
-        default=Path("DataFileList_YEARCOUNT_POST2000.csv"),
-        help="Input year count CSV",
+        "--metadata-fallback",
+        action="store_true",
+        default=True,
+        help="Search additional years for metadata if the primary year is missing",
     )
     location_parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("IDData.csv"),
-        help="Output CSV path",
+        "--resume",
+        action="store_true",
+        default=True,
+        help="Resume from existing Stations.csv if present",
     )
     location_parser.add_argument(
-        "--metadata-year",
+        "--no-resume",
+        action="store_false",
+        dest="resume",
+        help="Do not load existing Stations.csv",
+    )
+    location_parser.add_argument(
+        "--start-index",
         type=int,
-        default=DEFAULT_START_YEAR,
+        default=0,
+        help="1-based start index in DataFileList_YEARCOUNT (0 = start from first)",
+    )
+    location_parser.add_argument(
+        "--max-locations",
+        type=int,
+        default=None,
+        help="Limit to N new locations this run",
+    )
+    location_parser.add_argument(
+        "--checkpoint-every",
+        type=int,
+        default=100,
+        help="Write checkpoint copies every N locations",
+    )
+    location_parser.add_argument(
+        "--checkpoint-dir",
+        type=Path,
+        default=None,
+        help="Directory to write checkpoint copies",
     )
     location_parser.add_argument(
         "--start-year",
@@ -73,6 +111,30 @@ def _parse_args() -> argparse.Namespace:
         "--end-year",
         type=int,
         default=DEFAULT_END_YEAR,
+    )
+    location_parser.add_argument(
+        "--sleep-seconds",
+        type=float,
+        default=0.0,
+        help="Delay between metadata fetch attempts",
+    )
+    location_parser.add_argument(
+        "--retries",
+        type=int,
+        default=3,
+        help="Retry count for metadata fetches",
+    )
+    location_parser.add_argument(
+        "--backoff-base",
+        type=float,
+        default=0.5,
+        help="Base delay (seconds) for exponential backoff",
+    )
+    location_parser.add_argument(
+        "--backoff-max",
+        type=float,
+        default=8.0,
+        help="Maximum delay (seconds) for exponential backoff",
     )
 
     process_parser = subparsers.add_parser(
@@ -91,6 +153,42 @@ def _parse_args() -> argparse.Namespace:
     )
     process_parser.add_argument("--location-id", type=int, default=None)
     process_parser.add_argument(
+        "--aggregation-strategy",
+        choices=[
+            "best_hour",
+            "fixed_hour",
+            "hour_day_month_year",
+            "weighted_hours",
+            "daily_min_max_mean",
+        ],
+        default="best_hour",
+        help="Aggregation strategy for hourly/daily/monthly/yearly outputs",
+    )
+    process_parser.add_argument(
+        "--fixed-hour",
+        type=int,
+        default=None,
+        help="Fixed UTC hour to use for fixed_hour strategy",
+    )
+    process_parser.add_argument(
+        "--min-hours-per-day",
+        type=int,
+        default=18,
+        help="Minimum hours/day required for weighted_hours strategy",
+    )
+    process_parser.add_argument(
+        "--min-days-per-month",
+        type=int,
+        default=20,
+        help="Minimum days/month required for completeness filters",
+    )
+    process_parser.add_argument(
+        "--min-months-per-year",
+        type=int,
+        default=12,
+        help="Minimum months/year required for completeness filters",
+    )
+    process_parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("output"),
@@ -101,27 +199,75 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = _parse_args()
+    base_index_dir = Path("noaa_file_index")
+
+    def _today_dir() -> Path:
+        return base_index_dir / datetime.now(timezone.utc).strftime("%Y%m%d")
+
+    def _latest_index_dir() -> Path:
+        if not base_index_dir.exists():
+            raise FileNotFoundError("noaa_file_index folder not found")
+        candidates = []
+        for path in base_index_dir.iterdir():
+            if path.is_dir() and path.name.isdigit() and len(path.name) == 8:
+                candidates.append(path)
+        if not candidates:
+            raise FileNotFoundError("noaa_file_index has no dated subfolders")
+        return sorted(candidates)[-1]
 
     if args.command == "file-list":
-        file_list = build_data_file_list(args.output)
-        build_year_counts(file_list, args.counts_output, args.start_year, args.end_year)
+        run_dir = _today_dir()
+        run_dir.mkdir(parents=True, exist_ok=True)
+        output_path = run_dir / "DataFileList.csv"
+        counts_path = run_dir / "DataFileList_YEARCOUNT.csv"
+        file_list = build_data_file_list(
+            output_path,
+            sleep_seconds=args.sleep_seconds,
+            retries=args.retries,
+            backoff_base=args.backoff_base,
+            backoff_max=args.backoff_max,
+        )
+        build_year_counts(file_list, counts_path, args.start_year, args.end_year)
         return
 
     if args.command == "location-ids":
-        year_counts = args.counts_input
+        run_dir = _latest_index_dir()
+        year_counts = run_dir / "DataFileList_YEARCOUNT.csv"
         if year_counts.exists():
             counts = pd.read_csv(year_counts)
         else:
             raise FileNotFoundError(f"Missing {year_counts}")
-        expected_years = args.end_year - args.start_year + 1
-        build_location_ids(counts, args.output, args.metadata_year, expected_years)
+        metadata_years = range(args.start_year, args.end_year + 1)
+        build_location_ids(
+            counts,
+            run_dir / "Stations.csv",
+            metadata_years=metadata_years,
+            resume=args.resume,
+            start_index=args.start_index,
+            max_locations=args.max_locations,
+            checkpoint_every=args.checkpoint_every,
+            checkpoint_dir=args.checkpoint_dir,
+            sleep_seconds=args.sleep_seconds,
+            retries=args.retries,
+            backoff_base=args.backoff_base,
+            backoff_max=args.backoff_max,
+        )
         return
 
     if args.command == "process-location":
         output_dir: Path = args.output_dir
         output_dir.mkdir(parents=True, exist_ok=True)
         years = range(args.start_year, args.end_year + 1)
-        outputs = process_location(args.file_name, years, args.location_id)
+        outputs = process_location(
+            args.file_name,
+            years,
+            args.location_id,
+            aggregation_strategy=args.aggregation_strategy,
+            min_hours_per_day=args.min_hours_per_day,
+            min_days_per_month=args.min_days_per_month,
+            min_months_per_year=args.min_months_per_year,
+            fixed_hour=args.fixed_hour,
+        )
 
         outputs.raw.to_csv(output_dir / "LocationData_Raw.csv", index=False)
         outputs.cleaned.to_csv(output_dir / "LocationData_Cleaned.csv", index=False)

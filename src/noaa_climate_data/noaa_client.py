@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+import time
 import pandas as pd
 import requests
 
@@ -21,8 +22,36 @@ class StationMetadata:
     file_name: str
 
 
-def _normalize_year_dir(text: str) -> str | None:
-    text = text.strip()
+def fetch_station_metadata_for_years(
+    file_name: str,
+    years: Iterable[int],
+    sleep_seconds: float = 0.0,
+    retries: int = 3,
+    backoff_base: float = 0.5,
+    backoff_max: float = 8.0,
+) -> tuple[StationMetadata | None, int | None]:
+    """Fetch station metadata by trying multiple years in order."""
+    for year in years:
+        metadata = fetch_station_metadata(
+            file_name,
+            year,
+            retries=retries,
+            backoff_base=backoff_base,
+            backoff_max=backoff_max,
+        )
+        if metadata is not None:
+            return metadata, int(year)
+        if sleep_seconds > 0:
+            time.sleep(sleep_seconds)
+    return None, None
+
+
+def _normalize_year_dir(text: str | object) -> str | None:
+    if text is None:
+        return None
+    text = str(text).strip()
+    if text.lower() == "nan":
+        return None
     if not text.endswith("/"):
         return None
     year = text[:-1]
@@ -33,9 +62,55 @@ def _normalize_year_dir(text: str) -> str | None:
     return year
 
 
-def get_years() -> list[str]:
+def _sleep_backoff(attempt: int, backoff_base: float, backoff_max: float) -> None:
+    delay = min(backoff_max, backoff_base * (2**attempt))
+    time.sleep(delay)
+
+
+def _read_html_with_retries(
+    url: str,
+    retries: int,
+    backoff_base: float,
+    backoff_max: float,
+) -> list[pd.DataFrame]:
+    for attempt in range(retries + 1):
+        try:
+            return pd.read_html(url)
+        except Exception:
+            if attempt >= retries:
+                return []
+            _sleep_backoff(attempt, backoff_base, backoff_max)
+    return []
+
+
+def _read_csv_head_with_retries(
+    url: str,
+    retries: int,
+    backoff_base: float,
+    backoff_max: float,
+) -> pd.DataFrame | None:
+    for attempt in range(retries + 1):
+        try:
+            return pd.read_csv(url, nrows=1, dtype=str, low_memory=False)
+        except Exception:
+            if attempt >= retries:
+                return None
+            _sleep_backoff(attempt, backoff_base, backoff_max)
+    return None
+
+
+def get_years(
+    retries: int = 3,
+    backoff_base: float = 0.5,
+    backoff_max: float = 8.0,
+) -> list[str]:
     """Fetch available year directories from NOAA access page."""
-    tables = pd.read_html(BASE_URL + "/")
+    tables = _read_html_with_retries(
+        BASE_URL + "/",
+        retries=retries,
+        backoff_base=backoff_base,
+        backoff_max=backoff_max,
+    )
     if not tables:
         return []
     year_cells = tables[0].iloc[:, 0].astype(str).tolist()
@@ -47,24 +122,56 @@ def get_years() -> list[str]:
     return sorted(set(years))
 
 
-def get_file_list_for_year(year: str) -> list[str]:
+def get_file_list_for_year(
+    year: str,
+    retries: int = 3,
+    backoff_base: float = 0.5,
+    backoff_max: float = 8.0,
+) -> list[str]:
     """Fetch available CSV filenames for a given year directory."""
     url = f"{BASE_URL}/{year}/"
-    tables = pd.read_html(url)
+    tables = _read_html_with_retries(
+        url,
+        retries=retries,
+        backoff_base=backoff_base,
+        backoff_max=backoff_max,
+    )
     if not tables:
         return []
-    entries = tables[0].iloc[:, 0].astype(str).tolist()
-    return [entry for entry in entries if entry.endswith(".csv")]
+    entries = tables[0].iloc[:, 0].tolist()
+    results: list[str] = []
+    for entry in entries:
+        if entry is None:
+            continue
+        value = str(entry).strip()
+        if value.lower() == "nan":
+            continue
+        if value.endswith(".csv"):
+            results.append(value)
+    return results
 
 
-def build_file_list(years: Iterable[str]) -> pd.DataFrame:
+def build_file_list(
+    years: Iterable[str],
+    sleep_seconds: float = 0.0,
+    retries: int = 3,
+    backoff_base: float = 0.5,
+    backoff_max: float = 8.0,
+) -> pd.DataFrame:
     """Build a dataframe with YEAR and FileName columns."""
     frames: list[pd.DataFrame] = []
     for year in years:
-        files = get_file_list_for_year(year)
+        files = get_file_list_for_year(
+            year,
+            retries=retries,
+            backoff_base=backoff_base,
+            backoff_max=backoff_max,
+        )
         if not files:
             continue
         frames.append(pd.DataFrame({"YEAR": year, "FileName": files}))
+        if sleep_seconds > 0:
+            time.sleep(sleep_seconds)
     if not frames:
         return pd.DataFrame(columns=["YEAR", "FileName"])
     return pd.concat(frames, ignore_index=True)
@@ -116,23 +223,52 @@ def normalize_station_file_name(file_name: str) -> str:
     return f"{name}.csv"
 
 
-def _url_exists(url: str, timeout: int = 20) -> bool:
-    try:
-        response = requests.head(url, timeout=timeout)
-    except requests.RequestException:
-        return False
-    return response.status_code == 200
+def _url_exists(
+    url: str,
+    timeout: int = 20,
+    retries: int = 3,
+    backoff_base: float = 0.5,
+    backoff_max: float = 8.0,
+) -> bool:
+    for attempt in range(retries + 1):
+        try:
+            response = requests.head(url, timeout=timeout)
+        except requests.RequestException:
+            response = None
+        if response is not None and response.status_code == 200:
+            return True
+        if response is not None and response.status_code == 404:
+            return False
+        if attempt >= retries:
+            return False
+        _sleep_backoff(attempt, backoff_base, backoff_max)
+    return False
 
 
-def fetch_station_metadata(file_name: str, year: int) -> StationMetadata | None:
+def fetch_station_metadata(
+    file_name: str,
+    year: int,
+    retries: int = 3,
+    backoff_base: float = 0.5,
+    backoff_max: float = 8.0,
+) -> StationMetadata | None:
     """Fetch station metadata by reading the first row of a CSV file."""
     normalized = normalize_station_file_name(file_name)
     url = url_for(year, normalized)
-    if not _url_exists(url):
+    if not _url_exists(
+        url,
+        retries=retries,
+        backoff_base=backoff_base,
+        backoff_max=backoff_max,
+    ):
         return None
-    try:
-        frame = pd.read_csv(url, nrows=1, dtype=str, low_memory=False)
-    except Exception:
+    frame = _read_csv_head_with_retries(
+        url,
+        retries=retries,
+        backoff_base=backoff_base,
+        backoff_max=backoff_max,
+    )
+    if frame is None:
         return None
     if frame.empty:
         return None

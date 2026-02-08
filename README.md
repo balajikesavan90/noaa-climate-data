@@ -17,27 +17,71 @@ poetry install
 Build the file list and coverage counts:
 ```bash
 poetry run python -m noaa_climate_data.cli file-list \
-	--output DataFileList.csv \
-	--counts-output DataFileList_YEARCOUNT_POST2000.csv \
-	--start-year 2000 \
-	--end-year 2019
+	--start-year <START_YEAR> \
+	--end-year <END_YEAR> \
+	--sleep-seconds 0.5 \
+	--retries 3 \
+	--backoff-base 0.5 \
+	--backoff-max 8
 ```
+
+This writes to: `noaa_file_index/YYYYMMDD/DataFileList.csv` and
+`noaa_file_index/YYYYMMDD/DataFileList_YEARCOUNT.csv` (date is UTC).
 
 Build station metadata (location IDs):
 ```bash
 poetry run python -m noaa_climate_data.cli location-ids \
-	--counts-input DataFileList_YEARCOUNT_POST2000.csv \
-	--output IDData.csv \
-	--metadata-year 2000 \
-	--start-year 2000 \
-	--end-year 2019
+	--start-year <START_YEAR> \
+	--end-year <END_YEAR> \
+	--sleep-seconds 0.5 \
+	--retries 3 \
+	--backoff-base 0.5 \
+	--backoff-max 8
 ```
+
+Batching/resume options:
+```bash
+poetry run python -m noaa_climate_data.cli location-ids \
+	--start-year <START_YEAR> \
+	--end-year <END_YEAR> \
+	--max-locations 100 \
+	--checkpoint-every 100 \
+	--checkpoint-dir noaa_file_index/YYYYMMDD \
+	--sleep-seconds 0.5
+```
+- Resume is enabled by default (loads existing `Stations.csv` and skips those stations).
+- Use `--no-resume` to force a fresh run.
+- Use `--start-index` to skip the first N rows in `DataFileList_YEARCOUNT.csv` (1-based; 0 starts from first).
+- `--max-locations` limits how many new stations to fetch in this run.
+- `--checkpoint-every` writes periodic copies of `Stations.csv` (default 100).
+- `--checkpoint-dir` controls where checkpoint copies are written.
+
+This reads from the latest `noaa_file_index/YYYYMMDD/` folder and writes
+`noaa_file_index/YYYYMMDD/Stations.csv`.
 
 Download, clean, and aggregate a station:
 ```bash
 poetry run python -m noaa_climate_data.cli process-location 01001099999.csv \
-	--start-year 2000 \
-	--end-year 2019 \
+	--start-year <START_YEAR> \
+	--end-year <END_YEAR> \
+	--output-dir output
+```
+
+Pick an aggregation strategy:
+```bash
+poetry run python -m noaa_climate_data.cli process-location 01001099999.csv \
+	--aggregation-strategy hour_day_month_year \
+	--min-hours-per-day 18 \
+	--min-days-per-month 20 \
+	--min-months-per-year 12 \
+	--output-dir output
+```
+
+Fixed-hour example:
+```bash
+poetry run python -m noaa_climate_data.cli process-location 01001099999.csv \
+	--aggregation-strategy fixed_hour \
+	--fixed-hour 12 \
 	--output-dir output
 ```
 
@@ -62,10 +106,9 @@ The pipeline targets NOAA’s Global Hourly CSV archive at the base URL in
 **Station coverage selection**
 - `count_years_per_file(...)` filters file list by the requested year range and counts how many
 	years each file appears.
-- `build_location_ids(...)` keeps stations with *full coverage* across the requested window
-	(`No_Of_Years == expected_years`).
-- For each full‑coverage file, `fetch_station_metadata(...)` reads the first row from the CSV for
-	latitude/longitude/elevation/name.
+- `build_location_ids(...)` includes all stations in the year-count list (no coverage filter).
+- For each included file, metadata is pulled from the first available year; fallback years can be
+	searched if the primary metadata year is missing.
 
 **Download for a station**
 - `download_location_data(file_name, years)` attempts `pandas.read_csv(url)` for each year.
@@ -123,6 +166,30 @@ Preparation happens in `process_location(...)` in
 - Derived columns are added:
 	- `Year`, `MonthNum`, `Day` (date only), and `Hour`.
 
+**Aggregation strategies**
+- `best_hour` (default): choose the hour with the most unique `Day` values, then aggregate.
+- `fixed_hour`: use a fixed UTC hour for all records, then aggregate.
+- `hour_day_month_year`: aggregate to hour, then day, then month/year.
+- `weighted_hours`: use all hours, require ≥N hours/day, and weight by hour counts.
+- `daily_min_max_mean`: compute daily min/max/mean from all hours, then aggregate.
+
+**Strategy-specific behavior**
+- `best_hour`:
+	- Completeness filters: month ≥20 days; year = 12 months.
+	- Aggregation: mean across numeric columns.
+- `fixed_hour`:
+	- Completeness filters: month ≥20 days; year = 12 months.
+	- Aggregation: mean across numeric columns at the selected UTC hour.
+- `hour_day_month_year`:
+	- Completeness filters: month ≥20 days; year = 12 months (applied after daily aggregation).
+	- Aggregation: mean across numeric columns at hour → day → month/year.
+- `weighted_hours`:
+	- Completeness filters: hour coverage ≥N hours/day (default 18), then month ≥20 days; year = 12 months.
+	- Aggregation: hour → day means, then weighted mean for month/year using per‑day hour counts.
+- `daily_min_max_mean`:
+	- Completeness filters: month ≥20 days; year = 12 months (applied after daily min/max/mean).
+	- Aggregation: day‑level min/max/mean per metric, then monthly/yearly mean of those derived columns.
+
 **Best‑hour selection**
 - The “best hour” is the hour with the most unique `Day` values.
 - Only rows for that hour are kept before aggregation.
@@ -130,9 +197,15 @@ Preparation happens in `process_location(...)` in
 **Completeness filters**
 - A month is considered complete if it has at least 20 unique days.
 - A year is considered complete if it has all 12 months present after the month filter.
+- The `weighted_hours` strategy additionally requires ≥N hours/day before counting a day.
+
+**Configurable thresholds**
+- `--min-hours-per-day` (default 18)
+- `--min-days-per-month` (default 20)
+- `--min-months-per-year` (default 12)
 
 **Aggregation rules**
-- Numeric columns are averaged within each group.
+- Numeric columns are averaged within each group unless a strategy specifies a weighted mean.
 - Non‑numeric columns are coerced to numeric when possible; if any values convert, the column is
 	treated as numeric for aggregation.
 - Monthly grouping keys: `Year`, `MonthNum` (and `ID` if provided).
@@ -159,4 +232,4 @@ output directory:
 Station metadata outputs:
 - `DataFileList.csv`: available NOAA CSV files by year.
 - `DataFileList_YEARCOUNT_POST2000.csv`: year coverage counts for each file.
-- `IDData.csv`: station metadata for full‑coverage stations.
+- `Stations.csv`: station metadata for each file in the list.
