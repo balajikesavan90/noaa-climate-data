@@ -7,14 +7,7 @@ from typing import Iterable
 
 import pandas as pd
 
-from .constants import QUALITY_FLAGS
-
-
-FIELD_SCALES: dict[str, float] = {
-    "TMP": 0.1,
-    "DEW": 0.1,
-    "SLP": 0.1,
-}
+from .constants import QUALITY_FLAGS, FieldPartRule, get_field_rule
 
 
 @dataclass(frozen=True)
@@ -31,6 +24,30 @@ def _strip_plus(value: str) -> str:
 def _is_missing_numeric(value: str) -> bool:
     stripped = value.replace(".", "").replace("-", "").replace("+", "")
     return stripped.isdigit() and len(stripped) >= 2 and set(stripped) == {"9"}
+
+
+def _normalize_missing(value: str) -> str:
+    return value.replace(".", "").replace("-", "").replace("+", "")
+
+
+def _is_missing_value(value: str, rule: FieldPartRule | None) -> bool:
+    if rule and rule.missing_values:
+        stripped = _normalize_missing(value)
+        return stripped in rule.missing_values
+    return _is_missing_numeric(value)
+
+
+def _quality_for_part(prefix: str, part_index: int, parts: list[str]) -> str | None:
+    rule = get_field_rule(prefix)
+    if not rule:
+        return None
+    part_rule = rule.parts.get(part_index)
+    if not part_rule or part_rule.quality_part is None:
+        return None
+    quality_index = part_rule.quality_part
+    if quality_index > len(parts):
+        return None
+    return parts[quality_index - 1]
 
 
 def _to_float(value: str) -> float | None:
@@ -63,6 +80,7 @@ def _expand_parsed(
     allow_quality: bool,
 ) -> dict[str, object]:
     payload: dict[str, object] = {}
+    field_rule = get_field_rule(prefix)
     invalid_quality = (
         allow_quality
         and parsed.quality is not None
@@ -70,10 +88,19 @@ def _expand_parsed(
     )
     for idx, (part, value) in enumerate(zip(parsed.parts, parsed.values), start=1):
         key = f"{prefix}__part{idx}"
-        if invalid_quality and idx == 1:
+        part_rule = field_rule.parts.get(idx) if field_rule else None
+        part_quality = _quality_for_part(prefix, idx, parsed.parts) if allow_quality else None
+        if part_quality is not None and part_quality not in QUALITY_FLAGS:
             payload[key] = None
-        else:
-            payload[key] = value if value is not None else part
+            continue
+        if invalid_quality and idx == 1 and part_quality is None:
+            payload[key] = None
+            continue
+        if value is None:
+            payload[key] = None if _is_missing_value(part, part_rule) else part
+            continue
+        scale = part_rule.scale if part_rule else None
+        payload[key] = value * scale if scale is not None else value
     if allow_quality and parsed.quality is not None:
         payload[f"{prefix}__quality"] = parsed.quality
     return payload
@@ -91,12 +118,19 @@ def clean_value_quality(raw: str, prefix: str) -> dict[str, object]:
     parsed = parse_field(raw)
     if len(parsed.parts) != 2:
         return _expand_parsed(parsed, prefix, allow_quality=True)
-    value = _maybe_apply_quality(parsed.values[0], parsed.quality)
-    if value is not None and prefix in FIELD_SCALES:
-        value = value * FIELD_SCALES[prefix]
+    field_rule = get_field_rule(prefix)
+    part_rule = field_rule.parts.get(1) if field_rule else None
+    quality = parsed.quality
+    if part_rule and part_rule.quality_part:
+        quality_index = part_rule.quality_part
+        if quality_index <= len(parsed.parts):
+            quality = parsed.parts[quality_index - 1]
+    value = _maybe_apply_quality(parsed.values[0], quality)
+    if value is not None and part_rule and part_rule.scale is not None:
+        value = value * part_rule.scale
     return {
         f"{prefix}__value": value,
-        f"{prefix}__quality": parsed.quality,
+        f"{prefix}__quality": quality,
     }
 
 
@@ -142,5 +176,15 @@ def clean_noaa_dataframe(df: pd.DataFrame, keep_raw: bool = True) -> pd.DataFram
 
     if expansion_frames:
         cleaned = pd.concat([cleaned] + expansion_frames, axis=1)
+
+    for column in cleaned.columns:
+        series = cleaned[column]
+        if not pd.api.types.is_object_dtype(series) and not pd.api.types.is_string_dtype(series):
+            continue
+        cleaned[column] = series.apply(
+            lambda value: None
+            if isinstance(value, str) and _is_missing_numeric(value)
+            else value
+        )
 
     return cleaned
