@@ -105,6 +105,14 @@ poetry run python -m noaa_climate_data.cli process-location 01001099999.csv \
   --output-dir output
 ```
 
+Optional: add imperial/derived unit columns alongside metric outputs:
+
+```bash
+poetry run python -m noaa_climate_data.cli process-location 01001099999.csv \
+  --add-unit-conversions \
+  --output-dir output
+```
+
 Pick an aggregation strategy:
 
 ```bash
@@ -219,13 +227,13 @@ Each field declares its own sentinel values in `FIELD_RULES`. The pipeline:
 | WND direction | `999` | Missing wind direction |
 | WND speed | `9999` | Missing wind speed |
 | CIG height | `99999` | Missing ceiling height |
-| VIS distance | `999999`, `9999` | Missing visibility (primary + secondary) |
+| VIS distance | `999999` | Missing visibility |
 | TMP, DEW | `9999` | Missing temperature |
 | SLP | `99999` | Missing sea-level pressure |
 | OC1 gust | `9999` | Missing wind gust |
 | MA1 altimeter/pressure | `99999` | Missing pressure |
 | KA\* period/temperature | `999`, `9999` | Missing extreme temp |
-| MD1 Δp | `999`, `9999` | Missing pressure change |
+| MD1 Δp | `999`, `+999` | Missing pressure change |
 | SA1 SST | `999` | Missing sea-surface temperature |
 | UA1 wave height | `999` | Missing wave height |
 | UG1 swell height | `999` | Missing swell height |
@@ -246,14 +254,16 @@ Scale factors are applied after sentinel removal:
 | MA1 | part1 (altimeter), part3 (stn pressure) | ÷10 | hPa |
 | KA\* | part1 (period), part3 (temperature) | ÷10 | hours, °C |
 | MD1 | part3 (3hr Δp), part5 (24hr Δp) | ÷10 | hPa |
-| OD\* | part3 (speed) | ÷10 | m/s |
+| OD\* | part4 (speed) | ÷10 | m/s |
 | SA1 | value (SST) | ÷10 | °C |
 | UA1 | part3 (wave height) | ÷10 | m |
 | UG1 | part2 (swell height) | ÷10 | m |
 
 #### 2e. Quality-flag filtering
 
-- Allowed quality flags (`QUALITY_FLAGS`): `{0, 1, 4, 5, 9, A, C, I, M, P, R, U}`.
+- Allowed quality flags (`QUALITY_FLAGS`): `{0, 1, 2, 3, 4, 5, 6, 7, 9, A, C, I, M, P, R, U}`.
+- Erroneous quality codes (`3`, `7`) are retained in `LocationData_Cleaned.csv` for researcher transparency,
+  but those values are excluded during monthly/yearly aggregation.
 - Each value part in `FIELD_RULES` declares which quality part governs it via `quality_part`.
 - If the governing quality flag is **not** in the allowed set, only that specific value is set
   to `None` — other parts in the same field are preserved.
@@ -264,6 +274,10 @@ Scale factors are applied after sentinel removal:
 
 Aggregation happens in `process_location(...)` in
 [src/noaa_climate_data/pipeline.py](src/noaa_climate_data/pipeline.py).
+
+This monthly/yearly aggregation is a project-specific analysis layer. NOAA ISD
+does not define these summary products, so treat them as derived outputs rather
+than source-of-record observations.
 
 #### 3a. Time extraction
 
@@ -277,7 +291,8 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 
 | Function | Fields | Rationale |
 |----------|--------|-----------|
-| **mean** | TMP, DEW, SLP, WND speed/direction, MA1, KA\*, MD1, SA1, GA\* | Central tendency for continuous measurements |
+| **mean** | TMP, DEW, SLP, WND speed, MA1, KA\*, MD1, SA1, GA\* | Central tendency for continuous measurements |
+| **circular_mean** | WND direction | Wrap-aware mean for angular degrees |
 | **max** | OC1 (wind gust) | Peak gust is the meaningful aggregate |
 | **min** | VIS (visibility) | Worst visibility is climatologically significant |
 | **drop** | WND type code, CIG determination/CAVOK, VIS variability, MW\* weather codes, AY\* condition codes, MD1 tendency code, GE1 cloud code, all `*__quality` columns | Categorical codes and quality flags are observation-level metadata |
@@ -305,17 +320,17 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 
 | Field | Parts | Key value part(s) | Scale | Sentinel(s) | Quality part(s) | Agg | Type |
 |-------|-------|-------------------|-------|-------------|-----------------|-----|------|
-| WND | 5 | 1=direction, 4=speed | 1, 0.1 | 999, 9999 | 2, 5 | mean | numeric |
+| WND | 5 | 1=direction, 4=speed | 1, 0.1 | 999, 9999 | 2, 5 | circular_mean/mean | numeric |
 | CIG | 4 | 1=height | 1 | 99999 | 2 | mean | numeric |
-| VIS | 4 | 1=distance | 1 | 999999, 9999 | 2 | min | numeric |
+| VIS | 4 | 1=distance | 1 | 999999 | 2 | min | numeric |
 | TMP | 2 | 1=temperature | 0.1 | 9999 | 2 | mean | numeric |
 | DEW | 2 | 1=dew point | 0.1 | 9999 | 2 | mean | numeric |
 | SLP | 2 | 1=pressure | 0.1 | 99999 | 2 | mean | numeric |
 | OC1 | 2 | 1=gust speed | 0.1 | 9999 | 2 | max | numeric |
 | MA1 | 4 | 1=altimeter, 3=stn press | 0.1, 0.1 | 99999, 99999 | 2, 4 | mean | numeric |
 | KA\* | 4 | 1=period, 3=temperature | 0.1, 0.1 | 999, 9999 | 4 | mean | numeric |
-| MD1 | 6 | 1=tendency, 3=3hr Δp, 5=24hr Δp | —, 0.1, 0.1 | —, 999, 9999 | 4, 6 | drop/mean | mixed |
-| OD\* | 5 | 3=speed, 5=direction | 0.1, 1 | 9999, 999 | 4 | mean | numeric |
+| MD1 | 6 | 1=tendency, 3=3hr Δp, 5=24hr Δp | —, 0.1, 0.1 | —, 999, +999 | 4, 6 | drop/mean | mixed |
+| OD\* | 5 | 3=direction, 4=speed | 1, 0.1 | 999, 9999 | 5 | mean | numeric |
 | GA\* | 6 | 1=coverage, 3=base height | 1, 1 | 99, 99999 | 2, 4, 6 | mean | mixed |
 | GF1 | 13 | 1=total cov, 8=base ht | 1, 1 | 99, 99999 | 3, 5, 7, 9, 11, 13 | mean | mixed |
 | MW\* | 2 | 1=weather code | — | — | 2 | drop | categorical |

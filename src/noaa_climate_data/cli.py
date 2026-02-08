@@ -199,6 +199,12 @@ def _parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("output"),
     )
+    process_parser.add_argument(
+        "--add-unit-conversions",
+        action="store_true",
+        default=False,
+        help="Add imperial/derived unit columns alongside metric outputs",
+    )
 
     return parser.parse_args()
 
@@ -279,6 +285,7 @@ def main() -> None:
             min_months_per_year=args.min_months_per_year,
             fixed_hour=args.fixed_hour,
             sleep_seconds=args.sleep_seconds,
+            add_unit_conversions=args.add_unit_conversions,
         )
 
         outputs.raw.to_csv(output_dir / "LocationData_Raw.csv", index=False)

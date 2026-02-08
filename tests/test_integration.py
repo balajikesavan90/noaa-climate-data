@@ -29,6 +29,7 @@ from noaa_climate_data.constants import (
     get_agg_func,
     is_categorical_column,
     is_quality_column,
+    to_internal_column,
 )
 
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
@@ -53,11 +54,12 @@ pytestmark = pytest.mark.skipif(
 def _sentinel_set_for_column(col: str) -> set[float]:
     """Return the *scaled* sentinel values for *col* from FIELD_RULES.
 
-    For a column like ``VIS__part1`` the function looks up VIS →
+    For a column like ``visibility_m`` the function looks up VIS →
     part 1 → ``missing_values`` and applies the part's ``scale`` so that
     the numbers are directly comparable to cleaned CSV values.
     If no rule is found an empty set is returned (nothing to check).
     """
+    col = to_internal_column(col)
     # Parse "FIELD__partN" or "FIELD__value"  →  (field, part_index)
     parts = col.split("__", 1)
     if len(parts) != 2:
@@ -146,27 +148,27 @@ class TestPlausibleRanges:
         return _load(request.param, "Yearly")
 
     def test_temperature_range(self, yearly: pd.DataFrame):
-        if "TMP__value" not in yearly.columns:
+        if "temperature_c" not in yearly.columns:
             pytest.skip("TMP not present")
-        vals = yearly["TMP__value"].dropna()
+        vals = yearly["temperature_c"].dropna()
         if vals.empty:
             pytest.skip("No TMP data")
         assert vals.min() >= -90, f"TMP too low: {vals.min()}"
         assert vals.max() <= 60, f"TMP too high: {vals.max()}"
 
     def test_dew_point_range(self, yearly: pd.DataFrame):
-        if "DEW__value" not in yearly.columns:
+        if "dew_point_c" not in yearly.columns:
             pytest.skip("DEW not present")
-        vals = yearly["DEW__value"].dropna()
+        vals = yearly["dew_point_c"].dropna()
         if vals.empty:
             pytest.skip("No DEW data")
         assert vals.min() >= -90, f"DEW too low: {vals.min()}"
         assert vals.max() <= 50, f"DEW too high: {vals.max()}"
 
     def test_wind_speed_range(self, yearly: pd.DataFrame):
-        if "WND__part4" not in yearly.columns:
+        if "wind_speed_ms" not in yearly.columns:
             pytest.skip("WND speed not present")
-        vals = yearly["WND__part4"].dropna()
+        vals = yearly["wind_speed_ms"].dropna()
         if vals.empty:
             pytest.skip("No WND speed data")
         # Scaled: m/s.  World record gust ~113 m/s; yearly means << 100.
@@ -174,18 +176,18 @@ class TestPlausibleRanges:
         assert vals.max() <= 100, f"WND speed too high (not scaled?): {vals.max()}"
 
     def test_wind_gust_range(self, yearly: pd.DataFrame):
-        if "OC1__value" not in yearly.columns:
+        if "wind_gust_ms" not in yearly.columns:
             pytest.skip("OC1 not present")
-        vals = yearly["OC1__value"].dropna()
+        vals = yearly["wind_gust_ms"].dropna()
         if vals.empty:
             pytest.skip("No OC1 data")
         assert vals.min() >= 0, f"OC1 negative: {vals.min()}"
         assert vals.max() <= 120, f"OC1 too high (not scaled?): {vals.max()}"
 
     def test_altimeter_pressure_range(self, yearly: pd.DataFrame):
-        if "MA1__part1" not in yearly.columns:
+        if "altimeter_setting_hpa" not in yearly.columns:
             pytest.skip("MA1 altimeter not present")
-        vals = yearly["MA1__part1"].dropna()
+        vals = yearly["altimeter_setting_hpa"].dropna()
         if vals.empty:
             pytest.skip("No MA1 altimeter data")
         # Reasonable altimeter settings: ~870–1085 hPa.
@@ -193,9 +195,9 @@ class TestPlausibleRanges:
         assert vals.max() <= 1100, f"MA1 altimeter too high (not scaled?): {vals.max()}"
 
     def test_sea_surface_temp_range(self, yearly: pd.DataFrame):
-        if "SA1__value" not in yearly.columns:
+        if "sea_surface_temperature_c" not in yearly.columns:
             pytest.skip("SA1 not present")
-        vals = yearly["SA1__value"].dropna()
+        vals = yearly["sea_surface_temperature_c"].dropna()
         if vals.empty:
             pytest.skip("No SA1 data")
         assert vals.min() >= -5, f"SA1 SST too low: {vals.min()}"
@@ -213,22 +215,20 @@ class TestCategoricalsExcluded:
         return request.param
 
     _KNOWN_CATEGORICALS = {
-        "MW1__value",
-        "MW2__value",
-        "MW3__value",
-        "MW4__value",
-        "AY1__value",
-        "AY2__value",
-        "AY1__part1",
-        "AY2__part1",
-        "AY1__part3",
-        "AY2__part3",
-        "WND__part3",
-        "CIG__part3",
-        "CIG__part4",
-        "VIS__part3",
-        "MD1__part1",
-        "GE1__part1",
+        "present_weather_code_1",
+        "present_weather_code_2",
+        "present_weather_code_3",
+        "present_weather_code_4",
+        "past_weather_condition_code_1",
+        "past_weather_condition_code_2",
+        "past_weather_period_hours_1",
+        "past_weather_period_hours_2",
+        "wind_type_code",
+        "ceiling_determination_code",
+        "ceiling_cavok_code",
+        "visibility_variability_code",
+        "pressure_tendency_code",
+        "convective_cloud_code",
     }
 
     def _check_no_categoricals(self, df: pd.DataFrame, label: str):
@@ -274,19 +274,19 @@ class TestAggregationConsistency:
         """OC1 (wind gust) yearly value should equal the max of hourly, not mean."""
         hourly = _load(station, "Hourly")
         yearly = _load(station, "Yearly")
-        if "OC1__value" not in hourly.columns or "OC1__value" not in yearly.columns:
+        if "wind_gust_ms" not in hourly.columns or "wind_gust_ms" not in yearly.columns:
             pytest.skip("OC1 not present")
-        if yearly["OC1__value"].dropna().empty:
+        if yearly["wind_gust_ms"].dropna().empty:
             pytest.skip("No OC1 yearly data")
 
         for _, yrow in yearly.iterrows():
             yr = yrow["Year"]
-            h_vals = hourly.loc[hourly["Year"] == yr, "OC1__value"].dropna()
+            h_vals = hourly.loc[hourly["Year"] == yr, "wind_gust_ms"].dropna()
             if h_vals.empty:
                 continue
             expected_max = h_vals.max()
             expected_mean = h_vals.mean()
-            actual = yrow["OC1__value"]
+            actual = yrow["wind_gust_ms"]
             if pd.isna(actual):
                 continue
             # The actual should be closer to max than to mean
@@ -300,18 +300,18 @@ class TestAggregationConsistency:
         """VIS (visibility) yearly value should equal the min of hourly, not mean."""
         hourly = _load(station, "Hourly")
         yearly = _load(station, "Yearly")
-        if "VIS__part1" not in hourly.columns or "VIS__part1" not in yearly.columns:
+        if "visibility_m" not in hourly.columns or "visibility_m" not in yearly.columns:
             pytest.skip("VIS not present")
-        if yearly["VIS__part1"].dropna().empty:
+        if yearly["visibility_m"].dropna().empty:
             pytest.skip("No VIS yearly data")
 
         for _, yrow in yearly.iterrows():
             yr = yrow["Year"]
-            h_vals = hourly.loc[hourly["Year"] == yr, "VIS__part1"].dropna()
+            h_vals = hourly.loc[hourly["Year"] == yr, "visibility_m"].dropna()
             if h_vals.empty:
                 continue
             expected_min = h_vals.min()
-            actual = yrow["VIS__part1"]
+            actual = yrow["visibility_m"]
             if pd.isna(actual):
                 continue
             assert actual == pytest.approx(expected_min, rel=1e-3), (
@@ -323,18 +323,18 @@ class TestAggregationConsistency:
         """TMP (temperature) yearly value should equal the mean of hourly."""
         hourly = _load(station, "Hourly")
         yearly = _load(station, "Yearly")
-        if "TMP__value" not in hourly.columns or "TMP__value" not in yearly.columns:
+        if "temperature_c" not in hourly.columns or "temperature_c" not in yearly.columns:
             pytest.skip("TMP not present")
-        if yearly["TMP__value"].dropna().empty:
+        if yearly["temperature_c"].dropna().empty:
             pytest.skip("No TMP yearly data")
 
         for _, yrow in yearly.iterrows():
             yr = yrow["Year"]
-            h_vals = hourly.loc[hourly["Year"] == yr, "TMP__value"].dropna()
+            h_vals = hourly.loc[hourly["Year"] == yr, "temperature_c"].dropna()
             if h_vals.empty:
                 continue
             expected_mean = h_vals.mean()
-            actual = yrow["TMP__value"]
+            actual = yrow["temperature_c"]
             if pd.isna(actual):
                 continue
             assert actual == pytest.approx(expected_mean, rel=1e-3), (

@@ -7,12 +7,21 @@ from pathlib import Path
 from typing import Iterable, Literal
 import time
 import math
+import re
 
 import pandas as pd
 import numpy as np
 
 from .cleaning import clean_noaa_dataframe
-from .constants import DEFAULT_END_YEAR, DEFAULT_START_YEAR, get_agg_func, is_quality_column
+from .constants import (
+    DEFAULT_END_YEAR,
+    DEFAULT_START_YEAR,
+    get_agg_func,
+    get_field_rule,
+    is_quality_column,
+    to_friendly_column,
+    to_internal_column,
+)
 from .noaa_client import (
     StationMetadata,
     build_file_list,
@@ -41,6 +50,13 @@ AggregationStrategy = Literal[
     "weighted_hours",
     "daily_min_max_mean",
 ]
+
+_TEMP_COL_RE = re.compile(r"^(temperature_c|dew_point_c|extreme_temp_c_\d+)(?P<suffix>.*)$")
+_WIND_COL_RE = re.compile(r"^(wind_speed_ms|wind_gust_ms)(?P<suffix>.*)$")
+_VIS_COL_RE = re.compile(r"^(visibility_m)(?P<suffix>.*)$")
+_PRESSURE_COL_RE = re.compile(
+    r"^(sea_level_pressure_hpa|altimeter_setting_hpa|station_pressure_hpa)(?P<suffix>.*)$"
+)
 
 
 def build_data_file_list(
@@ -380,6 +396,84 @@ def _aggregate_numeric(df: pd.DataFrame, group_cols: list[str]) -> pd.DataFrame:
     return agg
 
 
+def _drop_metadata_columns(df: pd.DataFrame) -> pd.DataFrame:
+    drop_cols = [
+        col
+        for col in df.columns
+        if col not in {"ID", "Year", "MonthNum", "Day", "Hour"}
+        and (is_quality_column(col) or get_agg_func(col) == "drop")
+    ]
+    if not drop_cols:
+        return df
+    return df.drop(columns=drop_cols)
+
+
+def _apply_quality_filters_for_aggregation(df: pd.DataFrame) -> pd.DataFrame:
+    """Null values with erroneous quality codes (3, 7) before aggregation."""
+    bad_quality = {"3", "7"}
+    work = df.copy()
+    for col in df.columns:
+        internal = to_internal_column(col)
+        parts = internal.split("__", 1)
+        if len(parts) != 2:
+            continue
+        prefix, suffix = parts
+        if suffix in {"quality", "qc"}:
+            continue
+        rule = get_field_rule(prefix)
+        if rule is None:
+            continue
+        if suffix == "value":
+            quality_col_internal = f"{prefix}__quality"
+        elif suffix.startswith("part"):
+            try:
+                part_idx = int(suffix[4:])
+            except ValueError:
+                continue
+            part_rule = rule.parts.get(part_idx)
+            if part_rule is None or part_rule.quality_part is None:
+                continue
+            quality_col_internal = f"{prefix}__part{part_rule.quality_part}"
+        else:
+            continue
+        quality_col = to_friendly_column(quality_col_internal)
+        if quality_col not in work.columns:
+            continue
+        mask = work[quality_col].astype(str).isin(bad_quality)
+        if mask.any():
+            work.loc[mask, col] = pd.NA
+    return work
+
+
+def _add_unit_conversions(df: pd.DataFrame) -> pd.DataFrame:
+    work = df.copy()
+    for col in df.columns:
+        series = pd.to_numeric(df[col], errors="coerce")
+        if series.isna().all():
+            continue
+        temp_match = _TEMP_COL_RE.match(col)
+        if temp_match:
+            suffix = temp_match.group("suffix")
+            work[f"{temp_match.group(1)}_f{suffix}"] = (series * 9.0 / 5.0) + 32.0
+            continue
+        wind_match = _WIND_COL_RE.match(col)
+        if wind_match:
+            suffix = wind_match.group("suffix")
+            work[f"{wind_match.group(1)}_kt{suffix}"] = series * 1.9438444924
+            work[f"{wind_match.group(1)}_mph{suffix}"] = series * 2.2369362921
+            continue
+        vis_match = _VIS_COL_RE.match(col)
+        if vis_match:
+            suffix = vis_match.group("suffix")
+            work[f"visibility_mi{suffix}"] = series / 1609.344
+            continue
+        pressure_match = _PRESSURE_COL_RE.match(col)
+        if pressure_match:
+            suffix = pressure_match.group("suffix")
+            work[f"{pressure_match.group(1)}_inhg{suffix}"] = series * 0.0295299830714
+    return work
+
+
 def _weighted_aggregate(
     df: pd.DataFrame,
     group_cols: list[str],
@@ -456,8 +550,31 @@ def process_location(
     min_months_per_year: int = 12,
     fixed_hour: int | None = None,
     sleep_seconds: float = 0.0,
+    add_unit_conversions: bool = False,
 ) -> LocationDataOutputs:
     raw = download_location_data(file_name, years, sleep_seconds=sleep_seconds)
+    return process_location_from_raw(
+        raw,
+        location_id=location_id,
+        aggregation_strategy=aggregation_strategy,
+        min_hours_per_day=min_hours_per_day,
+        min_days_per_month=min_days_per_month,
+        min_months_per_year=min_months_per_year,
+        fixed_hour=fixed_hour,
+        add_unit_conversions=add_unit_conversions,
+    )
+
+
+def process_location_from_raw(
+    raw: pd.DataFrame,
+    location_id: int | None = None,
+    aggregation_strategy: AggregationStrategy = "best_hour",
+    min_hours_per_day: int = 18,
+    min_days_per_month: int = 20,
+    min_months_per_year: int = 12,
+    fixed_hour: int | None = None,
+    add_unit_conversions: bool = False,
+) -> LocationDataOutputs:
     if raw.empty:
         return LocationDataOutputs(
             raw=raw,
@@ -472,6 +589,8 @@ def process_location(
     if location_id is not None:
         cleaned["ID"] = location_id
 
+    agg_ready = _apply_quality_filters_for_aggregation(cleaned)
+
     month_group = ["Year", "MonthNum"]
     year_group = ["Year"]
     if "ID" in cleaned.columns:
@@ -483,25 +602,27 @@ def process_location(
         best_hour = _best_hour(hourly)
         if best_hour is not None:
             hourly = hourly[hourly["Hour"] == best_hour]
-        hourly = _filter_full_months(hourly, min_days=min_days_per_month)
-        hourly = _filter_full_years(hourly, min_months=min_months_per_year)
-        monthly = _aggregate_numeric(hourly, month_group)
-        yearly = _aggregate_numeric(hourly, year_group)
+        hourly_agg = _apply_quality_filters_for_aggregation(hourly)
+        hourly_agg = _filter_full_months(hourly_agg, min_days=min_days_per_month)
+        hourly_agg = _filter_full_years(hourly_agg, min_months=min_months_per_year)
+        monthly = _aggregate_numeric(hourly_agg, month_group)
+        yearly = _aggregate_numeric(hourly_agg, year_group)
     elif aggregation_strategy == "fixed_hour":
         if fixed_hour is None:
             raise ValueError("fixed_hour must be provided for fixed_hour strategy")
         hourly = cleaned[cleaned["Hour"] == fixed_hour]
-        hourly = _filter_full_months(hourly, min_days=min_days_per_month)
-        hourly = _filter_full_years(hourly, min_months=min_months_per_year)
-        monthly = _aggregate_numeric(hourly, month_group)
-        yearly = _aggregate_numeric(hourly, year_group)
+        hourly_agg = _apply_quality_filters_for_aggregation(hourly)
+        hourly_agg = _filter_full_months(hourly_agg, min_days=min_days_per_month)
+        hourly_agg = _filter_full_years(hourly_agg, min_months=min_months_per_year)
+        monthly = _aggregate_numeric(hourly_agg, month_group)
+        yearly = _aggregate_numeric(hourly_agg, year_group)
     elif aggregation_strategy == "hour_day_month_year":
         hour_group = ["Year", "MonthNum", "Day", "Hour"]
         day_group = ["Year", "MonthNum", "Day"]
         if "ID" in cleaned.columns:
             hour_group = ["ID"] + hour_group
             day_group = ["ID"] + day_group
-        hourly = _aggregate_numeric(cleaned, hour_group)
+        hourly = _aggregate_numeric(agg_ready, hour_group)
         daily = _aggregate_numeric(hourly, day_group)
         daily = _filter_full_months(daily, min_days=min_days_per_month)
         daily = _filter_full_years(daily, min_months=min_months_per_year)
@@ -516,7 +637,7 @@ def process_location(
         if "ID" in cleaned.columns:
             hour_group = ["ID"] + hour_group
             day_group = ["ID"] + day_group
-        hourly = _aggregate_numeric(cleaned, hour_group)
+        hourly = _aggregate_numeric(agg_ready, hour_group)
         hours_per_day = (
             hourly.groupby(day_group)["Hour"].nunique().reset_index(name="hours")
         )
@@ -535,7 +656,7 @@ def process_location(
         if "ID" in cleaned.columns:
             hour_group = ["ID"] + hour_group
             day_group = ["ID"] + day_group
-        hourly = _aggregate_numeric(cleaned, hour_group)
+        hourly = _aggregate_numeric(agg_ready, hour_group)
         daily = _daily_min_max_mean(hourly, day_group)
         daily = _filter_full_months(daily, min_days=min_days_per_month)
         daily = _filter_full_years(daily, min_months=min_months_per_year)
@@ -545,6 +666,15 @@ def process_location(
         yearly = _aggregate_numeric(daily, year_group)
     else:
         raise ValueError(f"Unknown aggregation strategy: {aggregation_strategy}")
+
+    monthly = _drop_metadata_columns(monthly)
+    yearly = _drop_metadata_columns(yearly)
+
+    if add_unit_conversions:
+        cleaned = _add_unit_conversions(cleaned)
+        hourly = _add_unit_conversions(hourly)
+        monthly = _add_unit_conversions(monthly)
+        yearly = _add_unit_conversions(yearly)
 
     return LocationDataOutputs(
         raw=raw,

@@ -7,7 +7,13 @@ from typing import Iterable
 
 import pandas as pd
 
-from .constants import QUALITY_FLAGS, FieldPartRule, get_field_rule
+from .constants import (
+    QUALITY_FLAGS,
+    FieldPartRule,
+    get_field_registry_entry,
+    get_field_rule,
+    to_friendly_column,
+)
 
 
 @dataclass(frozen=True)
@@ -51,6 +57,20 @@ def _quality_for_part(prefix: str, part_index: int, parts: list[str]) -> str | N
     return parts[quality_index - 1]
 
 
+def _single_quality_part(prefix: str) -> int | None:
+    rule = get_field_rule(prefix)
+    if not rule:
+        return None
+    quality_parts = {
+        part.quality_part
+        for part in rule.parts.values()
+        if part.quality_part is not None
+    }
+    if len(quality_parts) == 1:
+        return next(iter(quality_parts))
+    return None
+
+
 def _to_float(value: str) -> float | None:
     value = value.strip()
     if value == "":
@@ -90,13 +110,21 @@ def _expand_parsed(
     if prefix == "WND":
         payload["WND__direction_variable"] = is_variable_direction
     field_rule = get_field_rule(prefix)
+    quality_value = None
+    if allow_quality:
+        quality_part_index = _single_quality_part(prefix)
+        if quality_part_index is not None and quality_part_index <= len(parsed.parts):
+            quality_value = parsed.parts[quality_part_index - 1].strip()
+            if quality_value == "":
+                quality_value = None
     invalid_quality = (
         allow_quality
-        and parsed.quality is not None
-        and parsed.quality not in QUALITY_FLAGS
+        and quality_value is not None
+        and quality_value not in QUALITY_FLAGS
     )
     for idx, (part, value) in enumerate(zip(parsed.parts, parsed.values), start=1):
-        key = f"{prefix}__part{idx}"
+        entry = get_field_registry_entry(prefix, idx, suffix="part")
+        key = entry.internal_name if entry else f"{prefix}__part{idx}"
         part_rule = field_rule.parts.get(idx) if field_rule else None
         if is_variable_direction and idx == 1:
             payload[key] = None
@@ -118,8 +146,8 @@ def _expand_parsed(
             continue
         scale = part_rule.scale if part_rule else None
         payload[key] = value * scale if scale is not None else value
-    if allow_quality and parsed.quality is not None:
-        payload[f"{prefix}__quality"] = parsed.quality
+    if allow_quality and quality_value is not None:
+        payload[f"{prefix}__quality"] = quality_value
     return payload
 
 
@@ -137,6 +165,8 @@ def clean_value_quality(raw: str, prefix: str) -> dict[str, object]:
         return _expand_parsed(parsed, prefix, allow_quality=True)
     field_rule = get_field_rule(prefix)
     part_rule = field_rule.parts.get(1) if field_rule else None
+    entry = get_field_registry_entry(prefix, 1, suffix="value")
+    value_key = entry.internal_name if entry else f"{prefix}__value"
     quality = parsed.quality
     if part_rule and part_rule.quality_part:
         quality_index = part_rule.quality_part
@@ -146,7 +176,7 @@ def clean_value_quality(raw: str, prefix: str) -> dict[str, object]:
     if value is not None and part_rule and part_rule.scale is not None:
         value = value * part_rule.scale
     return {
-        f"{prefix}__value": value,
+        value_key: value,
         f"{prefix}__quality": quality,
     }
 
@@ -203,5 +233,9 @@ def clean_noaa_dataframe(df: pd.DataFrame, keep_raw: bool = True) -> pd.DataFram
             if isinstance(value, str) and _is_missing_numeric(value)
             else value
         )
+
+    rename_map = {col: to_friendly_column(col) for col in cleaned.columns}
+    if any(key != value for key, value in rename_map.items()):
+        cleaned = cleaned.rename(columns=rename_map)
 
     return cleaned

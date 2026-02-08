@@ -50,12 +50,6 @@ class TestIsMissingValue:
         rule = get_field_rule("VIS").parts[1]
         assert _is_missing_value("999999", rule)
 
-    def test_vis_secondary_sentinel_9999(self):
-        rule = get_field_rule("VIS").parts[1]
-        assert _is_missing_value("9999", rule)
-        # Ensure leading-zero forms are also detected
-        assert _is_missing_value("009999", rule)
-
     def test_slp_sentinel_99999(self):
         rule = get_field_rule("SLP").parts[1]
         assert _is_missing_value("99999", rule)
@@ -97,11 +91,6 @@ class TestSentinelsInCleanedOutput:
         result = clean_value_quality("999999,1,N,1", "VIS")
         assert result["VIS__part1"] is None
 
-    def test_vis_secondary_sentinel_9999_becomes_none(self):
-        """VIS=9999 is a secondary sentinel (distance=9999 with variability=9)."""
-        result = clean_value_quality("009999,5,N,1", "VIS")
-        assert result["VIS__part1"] is None
-
     def test_clean_dataframe_no_leaked_sentinels(self):
         """End-to-end: cleaning a DataFrame must not leave sentinel numbers."""
         df = pd.DataFrame(
@@ -117,13 +106,13 @@ class TestSentinelsInCleanedOutput:
         )
         cleaned = clean_noaa_dataframe(df, keep_raw=False)
         # Row 1 (index 1) should have NaN for all value columns.
-        assert pd.isna(cleaned.loc[1, "TMP__value"])
-        assert pd.isna(cleaned.loc[1, "SLP__value"])
-        assert pd.isna(cleaned.loc[1, "WND__part1"])
-        assert pd.isna(cleaned.loc[1, "WND__part4"])
+        assert pd.isna(cleaned.loc[1, "temperature_c"])
+        assert pd.isna(cleaned.loc[1, "sea_level_pressure_hpa"])
+        assert pd.isna(cleaned.loc[1, "wind_direction_deg"])
+        assert pd.isna(cleaned.loc[1, "wind_speed_ms"])
         # Rows 0 and 2 should have real numeric values.
-        assert cleaned.loc[0, "TMP__value"] == pytest.approx(25.0)
-        assert cleaned.loc[2, "TMP__value"] == pytest.approx(-3.2)
+        assert cleaned.loc[0, "temperature_c"] == pytest.approx(25.0)
+        assert cleaned.loc[2, "temperature_c"] == pytest.approx(-3.2)
 
     def test_wnd_variable_direction_sets_flag(self):
         result = clean_value_quality("999,1,V,0050,1", "WND")
@@ -187,14 +176,14 @@ class TestScaleFactorsInDataframe:
     def test_dataframe_tmp_scaled(self):
         df = pd.DataFrame({"TMP": ["+0250,1", "-0100,1"]})
         cleaned = clean_noaa_dataframe(df, keep_raw=False)
-        assert cleaned.loc[0, "TMP__value"] == pytest.approx(25.0)
-        assert cleaned.loc[1, "TMP__value"] == pytest.approx(-10.0)
+        assert cleaned.loc[0, "temperature_c"] == pytest.approx(25.0)
+        assert cleaned.loc[1, "temperature_c"] == pytest.approx(-10.0)
 
     def test_dataframe_wnd_speed_scaled(self):
         df = pd.DataFrame({"WND": ["090,1,N,0110,1", "270,1,N,0030,1"]})
         cleaned = clean_noaa_dataframe(df, keep_raw=False)
-        assert cleaned.loc[0, "WND__part4"] == pytest.approx(11.0)
-        assert cleaned.loc[1, "WND__part4"] == pytest.approx(3.0)
+        assert cleaned.loc[0, "wind_speed_ms"] == pytest.approx(11.0)
+        assert cleaned.loc[1, "wind_speed_ms"] == pytest.approx(3.0)
 
 
 # ── 3. Per-value quality-flag mapping ────────────────────────────────────
@@ -212,8 +201,8 @@ class TestQualityForPart:
         assert _quality_for_part("WND", 4, parts) == "1"
 
     def test_wnd_direction_bad_quality_does_not_affect_speed(self):
-        parts = ["180", "3", "N", "0050", "1"]  # part2=3 → bad for direction
-        assert _quality_for_part("WND", 1, parts) == "3"  # direction gets bad flag
+        parts = ["180", "8", "N", "0050", "1"]  # part2=8 → bad for direction
+        assert _quality_for_part("WND", 1, parts) == "8"  # direction gets bad flag
         assert _quality_for_part("WND", 4, parts) == "1"  # speed keeps good flag
 
     def test_ma1_separate_quality_parts(self):
@@ -234,34 +223,34 @@ class TestQualityNullsCorrectPart:
     """Bad quality must null only the governed value, not siblings."""
 
     def test_wnd_bad_direction_quality_nulls_direction_only(self):
-        # part2=3 (bad quality for direction), part5=1 (good for speed)
-        result = clean_value_quality("180,3,N,0050,1", "WND")
+        # part2=8 (bad quality for direction), part5=1 (good for speed)
+        result = clean_value_quality("180,8,N,0050,1", "WND")
         assert result["WND__part1"] is None         # direction nulled
         assert result["WND__part4"] == pytest.approx(5.0)  # speed preserved
 
     def test_wnd_bad_speed_quality_nulls_speed_only(self):
-        # part2=1 (good for direction), part5=3 (bad for speed)
-        result = clean_value_quality("180,1,N,0050,3", "WND")
+        # part2=1 (good for direction), part5=8 (bad for speed)
+        result = clean_value_quality("180,1,N,0050,8", "WND")
         assert result["WND__part1"] == pytest.approx(180.0)  # direction preserved
         assert result["WND__part4"] is None          # speed nulled
 
     def test_wnd_both_bad_nulls_both(self):
-        result = clean_value_quality("180,3,N,0050,3", "WND")
+        result = clean_value_quality("180,8,N,0050,8", "WND")
         assert result["WND__part1"] is None
         assert result["WND__part4"] is None
 
     def test_ma1_bad_station_pressure_preserves_altimeter(self):
-        result = clean_value_quality("10132,1,09876,3", "MA1")
+        result = clean_value_quality("10132,1,09876,8", "MA1")
         assert result["MA1__part1"] == pytest.approx(1013.2)  # altimeter preserved
         assert result["MA1__part3"] is None  # station pressure nulled
 
     def test_ma1_bad_altimeter_preserves_station_pressure(self):
-        result = clean_value_quality("10132,3,09876,1", "MA1")
+        result = clean_value_quality("10132,8,09876,1", "MA1")
         assert result["MA1__part1"] is None  # altimeter nulled
         assert result["MA1__part3"] == pytest.approx(987.6)  # station pressure preserved
 
     def test_tmp_bad_quality_nulls_value(self):
-        result = clean_value_quality("+0250,3", "TMP")
+        result = clean_value_quality("+0250,8", "TMP")
         assert result["TMP__value"] is None
 
     def test_tmp_good_quality_keeps_value(self):
@@ -273,18 +262,56 @@ class TestQualityNullsCorrectPart:
             {
                 "WND": [
                     "180,1,N,0050,1",   # both good
-                    "180,3,N,0050,1",   # bad direction
-                    "180,1,N,0050,3",   # bad speed
+                    "180,8,N,0050,1",   # bad direction
+                    "180,1,N,0050,8",   # bad speed
                 ],
             }
         )
         cleaned = clean_noaa_dataframe(df, keep_raw=False)
         # Row 0: both values present
-        assert cleaned.loc[0, "WND__part1"] == pytest.approx(180.0)
-        assert cleaned.loc[0, "WND__part4"] == pytest.approx(5.0)
+        assert cleaned.loc[0, "wind_direction_deg"] == pytest.approx(180.0)
+        assert cleaned.loc[0, "wind_speed_ms"] == pytest.approx(5.0)
         # Row 1: direction nulled, speed kept
-        assert pd.isna(cleaned.loc[1, "WND__part1"])
-        assert cleaned.loc[1, "WND__part4"] == pytest.approx(5.0)
+        assert pd.isna(cleaned.loc[1, "wind_direction_deg"])
+        assert cleaned.loc[1, "wind_speed_ms"] == pytest.approx(5.0)
         # Row 2: direction kept, speed nulled
-        assert cleaned.loc[2, "WND__part1"] == pytest.approx(180.0)
-        assert pd.isna(cleaned.loc[2, "WND__part4"])
+        assert cleaned.loc[2, "wind_direction_deg"] == pytest.approx(180.0)
+        assert pd.isna(cleaned.loc[2, "wind_speed_ms"])
+
+
+class TestCleanDataframeEdgeCases:
+    def test_invalid_quality_nulls_values_in_dataframe(self):
+        df = pd.DataFrame(
+            {
+                "TMP": [
+                    "+0250,1",
+                    "+0250,8",
+                ],
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=False)
+        assert cleaned.loc[0, "temperature_c"] == pytest.approx(25.0)
+        assert pd.isna(cleaned.loc[1, "temperature_c"])
+
+    def test_invalid_quality_in_multipart_field(self):
+        df = pd.DataFrame(
+            {
+                "KA1": [
+                    "005,1,0123,8",  # invalid quality code
+                ],
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=False)
+        assert pd.isna(cleaned.loc[0, "extreme_temp_period_hours_1"])
+        assert pd.isna(cleaned.loc[0, "extreme_temp_c_1"])
+
+    def test_vis_missing_with_leading_zeros(self):
+        df = pd.DataFrame(
+            {
+                "VIS": [
+                    "009999,5,N,1",
+                ],
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=False)
+        assert cleaned.loc[0, "visibility_m"] == pytest.approx(9999.0)

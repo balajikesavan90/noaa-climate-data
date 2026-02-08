@@ -11,7 +11,7 @@ The Python rewrite generalised this with `clean_noaa_dataframe` — it auto-dete
 ## P0 — Data Correctness (current outputs have wrong values)
 
 - [x] **Fix missing-value sentinels leaking into numeric means** ✅
-  - `_is_missing_value` in `cleaning.py` now checks per-field `missing_values` sets from `FIELD_RULES` (999, 9999, 99999, 999999 all covered). Verified: fresh cleaning of raw data produces zero leaked sentinels.
+  - `_is_missing_value` in `cleaning.py` now checks per-field `missing_values` sets from `FIELD_RULES` (all-9s sentinels covered where specified). Verified: fresh cleaning of raw data produces zero leaked sentinels.
   - ⚠️ On-disk output files in `output/` are **stale** and must be re-generated to reflect this fix.
 
 - [x] **Add scale factors for all fields that need ÷10** ✅
@@ -24,13 +24,20 @@ The Python rewrite generalised this with `clean_noaa_dataframe` — it auto-dete
   | MA1 | part1 (altimeter), part3 (station pressure) | hPa | Values 10× too large |
   | KA1/KA2 | part1 (period), part3 (temperature) | hours / °C | Both 10× too large |
   | MD1 | part3 (3hr Δp), part5 (24hr Δp) | hPa | Values 10× too large |
-  | OD1/OD2 | part3 (speed) | m/s | Values 10× too large |
+  | OD1/OD2 | part4 (speed) | m/s | Values 10× too large |
   | SA1 | value (SST) | °C | Values 10× too large |
   | UA1 | part3 (wave height) | m | Values 10× too large |
   | UG1 | part2 (swell height) | m | Values 10× too large |
 
 - [x] **Per-value quality-flag mapping for multi-part fields** ✅
   - `_quality_for_part` in `cleaning.py` now reads `quality_part` from each `FieldPartRule` to apply the correct quality flag per value. Verified: WND bad-direction-quality nulls direction but preserves speed; WND bad-speed-quality nulls speed but preserves direction; MA1 bad-station-pressure-quality nulls station pressure but preserves altimeter.
+
+- [x] **Align missing sentinels to ISD spec for VIS and MD1** ✅
+  - VIS distance missing should be `999999` only (ISD mandatory section). Remove `9999` from VIS missing set.
+  - MD1 24-hour pressure change missing should be `+999` (ISD pressure section). Replace `9999` with `999` for part5.
+
+- [x] **Fix OD* part ordering to match ISD spec** ✅
+  - OD fields are ordered: type, period, direction, speed, speed-quality. Map part3 to direction, part4 to speed (scale 0.1), and part5 to speed-quality for filtering.
 
 ---
 
@@ -42,8 +49,8 @@ The Python rewrite generalised this with `clean_noaa_dataframe` — it auto-dete
 
   | Column | What it is | Current yearly "mean" |
   |--------|-----------|----------------------|
-  | `MW1__value` | Present-weather code (WMO 4677, 00–99) | ~15.4 (nonsensical) |
-  | `MW2__value` | Second weather code | ~65.9 (nonsensical) |
+  | `present_weather_code_1` | Present-weather code (WMO 4677, 00–99) | ~15.4 (nonsensical) |
+  | `present_weather_code_2` | Second weather code | ~65.9 (nonsensical) |
   | `WND__part3` | Wind type code (N/C/V/9) | 9.0 (coerced string) |
   | `CIG__part3` | Ceiling determination code | 9.0 |
   | `CIG__part4` | CAVOK code | coerced |
@@ -63,11 +70,14 @@ The Python rewrite generalised this with `clean_noaa_dataframe` — it auto-dete
   - Weather codes (MW, AY) → **drop** ✓ (excluded from numeric aggregation)
   - Extreme temperatures (KA) → **mean** (min-of-min / max-of-max deferred to P3 multi-occurrence handling)
 
+- [x] **Exclude per-part quality codes from aggregation** ✅
+  - WND part2/part5, CIG part2, VIS part4, and other multi-part quality fields now use `kind="categorical"` / `agg="drop"` so aggregation ignores them.
+
 ---
 
 ## P2 — Researcher Usability
 
-- [ ] **Rename expanded columns to human-readable names**
+- [x] **Rename expanded columns to human-readable names** ✅
   - `WND__part4` → `wind_speed_ms`
   - `WND__part1` → `wind_direction_deg`
   - `CIG__part1` → `ceiling_height_m`
@@ -78,74 +88,62 @@ The Python rewrite generalised this with `clean_noaa_dataframe` — it auto-dete
   - `OC1__value` → `wind_gust_ms`
   - `MA1__part1` → `altimeter_setting_hpa`
   - `MA1__part3` → `station_pressure_hpa`
-  - `KA*__part3` → `extreme_temp_c` (with min/max qualifier from part2)
-  - `MW*__value` → `present_weather_code`
+  - `KA*__part3` → `extreme_temp_c_<n>` (paired with `extreme_temp_type_<n>` from part2)
+  - `MW*__value` → `present_weather_code_<n>`
   - etc.
 
-- [ ] **Create a `FIELD_REGISTRY` dataclass/dict in `constants.py`**
+- [x] **Create a `FIELD_REGISTRY` dataclass/dict in `constants.py`** ✅
   - Each entry encodes: field code, part index, human-readable name, type (`numeric` / `categorical` / `quality`), scale factor, missing-value sentinel, which quality-flag part governs it, and preferred aggregation function.
   - This replaces both `FIELD_SCALES` and the generic part-numbering logic in `_expand_parsed`.
 
-- [ ] **Drop quality-flag and raw-code columns from aggregated outputs**
-  - Quality columns (`*__quality`, `*__qc`) and type/determination codes are observation-level metadata. They should remain in `LocationData_Cleaned.csv` but be excluded from monthly/yearly aggregation to reduce noise.
+- [x] **Drop quality-flag and raw-code columns from aggregated outputs** ✅
+  - Quality columns (`*__quality`, `*__qc`) and type/determination codes are observation-level metadata. They remain in `LocationData_Cleaned.csv` but are explicitly removed from monthly/yearly aggregation.
 
-- [ ] **Add unit-conversion options**
-  - The old R code converted °C → °F for the charts. Consider a post-cleaning step or CLI flag that adds `_f` columns for temperatures, `_kt` / `_mph` for wind, `_mi` for visibility, `_inhg` for pressure, etc.
+- [x] **Add unit-conversion options** ✅
+  - Optional `--add-unit-conversions` flag adds `_f`, `_kt`, `_mph`, `_mi`, `_inhg` columns; metric remains the default.
 
 ---
 
 ## P3 — Expand Research Value
 
-- [ ] **Add precipitation fields (AA1–AA4)**
-  - Hourly liquid precipitation, mm ÷10, missing = `9999`. Essential for climate research but not currently present in the raw download columns for many stations. The pipeline should look for and parse these when available.
-
-- [ ] **Add snow depth (AJ1)**
-  - Snow depth in cm, scale ×1, missing = `9999`. Note: SA1 is **sea-surface temperature**, not snow — this is a common source of confusion.
-
-- [ ] **Add precipitation estimate fields (AU1–AU5)**
-  - For stations that lack AA data, AU provides condition codes and estimated precipitation intensity/duration.
-
-- [ ] **Compute derived quantities**
-  - With TMP and DEW both cleaned, the pipeline can derive:
-    - **Relative humidity (%)** via the Magnus formula
-    - **Wet-bulb temperature** (increasingly important for climate-health research)
-  - With TMP and WND speed:
-    - **Wind chill** (when TMP < 10 °C and speed > 4.8 km/h)
-    - **Heat index** (when TMP > 27 °C and RH > 40%)
-
-- [ ] **Handle multi-occurrence fields (GA1–GA6, MW1–MW7, KA1–KA4)**
-  - These represent *layers* or *concurrent observations*, not repeated measurements. For sky cover (GA), the pipeline could derive a single "total cloud cover" summary. For extreme temps (KA), separate min vs max into distinct columns based on the code in part2 (`N`=min, `M`=max).
+See [P3_EXPAND_RESEARCH_VALUE.md](P3_EXPAND_RESEARCH_VALUE.md) for the expanded plan and research-facing deliverables.
 
 ---
 
 ## P4 — NOAA Alignment
 
-- [ ] **Include full NOAA quality-code domain**
-  - Accept 0–7 and 9 in addition to manual QC flags (A/C/I/M/P/R/U); decide whether to filter only erroneous codes (3, 7).
+- [x] **Include full NOAA quality-code domain (excluding erroneous 3, 7)** ✅
+  - Accept 0–2, 4–6, and 9 in addition to manual QC flags (A/C/I/M/P/R/U); keep 3 and 7 filtered as erroneous.
 
-- [ ] **Handle variable wind direction**
+- [x] **Handle variable wind direction** ✅
   - Treat `WND` direction `999` as "variable" when type code is `V` instead of missing.
 
-- [ ] **Expand field rules beyond current subset**
+- [x] **Expand field rules beyond current subset** ✅
   - Add rules for additional mandatory/additional sections with correct scales, sentinels, and quality mappings.
 
-- [ ] **Document aggregation as a derived analysis layer**
+- [x] **Document aggregation as a derived analysis layer** ✅
   - Make explicit that monthly/yearly aggregation is not part of NOAA spec and is a project-specific analytic choice.
+
+- [x] **Update README to match ISD + code behavior** ✅
+  - Quality flags should include 2 and 6 (ISD allows them), WND direction uses circular mean, VIS missing is `999999` only, and MD1 24-hour missing is `+999`.
+
+- [x] **Only emit `__quality` columns when the ISD field defines a single quality part** ✅
+  - Multi-part fields like CIG now emit `__quality` from the defined quality part, and fields with multiple quality parts (e.g. WND) no longer emit `__quality`.
 
 ---
 
 ## P5 — Test Coverage
 
-- [ ] **Add coverage for pipeline aggregation branches**
+- [x] **Add coverage for pipeline aggregation branches** ✅
   - Tests for `fixed_hour`, `weighted_hours`, `daily_min_max_mean`, and `hour_day_month_year` strategies.
 
-- [ ] **Add edge-case tests for cleaning quality and missing values**
+- [x] **Add edge-case tests for cleaning quality and missing values** ✅
   - Cover `invalid_quality` behavior, per-part quality flags, and sentinel handling in `clean_noaa_dataframe`.
 
-- [ ] **Add tests for field-specific aggregation rules**
+- [x] **Add tests for field-specific aggregation rules** ✅
   - Assert min/max/sum/drop/mode behavior from `FieldPartRule.agg` on representative columns.
 
-- [ ] **Add tests for NOAA client and CLI paths**
+- [x] **Add tests for NOAA client and CLI paths** ✅
   - Minimal mocks to exercise `noaa_client` and `cli` workflows without network access.
 
 ---
@@ -163,8 +161,8 @@ The Python rewrite generalised this with `clean_noaa_dataframe` — it auto-dete
 | OC1 | 2 | 1=gust speed | 0.1 | 9999 | 2 | numeric |
 | MA1 | 4 | 1=altimeter, 3=stn press | 0.1, 0.1 | 99999, 99999 | 2, 4 | numeric |
 | KA* | 4 | 1=period, 3=temperature | 0.1, 0.1 | 999, 9999 | 4 | numeric |
-| MD1 | 6 | 3=3hr Δp, 5=24hr Δp | 0.1, 0.1 | 999, 9999 | 4, 6 | numeric |
-| OD* | 5 | 3=speed, 5=direction | 0.1, 1 | 9999, 999 | 4 | numeric |
+| MD1 | 6 | 3=3hr Δp, 5=24hr Δp | 0.1, 0.1 | 999, +999 | 4, 6 | numeric |
+| OD* | 5 | 3=direction, 4=speed, 5=speed-quality | 1, 0.1 | 999, 9999 | 5 | numeric |
 | GA* | 6 | 1=coverage, 3=base height | 1, 1 | 99, 99999 | 2, 4, 6 | mixed |
 | GF1 | 13 | 1=total cov, 8=base ht | 1, 1 | 99, 99999 | 3, 5, 7, 9, 11, 13 | mixed |
 | MW* | 2 | 1=weather code | — | — | 2 | categorical |

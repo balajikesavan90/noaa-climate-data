@@ -4,7 +4,9 @@ import sys
 import time
 from pathlib import Path
 
-from noaa_climate_data.pipeline import process_location
+import pandas as pd
+
+from noaa_climate_data.pipeline import process_location_from_raw
 
 STATIONS = [
     "57067099999",
@@ -28,12 +30,16 @@ def main():
         fname = f"{station}.csv"
         outdir = OUTPUT_BASE / station
         outdir.mkdir(parents=True, exist_ok=True)
+        raw_path = outdir / "LocationData_Raw.csv"
         print(f"\n{'='*60}")
         print(f"Processing {station} ...")
         t0 = time.time()
         try:
-            outputs = process_location(fname, range(2001, 2026), None)
-            outputs.raw.to_csv(outdir / "LocationData_Raw.csv", index=False)
+            if not raw_path.exists():
+                raise FileNotFoundError(f"Missing raw file: {raw_path}")
+            raw = pd.read_csv(raw_path, dtype=str, low_memory=False)
+            outputs = process_location_from_raw(raw, location_id=None)
+            outputs.raw.to_csv(raw_path, index=False)
             outputs.cleaned.to_csv(outdir / "LocationData_Cleaned.csv", index=False)
             outputs.hourly.to_csv(outdir / "LocationData_Hourly.csv", index=False)
             outputs.monthly.to_csv(outdir / "LocationData_Monthly.csv", index=False)
