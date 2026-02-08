@@ -10,8 +10,10 @@ BASE_URL = "https://www.ncei.noaa.gov/data/global-hourly/access"
 QUALITY_FLAGS = {
     "0",
     "1",
+    "2",
     "4",
     "5",
+    "6",
     "9",
     "A",
     "C",
@@ -32,7 +34,7 @@ class FieldPartRule:
     missing_values: set[str] | None = None
     quality_part: int | None = None
     kind: str = "numeric"
-    agg: str = "mean"  # mean | max | min | mode | sum | drop
+    agg: str = "mean"  # mean | max | min | mode | sum | drop | circular_mean
 
 
 @dataclass(frozen=True)
@@ -45,7 +47,7 @@ FIELD_RULES: dict[str, FieldRule] = {
     "WND": FieldRule(
         code="WND",
         parts={
-            1: FieldPartRule(missing_values={"999"}, quality_part=2),
+            1: FieldPartRule(missing_values={"999"}, quality_part=2, agg="circular_mean"),
             3: FieldPartRule(kind="categorical", agg="drop"),  # wind type code
             4: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=5),
         },
@@ -201,7 +203,7 @@ def get_agg_func(col: str) -> str:
     """Return the preferred aggregation function name for *col*.
 
     Returns one of: ``"mean"``, ``"max"``, ``"min"``, ``"mode"``,
-    ``"sum"``, ``"drop"``.  Defaults to ``"mean"`` for columns that
+    ``"sum"``, ``"drop"``, ``"circular_mean"``.  Defaults to ``"mean"`` for columns that
     have no explicit rule.
     """
     if is_quality_column(col):

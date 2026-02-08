@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Literal
 import time
+import math
 
 import pandas as pd
+import numpy as np
 
 from .cleaning import clean_noaa_dataframe
 from .constants import DEFAULT_END_YEAR, DEFAULT_START_YEAR, get_agg_func, is_quality_column
@@ -309,6 +311,30 @@ def _classify_columns(
     return buckets
 
 
+def _circular_mean_deg(values: pd.Series, weights: pd.Series | None = None) -> float | None:
+    series = pd.to_numeric(values, errors="coerce")
+    if weights is None:
+        series = series.dropna()
+        if series.empty:
+            return None
+        radians = np.deg2rad(series)
+        mean_sin = np.sin(radians).mean()
+        mean_cos = np.cos(radians).mean()
+    else:
+        combined = pd.concat([series, weights], axis=1).dropna()
+        if combined.empty:
+            return None
+        radians = np.deg2rad(combined.iloc[:, 0])
+        w = pd.to_numeric(combined.iloc[:, 1], errors="coerce").fillna(0.0)
+        total = w.sum()
+        if total == 0:
+            return None
+        mean_sin = (np.sin(radians) * w).sum() / total
+        mean_cos = (np.cos(radians) * w).sum() / total
+    angle = math.atan2(mean_sin, mean_cos)
+    return (math.degrees(angle) + 360.0) % 360.0
+
+
 def _aggregate_numeric(df: pd.DataFrame, group_cols: list[str]) -> pd.DataFrame:
     work, numeric_cols = _coerce_numeric(df, group_cols)
     if not numeric_cols:
@@ -317,6 +343,7 @@ def _aggregate_numeric(df: pd.DataFrame, group_cols: list[str]) -> pd.DataFrame:
     buckets = _classify_columns(numeric_cols)
     # Drop categorical / quality columns from aggregation entirely.
     drop_cols = set(buckets.pop("drop", []))
+    circular_cols = buckets.pop("circular_mean", [])
     agg_cols = [c for c in numeric_cols if c not in drop_cols]
     if not agg_cols:
         return work[group_cols].drop_duplicates()
@@ -333,6 +360,8 @@ def _aggregate_numeric(df: pd.DataFrame, group_cols: list[str]) -> pd.DataFrame:
     mode_cols = buckets.pop("mode", [])
     for col in mode_cols:
         agg_spec.pop(col, None)
+    for col in circular_cols:
+        agg_spec.pop(col, None)
 
     agg = grouped.agg(agg_spec).reset_index() if agg_spec else work[group_cols].drop_duplicates()
 
@@ -342,6 +371,11 @@ def _aggregate_numeric(df: pd.DataFrame, group_cols: list[str]) -> pd.DataFrame:
                 lambda x: x.mode().iloc[0] if not x.mode().empty else None
             ).reset_index(name=col)
             agg = agg.merge(mode_series, on=group_cols, how="left")
+
+    if circular_cols:
+        for col in circular_cols:
+            circ_series = grouped[col].agg(_circular_mean_deg).reset_index(name=col)
+            agg = agg.merge(circ_series, on=group_cols, how="left")
 
     return agg
 
@@ -373,6 +407,8 @@ def _weighted_aggregate(
             data[col] = group[col].min()
         elif func == "sum":
             data[col] = group[col].sum()
+        elif func == "circular_mean":
+            data[col] = group.apply(lambda g: _circular_mean_deg(g[col], g[weight_col]))
         else:
             weighted_sum = (work[col] * work[weight_col]).groupby(
                 [work[g] for g in group_cols]
@@ -399,6 +435,11 @@ def _daily_min_max_mean(
     group = work.groupby(group_cols)
     frames: list[pd.Series] = []
     for col in keep_cols:
+        if get_agg_func(col) == "circular_mean":
+            frames.append(
+                group[col].agg(_circular_mean_deg).rename(f"{col}__daily_mean")
+            )
+            continue
         frames.append(group[col].min().rename(f"{col}__daily_min"))
         frames.append(group[col].max().rename(f"{col}__daily_max"))
         frames.append(group[col].mean().rename(f"{col}__daily_mean"))

@@ -118,6 +118,38 @@ The Python rewrite generalised this with `clean_noaa_dataframe` — it auto-dete
 
 ---
 
+## P4 — NOAA Alignment
+
+- [ ] **Include full NOAA quality-code domain**
+  - Accept 0–7 and 9 in addition to manual QC flags (A/C/I/M/P/R/U); decide whether to filter only erroneous codes (3, 7).
+
+- [ ] **Handle variable wind direction**
+  - Treat `WND` direction `999` as "variable" when type code is `V` instead of missing.
+
+- [ ] **Expand field rules beyond current subset**
+  - Add rules for additional mandatory/additional sections with correct scales, sentinels, and quality mappings.
+
+- [ ] **Document aggregation as a derived analysis layer**
+  - Make explicit that monthly/yearly aggregation is not part of NOAA spec and is a project-specific analytic choice.
+
+---
+
+## P5 — Test Coverage
+
+- [ ] **Add coverage for pipeline aggregation branches**
+  - Tests for `fixed_hour`, `weighted_hours`, `daily_min_max_mean`, and `hour_day_month_year` strategies.
+
+- [ ] **Add edge-case tests for cleaning quality and missing values**
+  - Cover `invalid_quality` behavior, per-part quality flags, and sentinel handling in `clean_noaa_dataframe`.
+
+- [ ] **Add tests for field-specific aggregation rules**
+  - Assert min/max/sum/drop/mode behavior from `FieldPartRule.agg` on representative columns.
+
+- [ ] **Add tests for NOAA client and CLI paths**
+  - Minimal mocks to exercise `noaa_client` and `cli` workflows without network access.
+
+---
+
 ## Reference — ISD Field Structure
 
 | Field | Parts | Key value part(s) | Scale | Missing | Quality part(s) | Type |

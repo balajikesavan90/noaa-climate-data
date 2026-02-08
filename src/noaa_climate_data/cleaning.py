@@ -81,6 +81,14 @@ def _expand_parsed(
     allow_quality: bool,
 ) -> dict[str, object]:
     payload: dict[str, object] = {}
+    is_variable_direction = (
+        prefix == "WND"
+        and len(parsed.parts) >= 3
+        and parsed.parts[0].strip() == "999"
+        and parsed.parts[2].strip().upper() == "V"
+    )
+    if prefix == "WND":
+        payload["WND__direction_variable"] = is_variable_direction
     field_rule = get_field_rule(prefix)
     invalid_quality = (
         allow_quality
@@ -90,6 +98,9 @@ def _expand_parsed(
     for idx, (part, value) in enumerate(zip(parsed.parts, parsed.values), start=1):
         key = f"{prefix}__part{idx}"
         part_rule = field_rule.parts.get(idx) if field_rule else None
+        if is_variable_direction and idx == 1:
+            payload[key] = None
+            continue
         part_quality = _quality_for_part(prefix, idx, parsed.parts) if allow_quality else None
         if part_quality is not None and part_quality not in QUALITY_FLAGS:
             payload[key] = None

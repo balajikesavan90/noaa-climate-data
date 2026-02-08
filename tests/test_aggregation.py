@@ -88,10 +88,12 @@ class TestGetAggFunc:
         assert get_agg_func("TMP__value") == "mean"
         assert get_agg_func("DEW__value") == "mean"
         assert get_agg_func("SLP__value") == "mean"
-        assert get_agg_func("WND__part1") == "mean"
         assert get_agg_func("WND__part4") == "mean"
         assert get_agg_func("MA1__part1") == "mean"
         assert get_agg_func("MA1__part3") == "mean"
+
+    def test_circular_mean_columns(self):
+        assert get_agg_func("WND__part1") == "circular_mean"
 
     def test_max_columns(self):
         assert get_agg_func("OC1__value") == "max"
@@ -192,6 +194,18 @@ class TestAggregateNumeric:
         row_2020 = result[result["Year"] == 2020].iloc[0]
         # VIS should use min (worst visibility)
         assert row_2020["VIS__part1"] == pytest.approx(3000.0)
+
+    def test_circular_mean_applied_for_wind_direction(self):
+        df = pd.DataFrame(
+            {
+                "Year": [2020, 2020],
+                "MonthNum": [1, 1],
+                "WND__part1": [350.0, 10.0],
+            }
+        )
+        result = _aggregate_numeric(df, ["Year", "MonthNum"])
+        row = result.iloc[0]
+        assert row["WND__part1"] == pytest.approx(0.0, abs=1e-6)
 
 
 class TestDailyMinMaxMean:
