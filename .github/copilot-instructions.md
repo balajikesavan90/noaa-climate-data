@@ -6,6 +6,7 @@
 
 ## Key workflows (Poetry)
 - Install: `poetry install` (from [README.md](README.md)).
+- Run tests: `poetry run pytest tests/ -v`.
 - Build file list + year counts: `poetry run python -m noaa_climate_data.cli file-list ...`.
 - Build station metadata: `poetry run python -m noaa_climate_data.cli location-ids ...`.
 - Process a station: `poetry run python -m noaa_climate_data.cli process-location <file>.csv ...`.

@@ -125,6 +125,12 @@ class TestSentinelsInCleanedOutput:
         assert cleaned.loc[0, "TMP__value"] == pytest.approx(25.0)
         assert cleaned.loc[2, "TMP__value"] == pytest.approx(-3.2)
 
+    def test_wnd_variable_direction_sets_flag(self):
+        result = clean_value_quality("999,1,V,0050,1", "WND")
+        assert result["WND__direction_variable"] is True
+        assert result["WND__part1"] is None
+        assert result["WND__part4"] == pytest.approx(5.0)
+
 
 # ── 2. Scale factors (÷10) ──────────────────────────────────────────────
 
