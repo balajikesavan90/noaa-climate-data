@@ -189,6 +189,12 @@ def _parse_args() -> argparse.Namespace:
         help="Minimum months/year required for completeness filters",
     )
     process_parser.add_argument(
+        "--sleep-seconds",
+        type=float,
+        default=0.0,
+        help="Delay between yearly CSV downloads",
+    )
+    process_parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("output"),
@@ -267,6 +273,7 @@ def main() -> None:
             min_days_per_month=args.min_days_per_month,
             min_months_per_year=args.min_months_per_year,
             fixed_hour=args.fixed_hour,
+            sleep_seconds=args.sleep_seconds,
         )
 
         outputs.raw.to_csv(output_dir / "LocationData_Raw.csv", index=False)

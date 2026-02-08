@@ -170,6 +170,7 @@ def build_location_ids(
 def download_location_data(
     file_name: str,
     years: Iterable[int],
+    sleep_seconds: float = 0.0,
 ) -> pd.DataFrame:
     frames: list[pd.DataFrame] = []
     for year in years:
@@ -181,6 +182,8 @@ def download_location_data(
         if not frame.empty:
             frame["YEAR"] = year
             frames.append(frame)
+        if sleep_seconds > 0:
+            time.sleep(sleep_seconds)
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, ignore_index=True)
@@ -290,8 +293,9 @@ def process_location(
     min_days_per_month: int = 20,
     min_months_per_year: int = 12,
     fixed_hour: int | None = None,
+    sleep_seconds: float = 0.0,
 ) -> LocationDataOutputs:
-    raw = download_location_data(file_name, years)
+    raw = download_location_data(file_name, years, sleep_seconds=sleep_seconds)
     if raw.empty:
         return LocationDataOutputs(
             raw=raw,

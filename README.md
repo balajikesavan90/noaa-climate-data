@@ -64,6 +64,7 @@ Download, clean, and aggregate a station:
 poetry run python -m noaa_climate_data.cli process-location 01001099999.csv \
 	--start-year <START_YEAR> \
 	--end-year <END_YEAR> \
+	--sleep-seconds 0.5 \
 	--output-dir output
 ```
 
