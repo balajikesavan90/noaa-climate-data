@@ -215,6 +215,15 @@ class TestQualityForPart:
         assert _quality_for_part("MA1", 1, parts) == "1"  # altimeter still good
         assert _quality_for_part("MA1", 3, parts) == "3"  # station press bad
 
+    def test_ua1_wave_parts_use_part4_quality(self):
+        parts = ["I", "05", "120", "1", "03", "9"]
+        assert _quality_for_part("UA1", 2, parts) == "1"
+        assert _quality_for_part("UA1", 3, parts) == "1"
+
+    def test_ua1_sea_state_quality_is_part6(self):
+        parts = ["I", "05", "120", "1", "03", "9"]
+        assert _quality_for_part("UA1", 5, parts) == "9"
+
     def test_no_rule_returns_none(self):
         assert _quality_for_part("UNKNOWN", 1, ["x", "y"]) is None
 
@@ -257,6 +266,18 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("+0250,1", "TMP")
         assert result["TMP__value"] == pytest.approx(25.0)
 
+    def test_ua1_bad_sea_state_quality_nulls_sea_state_only(self):
+        result = clean_value_quality("I,05,120,1,03,8", "UA1")
+        assert result["UA1__part2"] == pytest.approx(5.0)
+        assert result["UA1__part3"] == pytest.approx(12.0)
+        assert result["UA1__part5"] is None
+
+    def test_ua1_bad_wave_quality_nulls_wave_values_only(self):
+        result = clean_value_quality("I,05,120,8,03,1", "UA1")
+        assert result["UA1__part2"] is None
+        assert result["UA1__part3"] is None
+        assert result["UA1__part5"] == pytest.approx(3.0)
+
     def test_md1_bad_tendency_quality_nulls_tendency_only(self):
         result = clean_value_quality("5,8,045,1,0123,1", "MD1")
         assert result["MD1__part1"] is None
@@ -268,14 +289,14 @@ class TestQualityNullsCorrectPart:
         assert result["UA1__part1"] is None
         assert result["UA1__part2"] is None
         assert result["UA1__part3"] is None
-        assert result["UA1__part5"] is None
+        assert result["UA1__part5"] == pytest.approx(4.0)
 
     def test_ua1_quality_code_outside_marine_domain(self):
         result = clean_value_quality("M,10,050,4,04,1", "UA1")
         assert result["UA1__part1"] is None
         assert result["UA1__part2"] is None
         assert result["UA1__part3"] is None
-        assert result["UA1__part5"] is None
+        assert result["UA1__part5"] == pytest.approx(4.0)
 
     def test_ug1_bad_swell_quality_nulls_swell_parts(self):
         result = clean_value_quality("10,050,180,8", "UG1")

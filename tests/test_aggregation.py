@@ -51,8 +51,12 @@ class TestIsCategoricalColumn:
     def test_categorical_columns(self):
         assert is_categorical_column("present_weather_code_1")
         assert is_categorical_column("present_weather_code_2")
+        assert is_categorical_column("MW1__part2")
         assert is_categorical_column("AY1__value")
         assert is_categorical_column("AY2__value")
+        assert is_categorical_column("AY1__part2")
+        assert is_categorical_column("AY1__part4")
+        assert is_categorical_column("KA1__part2")
         assert is_categorical_column("WND__part2")
         assert is_categorical_column("WND__part3")
         assert is_categorical_column("WND__part5")
@@ -87,6 +91,7 @@ class TestGetAggFunc:
 
     def test_categorical_columns_drop(self):
         assert get_agg_func("present_weather_code_1") == "drop"
+        assert get_agg_func("MW1__part2") == "drop"
         assert get_agg_func("WND__part2") == "drop"
         assert get_agg_func("WND__part3") == "drop"
         assert get_agg_func("WND__part5") == "drop"
@@ -96,6 +101,9 @@ class TestGetAggFunc:
         assert get_agg_func("VIS__part4") == "drop"
         assert get_agg_func("MD1__part1") == "drop"
         assert get_agg_func("MD1__part2") == "drop"
+        assert get_agg_func("AY1__part2") == "drop"
+        assert get_agg_func("AY1__part4") == "drop"
+        assert get_agg_func("KA1__part2") == "drop"
         assert get_agg_func("GE1__part1") == "drop"
         assert get_agg_func("GE1__part2") == "drop"
 

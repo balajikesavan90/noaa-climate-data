@@ -139,7 +139,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "9"},
             ),  # wave height quality
-            5: FieldPartRule(kind="categorical", agg="drop", quality_part=4),  # sea state code
+            5: FieldPartRule(kind="categorical", agg="drop", quality_part=6),  # sea state code
             6: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -237,6 +237,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
         code="KA*",
         parts={
             1: FieldPartRule(scale=0.1, missing_values={"999"}),
+            2: FieldPartRule(kind="categorical", agg="drop", missing_values={"9"}),
             3: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=4),
             4: FieldPartRule(kind="quality", agg="drop"),  # temperature quality
         },
@@ -255,13 +256,16 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
         code="MW*",
         parts={
             1: FieldPartRule(kind="categorical", agg="drop"),  # present-weather code
+            2: FieldPartRule(kind="quality", agg="drop"),  # present-weather quality
         },
     ),
     "AY": FieldRule(
         code="AY*",
         parts={
             1: FieldPartRule(kind="categorical", agg="drop"),  # past-weather condition code
-            3: FieldPartRule(kind="categorical", agg="drop"),  # past-weather period
+            2: FieldPartRule(kind="quality", agg="drop"),  # past-weather condition quality
+            3: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),  # past-weather period
+            4: FieldPartRule(kind="quality", agg="drop"),  # past-weather period quality
         },
     ),
 }

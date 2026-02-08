@@ -321,7 +321,7 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 | **circular_mean** | WND direction | Wrap-aware mean for angular degrees |
 | **max** | OC1 (wind gust) | Peak gust is the meaningful aggregate |
 | **min** | VIS (visibility) | Worst visibility is climatologically significant |
-| **drop** | WND type code, CIG determination/CAVOK, VIS variability, MW\* weather codes, AY\* condition codes, MD1 tendency code, GE1 categorical codes, all `*__quality` columns | Categorical codes and quality flags are observation-level metadata |
+| **drop** | WND type code, CIG determination/CAVOK, VIS variability, MW\* weather codes/quality, AY\* condition/period codes/quality, MD1 tendency code, GE1 categorical codes, all `*__quality` columns | Categorical codes and quality flags are observation-level metadata |
 
 #### 3c. Aggregation strategies
 
@@ -354,7 +354,7 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 | SLP | 2 | 1=pressure | 0.1 | 99999 | 2 | mean | numeric |
 | OC1 | 2 | 1=gust speed | 0.1 | 9999 | 2 | max | numeric |
 | MA1 | 4 | 1=altimeter, 3=stn press | 0.1, 0.1 | 99999, 99999 | 2, 4 | mean | numeric |
-| KA\* | 4 | 1=period, 3=temperature | 0.1, 0.1 | 999, 9999 | 4 | mean | numeric |
+| KA\* | 4 | 1=period, 2=code, 3=temperature | 0.1, 1, 0.1 | 999, 9, 9999 | 4 | mean/drop | mixed |
 | MD1 | 6 | 1=tendency, 3=3hr Δp, 5=24hr Δp | —, 0.1, 0.1 | —, 999, +999 | 2, 4, 6 | drop/mean | mixed |
 | OD\* | 5 | 3=direction, 4=speed | 1, 0.1 | 999, 9999 | 5 | mean | numeric |
 | GA\* | 6 | 1=coverage, 3=base height | 1, 1 | 99, 99999 | 2, 4, 6 | mean | mixed |
@@ -367,7 +367,7 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 | UG1 | 4 | 1=period (sec), 2=swell ht, 3=direction | 1, 0.1, 1 | 99, 999, 999 | 4 | mean/circular_mean | mixed |
 
 Notes:
-- UA1 method code and sea state are categorical and are excluded from aggregation; wave measurement quality (part4) gates parts 1-3 and 5; sea state quality is part6.
+- UA1 method code and sea state are categorical and are excluded from aggregation; wave measurement quality (part4) gates parts 1-3; sea state quality is part6 and gates part5.
 - UG1 swell direction uses a circular mean during aggregation when present; primary swell quality (part4) gates parts 1-3.
 - UA1/UG1 quality codes are restricted to {0, 1, 2, 3, 9} per ISD marine specs.
 
