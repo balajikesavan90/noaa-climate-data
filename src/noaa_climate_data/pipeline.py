@@ -163,6 +163,10 @@ def build_location_ids(
         )
         processed.add(file_name)
         new_count += 1
+        print(
+            f"Fetched {file_name} (year={metadata_year}) -> "
+            f"{len(rows)}/{total} total, {new_count} new."
+        )
         if checkpoint_every and (len(rows) % checkpoint_every == 0):
             frame = pd.DataFrame(rows)
             frame.to_csv(output_csv, index=False)
