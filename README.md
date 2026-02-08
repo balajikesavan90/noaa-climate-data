@@ -9,7 +9,7 @@ Global Hourly archive.
 This project replaces the legacy R scripts with a Python pipeline that:
 
 1. **Discovers** the NOAA Global Hourly file list and year coverage counts.
-2. **Builds** station metadata (location IDs) for stations with full year coverage.
+2. **Builds** station metadata (location IDs) for all stations in the year-count list.
 3. **Downloads** all available metrics for a station across multiple years.
 4. **Cleans** comma-encoded ISD fields — applying per-field sentinel detection, scale
    factors, and quality-flag filtering via a declarative `FIELD_RULES` registry.
@@ -287,7 +287,8 @@ Scale factors are applied after sentinel removal:
 
 #### 2e. Quality-flag filtering
 
-- Allowed quality flags (`QUALITY_FLAGS`): `{0, 1, 2, 3, 4, 5, 6, 7, 9, A, C, I, M, P, R, U}`.
+- Allowed quality flags (`QUALITY_FLAGS`): `{0, 1, 2, 3, 4, 5, 6, 7, 9, M}`.
+- Some sections (e.g., UA1/UG1 marine groups) apply narrower per-field quality limits per ISD specs.
 - Erroneous quality codes (`3`, `7`) are retained in `LocationData_Cleaned.csv` for researcher transparency,
   but those values are excluded during monthly/yearly aggregation.
 - Each value part in `FIELD_RULES` declares which quality part governs it via `quality_part`.
@@ -355,7 +356,8 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 | OC1 | 2 | 1=gust speed | 0.1 | 9999 | 2 | max | numeric |
 | MA1 | 4 | 1=altimeter, 3=stn press | 0.1, 0.1 | 99999, 99999 | 2, 4 | mean | numeric |
 | KA\* | 4 | 1=period, 2=code, 3=temperature | 0.1, 1, 0.1 | 999, 9, 9999 | 4 | mean/drop | mixed |
-| MD1 | 6 | 1=tendency, 3=3hr Δp, 5=24hr Δp | —, 0.1, 0.1 | —, 999, +999 | 2, 4, 6 | drop/mean | mixed |
+| MD1 | 6 | 1=tendency, 3=3hr Δp, 5=24hr Δp | —, 0.1, 0.1 | 9, 999, +999 | 2, 4, 6 | drop/mean | mixed |
+| OA\* | 4 | 1=type, 2=period, 3=speed | —, 1, 0.1 | 9, 99, 9999 | 4 | drop/mean | mixed |
 | OD\* | 5 | 3=direction, 4=speed | 1, 0.1 | 999, 9999 | 5 | mean | numeric |
 | GA\* | 6 | 1=coverage, 3=base height | 1, 1 | 99, 99999 | 2, 4, 6 | mean | mixed |
 | GF1 | 13 | 1=total cov, 8=base ht | 1, 1 | 99, 99999 | 3, 5, 7, 9, 11, 13 | mean | mixed |

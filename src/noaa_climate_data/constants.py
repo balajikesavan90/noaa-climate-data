@@ -17,13 +17,7 @@ QUALITY_FLAGS = {
     "6",
     "7",
     "9",
-    "A",
-    "C",
-    "I",
     "M",
-    "P",
-    "R",
-    "U",
 }
 
 DEFAULT_START_YEAR = 2000
@@ -116,7 +110,12 @@ FIELD_RULES: dict[str, FieldRule] = {
     "MD1": FieldRule(
         code="MD1",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", quality_part=2),  # pressure tendency code
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                quality_part=2,
+                missing_values={"9"},
+            ),  # pressure tendency code
             2: FieldPartRule(kind="quality", agg="drop"),  # tendency quality
             3: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
             4: FieldPartRule(kind="quality", agg="drop"),  # 3-hr pressure quality
@@ -240,6 +239,19 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
             2: FieldPartRule(kind="categorical", agg="drop", missing_values={"9"}),
             3: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=4),
             4: FieldPartRule(kind="quality", agg="drop"),  # temperature quality
+        },
+    ),
+    "OA": FieldRule(
+        code="OA*",
+        parts={
+            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9"}),
+            2: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
+            3: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=4),
+            4: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
         },
     ),
     "OD": FieldRule(
@@ -379,6 +391,10 @@ _FRIENDLY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^KA(?P<idx>\d+)__part2$"), "extreme_temp_type_{idx}"),
     (re.compile(r"^KA(?P<idx>\d+)__part1$"), "extreme_temp_period_hours_{idx}"),
     (re.compile(r"^KA(?P<idx>\d+)__part4$"), "extreme_temp_quality_code_{idx}"),
+    (re.compile(r"^OA(?P<idx>\d+)__part1$"), "supp_wind_oa_type_code_{idx}"),
+    (re.compile(r"^OA(?P<idx>\d+)__part2$"), "supp_wind_oa_period_hours_{idx}"),
+    (re.compile(r"^OA(?P<idx>\d+)__part3$"), "supp_wind_oa_speed_ms_{idx}"),
+    (re.compile(r"^OA(?P<idx>\d+)__part4$"), "supp_wind_oa_speed_quality_code_{idx}"),
     (re.compile(r"^OD(?P<idx>\d+)__part1$"), "supp_wind_type_code_{idx}"),
     (re.compile(r"^OD(?P<idx>\d+)__part2$"), "supp_wind_period_hours_{idx}"),
     (re.compile(r"^OD(?P<idx>\d+)__part3$"), "supp_wind_direction_deg_{idx}"),
@@ -417,6 +433,10 @@ _INTERNAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^extreme_temp_type_(?P<idx>\d+)$"), "KA{idx}__part2"),
     (re.compile(r"^extreme_temp_period_hours_(?P<idx>\d+)$"), "KA{idx}__part1"),
     (re.compile(r"^extreme_temp_quality_code_(?P<idx>\d+)$"), "KA{idx}__part4"),
+    (re.compile(r"^supp_wind_oa_type_code_(?P<idx>\d+)$"), "OA{idx}__part1"),
+    (re.compile(r"^supp_wind_oa_period_hours_(?P<idx>\d+)$"), "OA{idx}__part2"),
+    (re.compile(r"^supp_wind_oa_speed_ms_(?P<idx>\d+)$"), "OA{idx}__part3"),
+    (re.compile(r"^supp_wind_oa_speed_quality_code_(?P<idx>\d+)$"), "OA{idx}__part4"),
     (re.compile(r"^supp_wind_type_code_(?P<idx>\d+)$"), "OD{idx}__part1"),
     (re.compile(r"^supp_wind_period_hours_(?P<idx>\d+)$"), "OD{idx}__part2"),
     (re.compile(r"^supp_wind_direction_deg_(?P<idx>\d+)$"), "OD{idx}__part3"),
