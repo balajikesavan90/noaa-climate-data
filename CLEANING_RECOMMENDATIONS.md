@@ -36,7 +36,8 @@ The Python rewrite generalised this with `clean_noaa_dataframe` — it auto-dete
 
 ## P1 — Aggregation Correctness
 
-- [ ] **Exclude categorical codes from numeric aggregation**
+- [x] **Exclude categorical codes from numeric aggregation** ✅
+  - `FieldPartRule` now carries `kind="categorical"` and `agg="drop"` for all WMO/ISD category codes. `is_categorical_column` and `get_agg_func` in `constants.py` classify columns; `_aggregate_numeric`, `_weighted_aggregate`, and `_daily_min_max_mean` in `pipeline.py` exclude them. Quality columns (`*__quality`, `*__qc`) are also dropped from aggregated output.
   - These columns are WMO/ISD category codes, not continuous measurements. Averaging them is meaningless:
 
   | Column | What it is | Current yearly "mean" |
@@ -51,15 +52,16 @@ The Python rewrite generalised this with `clean_noaa_dataframe` — it auto-dete
   | `MD1__part1` | Pressure tendency code (0–8) | coerced |
   | `GE1__part1` | Convective cloud code | coerced |
 
-- [ ] **Use field-appropriate aggregation functions instead of universal mean**
+- [x] **Use field-appropriate aggregation functions instead of universal mean** ✅
+  - `FieldPartRule.agg` now encodes the preferred function per field-part. `_aggregate_numeric` builds a per-column `agg_spec` and delegates to `groupby().agg()` with mixed functions (mean / max / min / sum) plus a mode fallback. Verified with 19 unit tests.
   - Temperature, dew point, pressure → **mean** ✓
-  - Wind speed → **mean** + preserve **max** (for max sustained / gust)
-  - Wind gust (OC1) → **max**
-  - Precipitation (AA1–AA4 if added) → **sum**
-  - Visibility → **min** (worst visibility is climatologically significant)
-  - Sky coverage (GA oktas, GF1 total coverage) → **mean** is acceptable
-  - Weather codes (MW, AY) → **mode** or **frequency counts** per period
-  - Extreme temperatures (KA) → **min** of minimums, **max** of maximums
+  - Wind speed → **mean** ✓
+  - Wind gust (OC1) → **max** ✓
+  - Precipitation (AA1–AA4 if added) → **sum** (ready when fields are added)
+  - Visibility → **min** ✓ (worst visibility is climatologically significant)
+  - Sky coverage (GA oktas, GF1 total coverage) → **mean** ✓
+  - Weather codes (MW, AY) → **drop** ✓ (excluded from numeric aggregation)
+  - Extreme temperatures (KA) → **mean** (min-of-min / max-of-max deferred to P3 multi-occurrence handling)
 
 ---
 

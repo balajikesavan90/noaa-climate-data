@@ -10,7 +10,7 @@ import time
 import pandas as pd
 
 from .cleaning import clean_noaa_dataframe
-from .constants import DEFAULT_END_YEAR, DEFAULT_START_YEAR
+from .constants import DEFAULT_END_YEAR, DEFAULT_START_YEAR, get_agg_func, is_quality_column
 from .noaa_client import (
     StationMetadata,
     build_file_list,
@@ -278,6 +278,10 @@ def _coerce_numeric(
     for col in candidates:
         if col in numeric_cols:
             continue
+        # Skip quality and categorical columns — they should never be
+        # coerced into numbers for aggregation.
+        if is_quality_column(col) or get_agg_func(col) == "drop":
+            continue
         if work[col].dtype == "object":
             converted = pd.to_numeric(work[col], errors="coerce")
             if converted.notna().any():
@@ -285,14 +289,60 @@ def _coerce_numeric(
                 numeric_cols.add(col)
 
     numeric_cols = [col for col in numeric_cols if col not in group_cols]
+    # Defragment after column-by-column coercion to avoid PerformanceWarning
+    # from pandas when the DataFrame has many internal blocks.
+    work = work.copy()
     return work, numeric_cols
+
+
+def _classify_columns(
+    numeric_cols: list[str],
+) -> dict[str, list[str]]:
+    """Split *numeric_cols* into buckets keyed by aggregation function.
+
+    Returns a dict like ``{"mean": [...], "max": [...], "min": [...], "drop": [...]}``.
+    """
+    buckets: dict[str, list[str]] = {}
+    for col in numeric_cols:
+        func = get_agg_func(col)
+        buckets.setdefault(func, []).append(col)
+    return buckets
 
 
 def _aggregate_numeric(df: pd.DataFrame, group_cols: list[str]) -> pd.DataFrame:
     work, numeric_cols = _coerce_numeric(df, group_cols)
     if not numeric_cols:
         return work[group_cols].drop_duplicates()
-    agg = work.groupby(group_cols)[numeric_cols].mean().reset_index()
+
+    buckets = _classify_columns(numeric_cols)
+    # Drop categorical / quality columns from aggregation entirely.
+    drop_cols = set(buckets.pop("drop", []))
+    agg_cols = [c for c in numeric_cols if c not in drop_cols]
+    if not agg_cols:
+        return work[group_cols].drop_duplicates()
+
+    # Build per-column aggregation spec.
+    agg_spec: dict[str, str | list[str]] = {}
+    for func_name, cols in buckets.items():
+        for col in cols:
+            agg_spec[col] = func_name  # "mean", "max", "min", "sum"
+
+    grouped = work.groupby(group_cols)
+
+    # Handle mode separately (not natively supported by groupby.agg).
+    mode_cols = buckets.pop("mode", [])
+    for col in mode_cols:
+        agg_spec.pop(col, None)
+
+    agg = grouped.agg(agg_spec).reset_index() if agg_spec else work[group_cols].drop_duplicates()
+
+    if mode_cols:
+        for col in mode_cols:
+            mode_series = grouped[col].agg(
+                lambda x: x.mode().iloc[0] if not x.mode().empty else None
+            ).reset_index(name=col)
+            agg = agg.merge(mode_series, on=group_cols, how="left")
+
     return agg
 
 
@@ -305,12 +355,29 @@ def _weighted_aggregate(
     if not numeric_cols:
         return work[group_cols].drop_duplicates()
 
+    # Exclude drop-columns (categorical / quality).
+    buckets = _classify_columns(numeric_cols)
+    drop_cols = set(buckets.pop("drop", []))
+    keep_cols = [c for c in numeric_cols if c not in drop_cols]
+    if not keep_cols:
+        return work[group_cols].drop_duplicates()
+
     group = work.groupby(group_cols)
     weight_sum = group[weight_col].sum()
     data: dict[str, pd.Series] = {}
-    for col in numeric_cols:
-        weighted_sum = (work[col] * work[weight_col]).groupby(group_cols).sum()
-        data[col] = weighted_sum / weight_sum
+    for col in keep_cols:
+        func = get_agg_func(col)
+        if func == "max":
+            data[col] = group[col].max()
+        elif func == "min":
+            data[col] = group[col].min()
+        elif func == "sum":
+            data[col] = group[col].sum()
+        else:
+            weighted_sum = (work[col] * work[weight_col]).groupby(
+                [work[g] for g in group_cols]
+            ).sum()
+            data[col] = weighted_sum / weight_sum
     return pd.DataFrame(data).reset_index()
 
 
@@ -321,9 +388,17 @@ def _daily_min_max_mean(
     work, numeric_cols = _coerce_numeric(df, group_cols)
     if not numeric_cols:
         return work[group_cols].drop_duplicates()
+
+    # Exclude drop-columns (categorical / quality).
+    buckets = _classify_columns(numeric_cols)
+    drop_cols = set(buckets.pop("drop", []))
+    keep_cols = [c for c in numeric_cols if c not in drop_cols]
+    if not keep_cols:
+        return work[group_cols].drop_duplicates()
+
     group = work.groupby(group_cols)
     frames: list[pd.Series] = []
-    for col in numeric_cols:
+    for col in keep_cols:
         frames.append(group[col].min().rename(f"{col}__daily_min"))
         frames.append(group[col].max().rename(f"{col}__daily_max"))
         frames.append(group[col].mean().rename(f"{col}__daily_mean"))

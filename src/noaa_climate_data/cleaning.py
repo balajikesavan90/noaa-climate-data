@@ -27,7 +27,8 @@ def _is_missing_numeric(value: str) -> bool:
 
 
 def _normalize_missing(value: str) -> str:
-    return value.replace(".", "").replace("-", "").replace("+", "")
+    stripped = value.replace(".", "").replace("-", "").replace("+", "")
+    return stripped.lstrip("0") or "0"
 
 
 def _is_missing_value(value: str, rule: FieldPartRule | None) -> bool:
@@ -96,8 +97,13 @@ def _expand_parsed(
         if invalid_quality and idx == 1 and part_quality is None:
             payload[key] = None
             continue
+        # Check field-specific sentinels first — raw parts like "009999"
+        # may parse numerically but still be declared missing.
+        if _is_missing_value(part, part_rule):
+            payload[key] = None
+            continue
         if value is None:
-            payload[key] = None if _is_missing_value(part, part_rule) else part
+            payload[key] = part
             continue
         scale = part_rule.scale if part_rule else None
         payload[key] = value * scale if scale is not None else value
