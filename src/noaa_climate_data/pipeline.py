@@ -93,11 +93,16 @@ def build_location_ids(
     full_coverage = year_counts
     rows: list[dict[str, object]] = []
     processed: set[str] = set()
+    total = len(full_coverage)
     if resume and output_csv.exists():
         existing = pd.read_csv(output_csv)
         if not existing.empty:
             rows = existing.to_dict(orient="records")
             processed = set(existing["FileName"].dropna().astype(str))
+            print(
+                f"Resuming Stations.csv: {len(rows)} rows already written; "
+                f"{len(processed)} stations will be skipped."
+            )
     metadata_years = list(metadata_years)
     if not metadata_years:
         raise ValueError("metadata_years must contain at least one year")
@@ -107,6 +112,10 @@ def build_location_ids(
         raise ValueError("start_index must be >= 0")
 
     new_count = 0
+    print(
+        f"Starting metadata fetch for {total} stations "
+        f"(start_index={start_index}, max_locations={max_locations})."
+    )
     for idx, file_name in enumerate(full_coverage["FileName"], start=1):
         if idx <= start_index:
             continue
@@ -160,10 +169,18 @@ def build_location_ids(
             target_dir = checkpoint_dir or output_csv.parent
             checkpoint_path = target_dir / f"{output_csv.stem}_checkpoint_{len(rows):05d}.csv"
             frame.to_csv(checkpoint_path, index=False)
+            print(
+                f"Progress: {len(rows)}/{total} rows saved "
+                f"(new this run: {new_count})."
+            )
         if sleep_seconds > 0:
             time.sleep(sleep_seconds)
     frame = pd.DataFrame(rows)
     frame.to_csv(output_csv, index=False)
+    print(
+        f"Finished metadata fetch. Total rows: {len(rows)} "
+        f"(new this run: {new_count})."
+    )
     return frame
 
 
