@@ -239,15 +239,20 @@ def main() -> None:
     if args.command == "location-ids":
         run_dir = _latest_index_dir()
         year_counts = run_dir / "DataFileList_YEARCOUNT.csv"
+        file_list_path = run_dir / "DataFileList.csv"
         if year_counts.exists():
             counts = pd.read_csv(year_counts)
         else:
             raise FileNotFoundError(f"Missing {year_counts}")
+        file_list = pd.read_csv(file_list_path) if file_list_path.exists() else None
         metadata_years = range(args.start_year, args.end_year + 1)
         build_location_ids(
             counts,
             run_dir / "Stations.csv",
             metadata_years=metadata_years,
+            file_list=file_list,
+            start_year=args.start_year,
+            end_year=args.end_year,
             resume=args.resume,
             start_index=args.start_index,
             max_locations=args.max_locations,

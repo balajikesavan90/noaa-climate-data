@@ -79,6 +79,9 @@ def build_location_ids(
     year_counts: pd.DataFrame,
     output_csv: Path,
     metadata_years: Iterable[int],
+    file_list: pd.DataFrame | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None,
     include_legacy_id: bool = True,
     resume: bool = True,
     start_index: int = 0,
@@ -94,6 +97,7 @@ def build_location_ids(
     rows: list[dict[str, object]] = []
     processed: set[str] = set()
     total = len(full_coverage)
+    year_summary: dict[str, tuple[int | None, int | None, int | None]] = {}
     if resume and output_csv.exists():
         existing = pd.read_csv(output_csv)
         if not existing.empty:
@@ -110,6 +114,23 @@ def build_location_ids(
         raise ValueError("checkpoint_every must be positive")
     if start_index < 0:
         raise ValueError("start_index must be >= 0")
+    if file_list is not None:
+        work = file_list.copy()
+        if "YEAR" in work.columns:
+            work["YEAR"] = pd.to_numeric(work["YEAR"], errors="coerce")
+        if start_year is not None:
+            work = work[work["YEAR"] >= start_year]
+        if end_year is not None:
+            work = work[work["YEAR"] <= end_year]
+        grouped = work.groupby("FileName")["YEAR"].agg(["min", "max", "count"]).reset_index()
+        year_summary = {
+            row["FileName"]: (
+                int(row["min"]) if pd.notna(row["min"]) else None,
+                int(row["max"]) if pd.notna(row["max"]) else None,
+                int(row["count"]) if pd.notna(row["count"]) else None,
+            )
+            for _, row in grouped.iterrows()
+        }
 
     new_count = 0
     print(
@@ -143,6 +164,7 @@ def build_location_ids(
                 metadata.name,
             )
         )
+        first_year, last_year, year_count = year_summary.get(file_name, (None, None, None))
         row: dict[str, object] = {
             "ID": station_id,
             "FileName": metadata.file_name,
@@ -153,6 +175,9 @@ def build_location_ids(
             "No_Of_Years": int(
                 year_counts.loc[year_counts["FileName"] == file_name, "No_Of_Years"].iloc[0]
             ),
+            "FIRST_YEAR": first_year,
+            "LAST_YEAR": last_year,
+            "YEAR_COUNT": year_count,
             "METADATA_YEAR": metadata_year,
             "METADATA_COMPLETE": metadata_complete,
         }
