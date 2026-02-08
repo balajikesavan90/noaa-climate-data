@@ -213,6 +213,29 @@ the declarative `FIELD_RULES` registry in
   - `<column>__quality` if a 1-character quality flag exists
 - The original raw column is preserved by default (`keep_raw=True`).
 
+#### 2b.1 Human-readable column names
+
+Expanded columns are renamed using the friendly map in
+[src/noaa_climate_data/constants.py](src/noaa_climate_data/constants.py). Key examples:
+
+| Raw column | Friendly name |
+|------------|---------------|
+| `WND__part1` | `wind_direction_deg` |
+| `WND__part4` | `wind_speed_ms` |
+| `CIG__part1` | `ceiling_height_m` |
+| `VIS__part1` | `visibility_m` |
+| `TMP__value` | `temperature_c` |
+| `DEW__value` | `dew_point_c` |
+| `OC1__value` | `wind_gust_ms` |
+| `MA1__part1` | `altimeter_setting_hpa` |
+| `UA1__part1` | `wave_method_code` |
+| `UA1__part2` | `wave_period_seconds` |
+| `UA1__part3` | `wave_height_m` |
+| `UA1__part5` | `sea_state_code` |
+| `UG1__part1` | `swell_period_seconds` |
+| `UG1__part2` | `swell_height_m` |
+| `UG1__part3` | `swell_direction_deg` |
+
 #### 2c. Missing-value sentinel detection
 
 Each field declares its own sentinel values in `FIELD_RULES`. The pipeline:
@@ -235,8 +258,11 @@ Each field declares its own sentinel values in `FIELD_RULES`. The pipeline:
 | KA\* period/temperature | `999`, `9999` | Missing extreme temp |
 | MD1 Δp | `999`, `+999` | Missing pressure change |
 | SA1 SST | `999` | Missing sea-surface temperature |
+| UA1 wave period | `99` | Missing wave period (seconds) |
 | UA1 wave height | `999` | Missing wave height |
+| UG1 swell period | `99` | Missing swell period (seconds) |
 | UG1 swell height | `999` | Missing swell height |
+| UG1 swell direction | `999` | Missing swell direction |
 
 Fields without a declared rule fall back to generic all-9s detection.
 
@@ -337,8 +363,12 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 | AY\* | 4 | 1=condition, 3=period | —, 1 | —, 99 | 2, 4 | drop | categorical |
 | GE1 | 2 | 1=convective cloud code | — | — | — | drop | categorical |
 | SA1 | 2 | 1=SST | 0.1 | 999 | 2 | mean | numeric |
-| UA1 | 6 | 2=period, 3=wave ht | 1, 0.1 | 99, 999 | 4 | mean | numeric |
-| UG1 | 4 | 1=period, 2=swell ht | 1, 0.1 | 99, 999 | 4 | mean | numeric |
+| UA1 | 6 | 1=method, 2=period (sec), 3=wave ht, 5=sea state | 1, 0.1 | 99, 999 | 4, 6 | mean/drop | mixed |
+| UG1 | 4 | 1=period (sec), 2=swell ht, 3=direction | 1, 0.1, 1 | 99, 999, 999 | 4 | mean/circular_mean | mixed |
+
+Notes:
+- UA1 method code and sea state are categorical and are excluded from aggregation; sea state quality is part6.
+- UG1 swell direction uses a circular mean during aggregation when present; direction quality is part4.
 
 ---
 

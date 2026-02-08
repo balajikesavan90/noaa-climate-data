@@ -82,8 +82,9 @@ FIELD_RULES: dict[str, FieldRule] = {
         code="VIS",
         parts={
             1: FieldPartRule(missing_values={"999999"}, quality_part=2, agg="min"),
+            2: FieldPartRule(kind="quality", agg="drop"),  # distance quality
             3: FieldPartRule(quality_part=4, kind="categorical", agg="drop"),
-            4: FieldPartRule(kind="quality", agg="drop"),  # distance quality
+            4: FieldPartRule(kind="quality", agg="drop"),  # variability quality
         },
     ),
     "TMP": FieldRule(
@@ -128,14 +129,20 @@ FIELD_RULES: dict[str, FieldRule] = {
     "UA1": FieldRule(
         code="UA1",
         parts={
+            1: FieldPartRule(kind="categorical", agg="drop"),  # method code
+            2: FieldPartRule(missing_values={"99"}),  # wave period (seconds)
             3: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
             4: FieldPartRule(kind="quality", agg="drop"),  # wave height quality
+            5: FieldPartRule(kind="categorical", agg="drop"),  # sea state code
+            6: FieldPartRule(kind="quality", agg="drop"),  # sea state quality
         },
     ),
     "UG1": FieldRule(
         code="UG1",
         parts={
+            1: FieldPartRule(missing_values={"99"}),  # primary swell period (seconds)
             2: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
+            3: FieldPartRule(missing_values={"999"}, agg="circular_mean"),
             4: FieldPartRule(kind="quality", agg="drop"),  # swell height quality
         },
     ),
@@ -288,11 +295,15 @@ FRIENDLY_COLUMN_MAP: dict[str, str] = {
     "MD1__part6": "pressure_change_24hr_quality_code",
     "SA1__value": "sea_surface_temperature_c",
     "SA1__quality": "sea_surface_temperature_quality_code",
-    "UA1__part2": "wave_period_hours",
+    "UA1__part1": "wave_method_code",
+    "UA1__part2": "wave_period_seconds",
     "UA1__part3": "wave_height_m",
     "UA1__part4": "wave_height_quality_code",
-    "UG1__part1": "swell_period_hours",
+    "UA1__part5": "sea_state_code",
+    "UA1__part6": "sea_state_quality_code",
+    "UG1__part1": "swell_period_seconds",
     "UG1__part2": "swell_height_m",
+    "UG1__part3": "swell_direction_deg",
     "UG1__part4": "swell_height_quality_code",
     "GE1__part1": "convective_cloud_code",
     "GF1__part1": "cloud_total_coverage",
