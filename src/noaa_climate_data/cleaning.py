@@ -57,6 +57,26 @@ def _quality_for_part(prefix: str, part_index: int, parts: list[str]) -> str | N
     return parts[quality_index - 1]
 
 
+def _allowed_quality_set(prefix: str, quality_part_index: int) -> set[str]:
+    rule = get_field_rule(prefix)
+    if rule is None:
+        return QUALITY_FLAGS
+    quality_rule = rule.parts.get(quality_part_index)
+    if quality_rule and quality_rule.allowed_quality:
+        return quality_rule.allowed_quality
+    return QUALITY_FLAGS
+
+
+def _allowed_quality_for_value(prefix: str, part_index: int) -> set[str]:
+    rule = get_field_rule(prefix)
+    if rule is None:
+        return QUALITY_FLAGS
+    part_rule = rule.parts.get(part_index)
+    if part_rule is None or part_rule.quality_part is None:
+        return QUALITY_FLAGS
+    return _allowed_quality_set(prefix, part_rule.quality_part)
+
+
 def _single_quality_part(prefix: str) -> int | None:
     rule = get_field_rule(prefix)
     if not rule:
@@ -117,10 +137,13 @@ def _expand_parsed(
             quality_value = parsed.parts[quality_part_index - 1].strip()
             if quality_value == "":
                 quality_value = None
+    allowed_quality = QUALITY_FLAGS
+    if allow_quality and quality_part_index is not None:
+        allowed_quality = _allowed_quality_set(prefix, quality_part_index)
     invalid_quality = (
         allow_quality
         and quality_value is not None
-        and quality_value not in QUALITY_FLAGS
+        and quality_value not in allowed_quality
     )
     for idx, (part, value) in enumerate(zip(parsed.parts, parsed.values), start=1):
         entry = get_field_registry_entry(prefix, idx, suffix="part")
@@ -130,7 +153,8 @@ def _expand_parsed(
             payload[key] = None
             continue
         part_quality = _quality_for_part(prefix, idx, parsed.parts) if allow_quality else None
-        if part_quality is not None and part_quality not in QUALITY_FLAGS:
+        allowed_for_part = _allowed_quality_for_value(prefix, idx)
+        if part_quality is not None and part_quality not in allowed_for_part:
             payload[key] = None
             continue
         if invalid_quality and idx == 1 and part_quality is None:

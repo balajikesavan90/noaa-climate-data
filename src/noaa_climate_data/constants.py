@@ -35,6 +35,7 @@ class FieldPartRule:
     scale: float | None = None
     missing_values: set[str] | None = None
     quality_part: int | None = None
+    allowed_quality: set[str] | None = None
     kind: str = "numeric"
     agg: str = "mean"  # mean | max | min | mode | sum | drop | circular_mean
 
@@ -133,9 +134,17 @@ FIELD_RULES: dict[str, FieldRule] = {
             1: FieldPartRule(kind="categorical", agg="drop", quality_part=4),  # method code
             2: FieldPartRule(missing_values={"99"}, quality_part=4),  # wave period (seconds)
             3: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
-            4: FieldPartRule(kind="quality", agg="drop"),  # wave height quality
+            4: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),  # wave height quality
             5: FieldPartRule(kind="categorical", agg="drop", quality_part=4),  # sea state code
-            6: FieldPartRule(kind="quality", agg="drop"),  # sea state quality
+            6: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),  # sea state quality
         },
     ),
     "UG1": FieldRule(
@@ -144,7 +153,11 @@ FIELD_RULES: dict[str, FieldRule] = {
             1: FieldPartRule(missing_values={"99"}, quality_part=4),  # primary swell period (seconds)
             2: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
             3: FieldPartRule(missing_values={"999"}, agg="circular_mean", quality_part=4),
-            4: FieldPartRule(kind="quality", agg="drop"),  # swell height quality
+            4: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),  # swell height quality
         },
     ),
     "GE1": FieldRule(

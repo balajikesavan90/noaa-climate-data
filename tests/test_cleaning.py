@@ -270,8 +270,21 @@ class TestQualityNullsCorrectPart:
         assert result["UA1__part3"] is None
         assert result["UA1__part5"] is None
 
+    def test_ua1_quality_code_outside_marine_domain(self):
+        result = clean_value_quality("M,10,050,4,04,1", "UA1")
+        assert result["UA1__part1"] is None
+        assert result["UA1__part2"] is None
+        assert result["UA1__part3"] is None
+        assert result["UA1__part5"] is None
+
     def test_ug1_bad_swell_quality_nulls_swell_parts(self):
         result = clean_value_quality("10,050,180,8", "UG1")
+        assert result["UG1__part1"] is None
+        assert result["UG1__part2"] is None
+        assert result["UG1__part3"] is None
+
+    def test_ug1_quality_code_outside_marine_domain(self):
+        result = clean_value_quality("10,050,180,4", "UG1")
         assert result["UG1__part1"] is None
         assert result["UG1__part2"] is None
         assert result["UG1__part3"] is None

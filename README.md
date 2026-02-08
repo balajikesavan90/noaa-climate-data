@@ -369,6 +369,7 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 Notes:
 - UA1 method code and sea state are categorical and are excluded from aggregation; wave measurement quality (part4) gates parts 1-3 and 5; sea state quality is part6.
 - UG1 swell direction uses a circular mean during aggregation when present; primary swell quality (part4) gates parts 1-3.
+- UA1/UG1 quality codes are restricted to {0, 1, 2, 3, 9} per ISD marine specs.
 
 ---
 
