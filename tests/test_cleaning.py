@@ -257,6 +257,25 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("+0250,1", "TMP")
         assert result["TMP__value"] == pytest.approx(25.0)
 
+    def test_md1_bad_tendency_quality_nulls_tendency_only(self):
+        result = clean_value_quality("5,8,045,1,0123,1", "MD1")
+        assert result["MD1__part1"] is None
+        assert result["MD1__part3"] == pytest.approx(4.5)
+        assert result["MD1__part5"] == pytest.approx(12.3)
+
+    def test_ua1_bad_wave_quality_nulls_wave_parts(self):
+        result = clean_value_quality("M,10,050,8,04,1", "UA1")
+        assert result["UA1__part1"] is None
+        assert result["UA1__part2"] is None
+        assert result["UA1__part3"] is None
+        assert result["UA1__part5"] is None
+
+    def test_ug1_bad_swell_quality_nulls_swell_parts(self):
+        result = clean_value_quality("10,050,180,8", "UG1")
+        assert result["UG1__part1"] is None
+        assert result["UG1__part2"] is None
+        assert result["UG1__part3"] is None
+
     def test_quality_in_dataframe(self):
         df = pd.DataFrame(
             {

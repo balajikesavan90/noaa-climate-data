@@ -321,7 +321,7 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 | **circular_mean** | WND direction | Wrap-aware mean for angular degrees |
 | **max** | OC1 (wind gust) | Peak gust is the meaningful aggregate |
 | **min** | VIS (visibility) | Worst visibility is climatologically significant |
-| **drop** | WND type code, CIG determination/CAVOK, VIS variability, MW\* weather codes, AY\* condition codes, MD1 tendency code, GE1 cloud code, all `*__quality` columns | Categorical codes and quality flags are observation-level metadata |
+| **drop** | WND type code, CIG determination/CAVOK, VIS variability, MW\* weather codes, AY\* condition codes, MD1 tendency code, GE1 categorical codes, all `*__quality` columns | Categorical codes and quality flags are observation-level metadata |
 
 #### 3c. Aggregation strategies
 
@@ -355,20 +355,20 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 | OC1 | 2 | 1=gust speed | 0.1 | 9999 | 2 | max | numeric |
 | MA1 | 4 | 1=altimeter, 3=stn press | 0.1, 0.1 | 99999, 99999 | 2, 4 | mean | numeric |
 | KA\* | 4 | 1=period, 3=temperature | 0.1, 0.1 | 999, 9999 | 4 | mean | numeric |
-| MD1 | 6 | 1=tendency, 3=3hr Δp, 5=24hr Δp | —, 0.1, 0.1 | —, 999, +999 | 4, 6 | drop/mean | mixed |
+| MD1 | 6 | 1=tendency, 3=3hr Δp, 5=24hr Δp | —, 0.1, 0.1 | —, 999, +999 | 2, 4, 6 | drop/mean | mixed |
 | OD\* | 5 | 3=direction, 4=speed | 1, 0.1 | 999, 9999 | 5 | mean | numeric |
 | GA\* | 6 | 1=coverage, 3=base height | 1, 1 | 99, 99999 | 2, 4, 6 | mean | mixed |
 | GF1 | 13 | 1=total cov, 8=base ht | 1, 1 | 99, 99999 | 3, 5, 7, 9, 11, 13 | mean | mixed |
 | MW\* | 2 | 1=weather code | — | — | 2 | drop | categorical |
 | AY\* | 4 | 1=condition, 3=period | —, 1 | —, 99 | 2, 4 | drop | categorical |
-| GE1 | 2 | 1=convective cloud code | — | — | — | drop | categorical |
+| GE1 | 4 | 1=convective cloud code, 3-4=base height range | 1 | 99999 | — | drop/mean | mixed |
 | SA1 | 2 | 1=SST | 0.1 | 999 | 2 | mean | numeric |
 | UA1 | 6 | 1=method, 2=period (sec), 3=wave ht, 5=sea state | 1, 0.1 | 99, 999 | 4, 6 | mean/drop | mixed |
 | UG1 | 4 | 1=period (sec), 2=swell ht, 3=direction | 1, 0.1, 1 | 99, 999, 999 | 4 | mean/circular_mean | mixed |
 
 Notes:
-- UA1 method code and sea state are categorical and are excluded from aggregation; sea state quality is part6.
-- UG1 swell direction uses a circular mean during aggregation when present; direction quality is part4.
+- UA1 method code and sea state are categorical and are excluded from aggregation; wave measurement quality (part4) gates parts 1-3 and 5; sea state quality is part6.
+- UG1 swell direction uses a circular mean during aggregation when present; primary swell quality (part4) gates parts 1-3.
 
 ---
 
@@ -379,6 +379,6 @@ completed and planned improvements, including:
 
 - **P0 ✅** — Sentinel removal, scale factors, per-value quality-flag mapping
 - **P1 ✅** — Categorical exclusion from aggregation, field-appropriate agg functions
-- **P2** — Human-readable column names, unit-conversion options
-- **P3** — Precipitation fields, derived quantities (RH, wind chill, heat index),
-  multi-occurrence field handling
+- **P2 ✅** — Human-readable column names, unit-conversion options
+- **P3 (in progress)** — Precipitation groups AA/AJ/AU implemented; derived quantities (RH, wind chill, heat index)
+  and additional precipitation groups pending

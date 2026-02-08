@@ -62,7 +62,9 @@ class TestIsCategoricalColumn:
         assert is_categorical_column("VIS__part3")
         assert is_categorical_column("VIS__part4")
         assert is_categorical_column("MD1__part1")
+        assert is_categorical_column("MD1__part2")
         assert is_categorical_column("GE1__part1")
+        assert is_categorical_column("GE1__part2")
 
     def test_numeric_columns_not_categorical(self):
         assert not is_categorical_column("temperature_c")
@@ -93,7 +95,9 @@ class TestGetAggFunc:
         assert get_agg_func("VIS__part3") == "drop"
         assert get_agg_func("VIS__part4") == "drop"
         assert get_agg_func("MD1__part1") == "drop"
+        assert get_agg_func("MD1__part2") == "drop"
         assert get_agg_func("GE1__part1") == "drop"
+        assert get_agg_func("GE1__part2") == "drop"
 
     def test_mean_columns(self):
         assert get_agg_func("temperature_c") == "mean"
@@ -102,6 +106,8 @@ class TestGetAggFunc:
         assert get_agg_func("wind_speed_ms") == "mean"
         assert get_agg_func("altimeter_setting_hpa") == "mean"
         assert get_agg_func("station_pressure_hpa") == "mean"
+        assert get_agg_func("GE1__part3") == "mean"
+        assert get_agg_func("GE1__part4") == "mean"
 
     def test_circular_mean_columns(self):
         assert get_agg_func("wind_direction_deg") == "circular_mean"

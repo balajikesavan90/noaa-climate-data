@@ -115,7 +115,8 @@ FIELD_RULES: dict[str, FieldRule] = {
     "MD1": FieldRule(
         code="MD1",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop"),  # pressure tendency code
+            1: FieldPartRule(kind="categorical", agg="drop", quality_part=2),  # pressure tendency code
+            2: FieldPartRule(kind="quality", agg="drop"),  # tendency quality
             3: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
             4: FieldPartRule(kind="quality", agg="drop"),  # 3-hr pressure quality
             5: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=6),
@@ -129,26 +130,31 @@ FIELD_RULES: dict[str, FieldRule] = {
     "UA1": FieldRule(
         code="UA1",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop"),  # method code
-            2: FieldPartRule(missing_values={"99"}),  # wave period (seconds)
+            1: FieldPartRule(kind="categorical", agg="drop", quality_part=4),  # method code
+            2: FieldPartRule(missing_values={"99"}, quality_part=4),  # wave period (seconds)
             3: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
             4: FieldPartRule(kind="quality", agg="drop"),  # wave height quality
-            5: FieldPartRule(kind="categorical", agg="drop"),  # sea state code
+            5: FieldPartRule(kind="categorical", agg="drop", quality_part=4),  # sea state code
             6: FieldPartRule(kind="quality", agg="drop"),  # sea state quality
         },
     ),
     "UG1": FieldRule(
         code="UG1",
         parts={
-            1: FieldPartRule(missing_values={"99"}),  # primary swell period (seconds)
+            1: FieldPartRule(missing_values={"99"}, quality_part=4),  # primary swell period (seconds)
             2: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
-            3: FieldPartRule(missing_values={"999"}, agg="circular_mean"),
+            3: FieldPartRule(missing_values={"999"}, agg="circular_mean", quality_part=4),
             4: FieldPartRule(kind="quality", agg="drop"),  # swell height quality
         },
     ),
     "GE1": FieldRule(
         code="GE1",
-        parts={1: FieldPartRule(kind="categorical", agg="drop")},  # convective cloud code
+        parts={
+            1: FieldPartRule(kind="categorical", agg="drop"),  # convective cloud code
+            2: FieldPartRule(kind="categorical", agg="drop"),  # vertical datum
+            3: FieldPartRule(missing_values={"99999"}),  # base height upper range
+            4: FieldPartRule(missing_values={"99999"}),  # base height lower range
+        },
     ),
     "GF1": FieldRule(
         code="GF1",
@@ -289,6 +295,7 @@ FRIENDLY_COLUMN_MAP: dict[str, str] = {
     "MA1__part3": "station_pressure_hpa",
     "MA1__part4": "station_pressure_quality_code",
     "MD1__part1": "pressure_tendency_code",
+    "MD1__part2": "pressure_tendency_quality_code",
     "MD1__part3": "pressure_change_3hr_hpa",
     "MD1__part4": "pressure_change_3hr_quality_code",
     "MD1__part5": "pressure_change_24hr_hpa",
@@ -306,6 +313,9 @@ FRIENDLY_COLUMN_MAP: dict[str, str] = {
     "UG1__part3": "swell_direction_deg",
     "UG1__part4": "swell_height_quality_code",
     "GE1__part1": "convective_cloud_code",
+    "GE1__part2": "cloud_vertical_datum_code",
+    "GE1__part3": "cloud_base_height_upper_m",
+    "GE1__part4": "cloud_base_height_lower_m",
     "GF1__part1": "cloud_total_coverage",
     "GF1__part2": "cloud_opaque_coverage",
     "GF1__part3": "cloud_total_coverage_quality_code",
