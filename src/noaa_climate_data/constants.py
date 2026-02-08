@@ -17,6 +17,25 @@ QUALITY_FLAGS = {
     "6",
     "7",
     "9",
+    "A",
+    "C",
+    "I",
+    "M",
+    "P",
+    "R",
+    "U",
+}
+
+CLOUD_QUALITY_FLAGS = {
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "9",
     "M",
 }
 
@@ -59,7 +78,7 @@ FIELD_RULES: dict[str, FieldRule] = {
         parts={
             1: FieldPartRule(missing_values={"999"}, quality_part=2, agg="circular_mean"),
             2: FieldPartRule(kind="quality", agg="drop"),  # direction quality
-            3: FieldPartRule(kind="categorical", agg="drop"),  # wind type code
+            3: FieldPartRule(kind="categorical", agg="drop", missing_values={"9"}),  # wind type code
             4: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=5),
             5: FieldPartRule(kind="quality", agg="drop"),  # speed quality
         },
@@ -69,8 +88,8 @@ FIELD_RULES: dict[str, FieldRule] = {
         parts={
             1: FieldPartRule(missing_values={"99999"}, quality_part=2),
             2: FieldPartRule(kind="quality", agg="drop"),  # height quality
-            3: FieldPartRule(kind="categorical", agg="drop"),  # determination code
-            4: FieldPartRule(kind="categorical", agg="drop"),  # CAVOK code
+            3: FieldPartRule(kind="categorical", agg="drop", missing_values={"9"}),  # determination code
+            4: FieldPartRule(kind="categorical", agg="drop", missing_values={"9"}),  # CAVOK code
         },
     ),
     "VIS": FieldRule(
@@ -78,7 +97,7 @@ FIELD_RULES: dict[str, FieldRule] = {
         parts={
             1: FieldPartRule(missing_values={"999999"}, quality_part=2, agg="min"),
             2: FieldPartRule(kind="quality", agg="drop"),  # distance quality
-            3: FieldPartRule(quality_part=4, kind="categorical", agg="drop"),
+            3: FieldPartRule(quality_part=4, kind="categorical", agg="drop", missing_values={"9"}),
             4: FieldPartRule(kind="quality", agg="drop"),  # variability quality
         },
     ),
@@ -194,7 +213,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
         parts={
             1: FieldPartRule(missing_values={"99"}, agg="drop"),  # period hours
             2: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=4, agg="sum"),
-            3: FieldPartRule(kind="categorical", agg="drop"),  # condition code
+            3: FieldPartRule(kind="categorical", agg="drop", missing_values={"9"}),  # condition code
             4: FieldPartRule(kind="quality", agg="drop"),  # quality code
         },
     ),
@@ -225,11 +244,23 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
         code="GA*",
         parts={
             1: FieldPartRule(missing_values={"99"}, quality_part=2, agg="mean"),
-            2: FieldPartRule(kind="quality", agg="drop"),  # coverage quality
+            2: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality=CLOUD_QUALITY_FLAGS,
+            ),  # coverage quality
             3: FieldPartRule(missing_values={"99999"}, quality_part=4),
-            4: FieldPartRule(kind="quality", agg="drop"),  # base height quality
+            4: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality=CLOUD_QUALITY_FLAGS,
+            ),  # base height quality
             5: FieldPartRule(kind="categorical", agg="drop", quality_part=6),  # cloud type
-            6: FieldPartRule(kind="quality", agg="drop"),  # cloud type quality
+            6: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality=CLOUD_QUALITY_FLAGS,
+            ),  # cloud type quality
         },
     ),
     "KA": FieldRule(
@@ -261,14 +292,34 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
             2: FieldPartRule(missing_values={"99"}, kind="categorical", agg="drop"),
             3: FieldPartRule(missing_values={"999"}, agg="circular_mean"),
             4: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=5),
-            5: FieldPartRule(missing_values={"9"}, kind="quality", agg="drop"),
+            5: FieldPartRule(
+                missing_values={"9"},
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+        },
+    ),
+    "MV": FieldRule(
+        code="MV*",
+        parts={
+            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
+            2: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"4", "5", "6", "7", "9"},
+            ),
         },
     ),
     "MW": FieldRule(
         code="MW*",
         parts={
             1: FieldPartRule(kind="categorical", agg="drop"),  # present-weather code
-            2: FieldPartRule(kind="quality", agg="drop"),  # present-weather quality
+            2: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "9", "M"},
+            ),  # present-weather quality
         },
     ),
     "AY": FieldRule(
@@ -362,6 +413,8 @@ FRIENDLY_COLUMN_MAP: dict[str, str] = {
 
 _FRIENDLY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^MW(?P<idx>\d+)__value$"), "present_weather_code_{idx}"),
+    (re.compile(r"^MV(?P<idx>\d+)__part1$"), "present_weather_vicinity_code_{idx}"),
+    (re.compile(r"^MV(?P<idx>\d+)__part2$"), "present_weather_vicinity_quality_code_{idx}"),
     (re.compile(r"^AY(?P<idx>\d+)__part1$"), "past_weather_condition_code_{idx}"),
     (re.compile(r"^AY(?P<idx>\d+)__part3$"), "past_weather_period_hours_{idx}"),
     (re.compile(r"^AA(?P<idx>\d+)__part1$"), "precip_period_hours_{idx}"),
@@ -404,6 +457,8 @@ _FRIENDLY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 
 _INTERNAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^present_weather_code_(?P<idx>\d+)$"), "MW{idx}__value"),
+    (re.compile(r"^present_weather_vicinity_code_(?P<idx>\d+)$"), "MV{idx}__part1"),
+    (re.compile(r"^present_weather_vicinity_quality_code_(?P<idx>\d+)$"), "MV{idx}__part2"),
     (re.compile(r"^past_weather_condition_code_(?P<idx>\d+)$"), "AY{idx}__part1"),
     (re.compile(r"^past_weather_period_hours_(?P<idx>\d+)$"), "AY{idx}__part3"),
     (re.compile(r"^precip_period_hours_(?P<idx>\d+)$"), "AA{idx}__part1"),

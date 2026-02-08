@@ -235,6 +235,8 @@ Expanded columns are renamed using the friendly map in
 | `UG1__part1` | `swell_period_seconds` |
 | `UG1__part2` | `swell_height_m` |
 | `UG1__part3` | `swell_direction_deg` |
+| `MV1__part1` | `present_weather_vicinity_code_1` |
+| `MV1__part2` | `present_weather_vicinity_quality_code_1` |
 
 #### 2c. Missing-value sentinel detection
 
@@ -287,8 +289,8 @@ Scale factors are applied after sentinel removal:
 
 #### 2e. Quality-flag filtering
 
-- Allowed quality flags (`QUALITY_FLAGS`): `{0, 1, 2, 3, 4, 5, 6, 7, 9, M}`.
-- Some sections (e.g., UA1/UG1 marine groups) apply narrower per-field quality limits per ISD specs.
+- Allowed quality flags (`QUALITY_FLAGS`): `{0, 1, 2, 3, 4, 5, 6, 7, 9, A, C, I, M, P, R, U}`.
+- Some sections (e.g., UA1/UG1 marine groups, MV/OD wind) apply narrower per-field quality limits per ISD specs.
 - Erroneous quality codes (`3`, `7`) are retained in `LocationData_Cleaned.csv` for researcher transparency,
   but those values are excluded during monthly/yearly aggregation.
 - Each value part in `FIELD_RULES` declares which quality part governs it via `quality_part`.
@@ -362,6 +364,7 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 | GA\* | 6 | 1=coverage, 3=base height | 1, 1 | 99, 99999 | 2, 4, 6 | mean | mixed |
 | GF1 | 13 | 1=total cov, 8=base ht | 1, 1 | 99, 99999 | 3, 5, 7, 9, 11, 13 | mean | mixed |
 | MW\* | 2 | 1=weather code | — | — | 2 | drop | categorical |
+| MV\* | 2 | 1=vicinity weather code | — | 99 | 2 | drop | categorical |
 | AY\* | 4 | 1=condition, 3=period | —, 1 | —, 99 | 2, 4 | drop | categorical |
 | GE1 | 4 | 1=convective cloud code, 3-4=base height range | 1 | 99999 | — | drop/mean | mixed |
 | SA1 | 2 | 1=SST | 0.1 | 999 | 2 | mean | numeric |
