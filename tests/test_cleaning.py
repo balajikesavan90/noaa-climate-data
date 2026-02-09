@@ -137,6 +137,56 @@ class TestSentinelsInCleanedOutput:
         assert result["GE1__part1"] is None
         assert result["GE1__part2"] is None
 
+    def test_hail_sentinel_becomes_none(self):
+        result = clean_value_quality("999,1", "HAIL")
+        assert result["HAIL__value"] is None
+
+    def test_ia1_missing_observation_code(self):
+        result = clean_value_quality("99,1", "IA1")
+        assert result["IA1__part1"] is None
+
+    def test_ia2_missing_min_temp_parts(self):
+        result = clean_value_quality("999,+9999,1", "IA2")
+        assert result["IA2__part1"] is None
+        assert result["IA2__part2"] is None
+
+    def test_kb_missing_parts(self):
+        result = clean_value_quality("999,9,+9999,1", "KB1")
+        assert result["KB1__part1"] is None
+        assert result["KB1__part2"] is None
+        assert result["KB1__part3"] is None
+
+    def test_kc_missing_parts(self):
+        result = clean_value_quality("9,9,+9999,999999,1", "KC1")
+        assert result["KC1__part1"] is None
+        assert result["KC1__part2"] is None
+        assert result["KC1__part3"] is None
+        assert result["KC1__part4"] is None
+
+    def test_kd_missing_parts(self):
+        result = clean_value_quality("999,9,9999,1", "KD1")
+        assert result["KD1__part1"] is None
+        assert result["KD1__part2"] is None
+        assert result["KD1__part3"] is None
+
+    def test_ke_missing_parts(self):
+        result = clean_value_quality("99,1,99,1,99,1,99,1", "KE1")
+        assert result["KE1__part1"] is None
+        assert result["KE1__part3"] is None
+        assert result["KE1__part5"] is None
+        assert result["KE1__part7"] is None
+
+    def test_kf_missing_parts(self):
+        result = clean_value_quality("9999,1", "KF1")
+        assert result["KF1__part1"] is None
+
+    def test_kg_missing_parts(self):
+        result = clean_value_quality("999,9,+9999,9,1", "KG1")
+        assert result["KG1__part1"] is None
+        assert result["KG1__part2"] is None
+        assert result["KG1__part3"] is None
+        assert result["KG1__part4"] is None
+
 
 # ── 2. Scale factors (÷10) ──────────────────────────────────────────────
 
@@ -186,6 +236,30 @@ class TestScaleFactors:
         result = clean_value_quality("-0032,1", "TMP")
         assert result["TMP__value"] == pytest.approx(-3.2)
 
+    def test_hail_scaled(self):
+        result = clean_value_quality("025,1", "HAIL")
+        assert result["HAIL__value"] == pytest.approx(2.5)
+
+    def test_ic1_evaporation_scaled(self):
+        result = clean_value_quality("24,0100,1,4,050,1,4,+050,1,4,+040,1,4", "IC1")
+        assert result["IC1__part5"] == pytest.approx(0.5)
+
+    def test_kb_scaled(self):
+        result = clean_value_quality("024,A,0100,1", "KB1")
+        assert result["KB1__part3"] == pytest.approx(1.0)
+
+    def test_kc_scaled(self):
+        result = clean_value_quality("M,1,0123,010203,1", "KC1")
+        assert result["KC1__part3"] == pytest.approx(12.3)
+
+    def test_kf_scaled(self):
+        result = clean_value_quality("0123,1", "KF1")
+        assert result["KF1__part1"] == pytest.approx(12.3)
+
+    def test_kg_scaled(self):
+        result = clean_value_quality("024,D,0123,D,1", "KG1")
+        assert result["KG1__part3"] == pytest.approx(12.3)
+
 
 class TestScaleFactorsInDataframe:
     """Scale factors work end-to-end through clean_noaa_dataframe."""
@@ -201,6 +275,13 @@ class TestScaleFactorsInDataframe:
         cleaned = clean_noaa_dataframe(df, keep_raw=False)
         assert cleaned.loc[0, "wind_speed_ms"] == pytest.approx(11.0)
         assert cleaned.loc[1, "wind_speed_ms"] == pytest.approx(3.0)
+
+    def test_dataframe_hail_renamed(self):
+        df = pd.DataFrame({"HAIL": ["025,1", "999,9"]})
+        cleaned = clean_noaa_dataframe(df, keep_raw=False)
+        assert "hail_size_cm" in cleaned.columns
+        assert cleaned.loc[0, "hail_size_cm"] == pytest.approx(2.5)
+        assert pd.isna(cleaned.loc[1, "hail_size_cm"])
 
 
 # ── 3. Per-value quality-flag mapping ────────────────────────────────────
@@ -556,6 +637,43 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("0060,0800,8,0900,1", "GR1")
         assert result["GR1__part2"] is None
         assert result["GR1__part4"] == pytest.approx(900.0)
+
+    def test_ia1_quality_rejects_8(self):
+        result = clean_value_quality("01,8", "IA1")
+        assert result["IA1__part1"] is None
+
+    def test_ib1_quality_rejects_2(self):
+        result = clean_value_quality("+0100,2,0,+0050,1,0,+0150,1,0,0010,1,0", "IB1")
+        assert result["IB1__part1"] is None
+        assert result["IB1__part4"] == pytest.approx(5.0)
+
+    def test_ic1_quality_rejects_2(self):
+        result = clean_value_quality("24,0100,1,2,050,1,4,+050,1,4,+040,1,4", "IC1")
+        assert result["IC1__part2"] is None
+
+    def test_kb_quality_rejects_8(self):
+        result = clean_value_quality("024,A,0100,8", "KB1")
+        assert result["KB1__part3"] is None
+
+    def test_kc_quality_rejects_8(self):
+        result = clean_value_quality("M,1,0123,010203,8", "KC1")
+        assert result["KC1__part3"] is None
+
+    def test_kd_quality_rejects_8(self):
+        result = clean_value_quality("024,H,0100,8", "KD1")
+        assert result["KD1__part3"] is None
+
+    def test_ke_quality_rejects_8(self):
+        result = clean_value_quality("01,8,02,1,03,1,04,1", "KE1")
+        assert result["KE1__part1"] is None
+
+    def test_kf_quality_rejects_2(self):
+        result = clean_value_quality("0123,2", "KF1")
+        assert result["KF1__part1"] is None
+
+    def test_kg_quality_rejects_8(self):
+        result = clean_value_quality("024,D,0100,D,8", "KG1")
+        assert result["KG1__part3"] is None
 
     def test_ay_quality_rejects_4(self):
         result = clean_value_quality("1,4,12,1", "AY1")

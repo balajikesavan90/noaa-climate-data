@@ -45,12 +45,12 @@
 - [x] Add Part 15 modeled solar irradiance group GP1 (modeled global/direct/diffuse values, flags, and uncertainties).
 - [x] Add Part 20 hourly solar angle group GQ1 (time period, mean zenith/azimuth angles, QC).
 - [x] Add Part 20 hourly extraterrestrial radiation group GR1 (time period, horizontal/normal values, QC).
-- [ ] Add Hail data group from Part 20/22 (identifier + hail size/quality); master doc labels a HAIL identifier but does not show its code.
-- [ ] Add Part 23 ground surface groups IA1/IA2, IB1/IB2, IC1 (ground condition, min/max temps, snow depth), with quality codes.
-- [ ] Add Part 23 air temperature groups KB1-KB3 (average air temperature) with scaling/sentinels.
-- [ ] Add Part 23 ground/soil temperature groups KC1-KC2, KD1-KD2, KE1, KF1, KG1-KG2 (soil/ground temps and quality flags).
-- [ ] Add Part 24 temperature groups KC1-KC2 (extreme air temperature for month) and KD1-KD2 (heating/cooling degree days).
-- [ ] Add Part 24 temperature groups KF1 (derived hourly air temperature) and KG1-KG2 (average dew point/wet bulb).
+- [x] Add Hail data group from Part 20/22 (identifier + hail size/quality); master doc labels a HAIL identifier but does not show its code.
+- [x] Add Part 23 ground surface groups IA1/IA2, IB1/IB2, IC1 (ground condition, min/max temps, snow depth), with quality codes.
+- [x] Add Part 23 air temperature groups KB1-KB3 (average air temperature) with scaling/sentinels.
+- [x] Add Part 23 ground/soil temperature groups KC1-KC2, KD1-KD2, KE1, KF1, KG1-KG2 (soil/ground temps and quality flags).
+- [x] Add Part 24 temperature groups KC1-KC2 (extreme air temperature for month) and KD1-KD2 (heating/cooling degree days).
+- [x] Add Part 24 temperature groups KF1 (derived hourly air temperature) and KG1-KG2 (average dew point/wet bulb).
 - [ ] Add Part 26 soil temperature group ST1 (type, temp, depth, cover, subplot, quality codes).
 - [ ] Add Part 27 pressure groups beyond MA1/MD1 (ME1, MF1, MG1, MH1, MK1).
 - [ ] Add Part 28 relative humidity group RH1-RH3 (period, code, derived, QC).
