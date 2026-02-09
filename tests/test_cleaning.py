@@ -69,6 +69,14 @@ class TestIsMissingValue:
         rule = get_field_rule("WND").parts[1]
         assert not _is_missing_value("123", rule)
 
+    def test_ge1_convective_cloud_missing(self):
+        rule = get_field_rule("GE1").parts[1]
+        assert _is_missing_value("9", rule)
+
+    def test_ge1_vertical_datum_missing(self):
+        rule = get_field_rule("GE1").parts[2]
+        assert _is_missing_value("999999", rule)
+
 
 class TestSentinelsInCleanedOutput:
     """Sentinels must become None/NaN, never appear as numeric values."""
@@ -119,6 +127,11 @@ class TestSentinelsInCleanedOutput:
         assert result["WND__direction_variable"] is True
         assert result["WND__part1"] is None
         assert result["WND__part4"] == pytest.approx(5.0)
+
+    def test_ge1_missing_parts(self):
+        result = clean_value_quality("9,999999,99999,99999", "GE1")
+        assert result["GE1__part1"] is None
+        assert result["GE1__part2"] is None
 
 
 # ── 2. Scale factors (÷10) ──────────────────────────────────────────────
@@ -331,6 +344,111 @@ class TestQualityNullsCorrectPart:
         assert cleaned.loc[2, "wind_direction_deg"] == pytest.approx(180.0)
         assert pd.isna(cleaned.loc[2, "wind_speed_ms"])
 
+    def test_gf1_cloud_quality_gates_values(self):
+        result = clean_value_quality("05,05,8,05,8,99,8,5000,8,99,8,99,8", "GF1")
+        assert result["GF1__part1"] is None
+        assert result["GF1__part4"] is None
+        assert result["GF1__part6"] is None
+        assert result["GF1__part8"] is None
+        assert result["GF1__part10"] is None
+        assert result["GF1__part12"] is None
+
+    def test_ga_cloud_type_missing(self):
+        result = clean_value_quality("05,1,01000,1,99,1", "GA1")
+        assert result["GA1__part5"] is None
+
+    def test_oc1_quality_rejects_c(self):
+        result = clean_value_quality("0085,C", "OC1")
+        assert result["OC1__value"] is None
+
+    def test_ma1_station_pressure_quality_rejects_c(self):
+        result = clean_value_quality("10132,1,09876,C", "MA1")
+        assert result["MA1__part1"] == pytest.approx(1013.2)
+        assert result["MA1__part3"] is None
+
+    def test_md1_quality_rejects_4(self):
+        result = clean_value_quality("5,4,045,1,0123,1", "MD1")
+        assert result["MD1__part1"] is None
+        assert result["MD1__part3"] == pytest.approx(4.5)
+        assert result["MD1__part5"] == pytest.approx(12.3)
+
+    def test_md1_quality_rejects_4_for_pressure(self):
+        result = clean_value_quality("5,1,045,4,0123,1", "MD1")
+        assert result["MD1__part3"] is None
+        assert result["MD1__part5"] == pytest.approx(12.3)
+
+    def test_sa1_quality_rejects_4(self):
+        result = clean_value_quality("0215,4", "SA1")
+        assert result["SA1__value"] is None
+
+    def test_au_quality_rejects_8(self):
+        result = clean_value_quality("1,1,01,1,1,1,8", "AU1")
+        assert result["AU1__part1"] is None
+        assert result["AU1__part2"] is None
+        assert result["AU1__part3"] is None
+        assert result["AU1__part4"] is None
+        assert result["AU1__part5"] is None
+        assert result["AU1__part6"] is None
+
+    def test_au_missing_sentinels(self):
+        result = clean_value_quality("1,9,99,9,9,9,1", "AU1")
+        assert result["AU1__part2"] is None
+        assert result["AU1__part3"] is None
+        assert result["AU1__part4"] is None
+        assert result["AU1__part5"] is None
+        assert result["AU1__part6"] is None
+
+    def test_ay_quality_rejects_4(self):
+        result = clean_value_quality("1,4,12,1", "AY1")
+        assert result["AY1__part1"] is None
+        assert result["AY1__part3"] == pytest.approx(12.0)
+
+    def test_ay_period_quality_rejects_4(self):
+        result = clean_value_quality("1,1,12,4", "AY1")
+        assert result["AY1__part3"] is None
+
+    def test_aa_quality_rejects_c(self):
+        result = clean_value_quality("01,0010,1,C", "AA1")
+        assert result["AA1__part2"] is None
+
+    def test_aj_quality_rejects_c(self):
+        result = clean_value_quality("0010,1,C,000100,1,C", "AJ1")
+        assert result["AJ1__part1"] is None
+        assert result["AJ1__part4"] is None
+
+    def test_od_calm_direction(self):
+        result = clean_value_quality("9,99,999,0000,1", "OD1")
+        assert result["OD1__part3"] == pytest.approx(0.0)
+
+    def test_aj_condition_missing(self):
+        result = clean_value_quality("0010,9,1,000100,9,1", "AJ1")
+        assert result["AJ1__part2"] is None
+        assert result["AJ1__part5"] is None
+
+    def test_ua1_missing_method_and_sea_state(self):
+        result = clean_value_quality("9,05,120,1,99,1", "UA1")
+        assert result["UA1__part1"] is None
+        assert result["UA1__part5"] is None
+
+
+class TestTwoPartFieldNamingAndQuality:
+    def test_mw_two_part_uses_parts(self):
+        result = clean_value_quality("12,4", "MW1")
+        assert "MW1__part1" in result
+        assert "MW1__part2" in result
+
+    def test_mw_quality_gates_code(self):
+        result = clean_value_quality("12,8", "MW1")
+        assert result["MW1__part1"] is None
+
+    def test_mv_quality_gates_code(self):
+        result = clean_value_quality("05,3", "MV1")
+        assert result["MV1__part1"] is None
+
+    def test_gj_quality_gates_value(self):
+        result = clean_value_quality("0100,8", "GJ1")
+        assert result["GJ1__part1"] is None
+
 
 class TestCleanDataframeEdgeCases:
     def test_invalid_quality_nulls_values_in_dataframe(self):
@@ -368,3 +486,60 @@ class TestCleanDataframeEdgeCases:
         )
         cleaned = clean_noaa_dataframe(df, keep_raw=False)
         assert cleaned.loc[0, "visibility_m"] == pytest.approx(9999.0)
+
+
+class TestControlAndMandatoryNormalization:
+    def test_control_field_validation(self):
+        df = pd.DataFrame(
+            {
+                "LATITUDE": [99.999, 45.0],
+                "LONGITUDE": [181.0, -120.0],
+                "ELEVATION": [9000.0, 100.0],
+                "CALL_SIGN": ["99999", "KJFK"],
+                "SOURCE": ["9", "4"],
+                "REPORT_TYPE": ["FM-12", "BOGUS"],
+                "QUALITY_CONTROL": ["V020", "V99"],
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=True)
+        assert pd.isna(cleaned.loc[0, "LATITUDE"])
+        assert pd.isna(cleaned.loc[0, "LONGITUDE"])
+        assert pd.isna(cleaned.loc[0, "ELEVATION"])
+        assert pd.isna(cleaned.loc[0, "CALL_SIGN"])
+        assert pd.isna(cleaned.loc[0, "SOURCE"])
+        assert cleaned.loc[0, "REPORT_TYPE"] == "FM-12"
+        assert cleaned.loc[0, "QUALITY_CONTROL"] == "V02"
+        assert cleaned.loc[1, "LATITUDE"] == pytest.approx(45.0)
+        assert cleaned.loc[1, "LONGITUDE"] == pytest.approx(-120.0)
+        assert cleaned.loc[1, "ELEVATION"] == pytest.approx(100.0)
+        assert cleaned.loc[1, "CALL_SIGN"] == "KJFK"
+        assert cleaned.loc[1, "SOURCE"] == "4"
+        assert cleaned.loc[1, "REPORT_TYPE"] == "BOGUS"
+        assert pd.isna(cleaned.loc[1, "QUALITY_CONTROL"])
+
+    def test_mandatory_clamps_and_calm_wind(self):
+        df = pd.DataFrame(
+            {
+                "CIG": ["25000,1,9,9"],
+                "VIS": ["170000,1,N,1"],
+                "WND": ["090,1,9,0000,1"],
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=False)
+        assert cleaned.loc[0, "ceiling_height_m"] == pytest.approx(22000.0)
+        assert cleaned.loc[0, "visibility_m"] == pytest.approx(160000.0)
+        assert cleaned.loc[0, "wind_type_code"] == "C"
+
+    def test_mandatory_domain_codes(self):
+        df = pd.DataFrame(
+            {
+                "WND": ["090,1,Z,0005,1"],
+                "CIG": ["01000,1,Z,X"],
+                "VIS": ["010000,1,X,1"],
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=False)
+        assert pd.isna(cleaned.loc[0, "wind_type_code"])
+        assert pd.isna(cleaned.loc[0, "ceiling_determination_code"])
+        assert pd.isna(cleaned.loc[0, "ceiling_cavok_code"])
+        assert pd.isna(cleaned.loc[0, "visibility_variability_code"])

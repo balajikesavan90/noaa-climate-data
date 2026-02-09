@@ -202,6 +202,43 @@ POS: 88-92
     DOM: A general domain comprised of the numeric characters (0-9), a plus sign (+), and a minus sign (-).
     +9999 = Missing.
 
+POS: 93-93
+    AIR-TEMPERATURE-OBSERVATION quality code
+    Quality flag for the air temperature value.
+    DOM: A specific domain comprised of the characters in the ASCII character set.
+    0/1/2/3/4/5/6/7/9 with the same meanings as other mandatory quality codes.
+
+POS: 94-98
+    DEW-POINT-OBSERVATION dew point temperature
+    The temperature to which air must be cooled to reach saturation.
+    MIN: -0932    MAX: +0618     UNITS: Degrees Celsius
+    SCALING FACTOR: 10
+    DOM: A general domain comprised of the numeric characters (0-9), a plus sign (+), and a minus sign (-).
+    +9999 = Missing.
+
+POS: 99-99
+    DEW-POINT-OBSERVATION quality code
+    Quality flag for the dew point value.
+    DOM: A specific domain comprised of the characters in the ASCII character set.
+    0/1/2/3/4/5/6/7/9 with the same meanings as other mandatory quality codes.
+
+POS: 100-104
+    SEA-LEVEL-PRESSURE-OBSERVATION sea level pressure
+    The pressure reduced to mean sea level.
+    MIN: 08600    MAX: 10900     UNITS: Hectopascals
+    SCALING FACTOR: 10
+    DOM: A general domain comprised of the numeric characters (0-9).
+    99999 = Missing.
+
+POS: 105-105
+    SEA-LEVEL-PRESSURE-OBSERVATION quality code
+    Quality flag for the sea level pressure value.
+    DOM: A specific domain comprised of the characters in the ASCII character set.
+    0/1/2/3/4/5/6/7/9 with the same meanings as other mandatory quality codes.
+    SCALING FACTOR: 10
+    DOM: A general domain comprised of the numeric characters (0-9), a plus sign (+), and a minus sign (-).
+    +9999 = Missing.
+
 
 
 

@@ -8,7 +8,10 @@ from typing import Iterable
 import pandas as pd
 
 from .constants import (
+    DATA_SOURCE_FLAGS,
     QUALITY_FLAGS,
+    QC_PROCESS_CODES,
+    REPORT_TYPE_CODES,
     FieldPartRule,
     get_field_registry_entry,
     get_field_rule,
@@ -129,6 +132,18 @@ def _expand_parsed(
     )
     if prefix == "WND":
         payload["WND__direction_variable"] = is_variable_direction
+    is_od_calm = (
+        prefix.startswith("OD")
+        and len(parsed.parts) >= 4
+        and parsed.parts[2].strip() == "999"
+        and parsed.parts[3].strip() == "0000"
+    )
+    is_wnd_calm = (
+        prefix == "WND"
+        and len(parsed.parts) >= 4
+        and parsed.parts[2].strip() == "9"
+        and parsed.parts[3].strip() == "0000"
+    )
     field_rule = get_field_rule(prefix)
     quality_value = None
     if allow_quality:
@@ -152,6 +167,12 @@ def _expand_parsed(
         if is_variable_direction and idx == 1:
             payload[key] = None
             continue
+        if is_wnd_calm and idx == 3:
+            payload[key] = "C"
+            continue
+        if is_od_calm and idx == 3:
+            payload[key] = 0.0
+            continue
         part_quality = _quality_for_part(prefix, idx, parsed.parts) if allow_quality else None
         allowed_for_part = _allowed_quality_for_value(prefix, idx)
         if part_quality is not None and part_quality not in allowed_for_part:
@@ -165,38 +186,70 @@ def _expand_parsed(
         if _is_missing_value(part, part_rule):
             payload[key] = None
             continue
+        if part_rule and part_rule.allowed_values:
+            if part.strip().upper() not in part_rule.allowed_values:
+                payload[key] = None
+                continue
         if value is None:
             payload[key] = part
             continue
         scale = part_rule.scale if part_rule else None
-        payload[key] = value * scale if scale is not None else value
+        scaled = value * scale if scale is not None else value
+        if prefix == "CIG" and idx == 1 and scaled is not None and scaled > 22000:
+            scaled = 22000.0
+        if prefix == "VIS" and idx == 1 and scaled is not None and scaled > 160000:
+            scaled = 160000.0
+        payload[key] = scaled
     if allow_quality and quality_value is not None:
         payload[f"{prefix}__quality"] = quality_value
     return payload
 
 
-def _maybe_apply_quality(value: float | None, quality: str | None) -> float | None:
-    if quality is None:
-        return value
-    if quality not in QUALITY_FLAGS:
-        return None
-    return value
+def _is_value_quality_field(prefix: str, part_count: int) -> bool:
+    if part_count != 2:
+        return False
+    rule = get_field_rule(prefix)
+    if rule is None:
+        return False
+    part_rule = rule.parts.get(1)
+    if part_rule is None or part_rule.quality_part is None:
+        return False
+    return len(rule.parts) == 1
 
 
 def clean_value_quality(raw: str, prefix: str) -> dict[str, object]:
     parsed = parse_field(raw)
     if len(parsed.parts) != 2:
         return _expand_parsed(parsed, prefix, allow_quality=True)
+    if not _is_value_quality_field(prefix, len(parsed.parts)):
+        return _expand_parsed(parsed, prefix, allow_quality=True)
     field_rule = get_field_rule(prefix)
     part_rule = field_rule.parts.get(1) if field_rule else None
     entry = get_field_registry_entry(prefix, 1, suffix="value")
     value_key = entry.internal_name if entry else f"{prefix}__value"
     quality = parsed.quality
-    if part_rule and part_rule.quality_part:
-        quality_index = part_rule.quality_part
-        if quality_index <= len(parsed.parts):
-            quality = parsed.parts[quality_index - 1]
-    value = _maybe_apply_quality(parsed.values[0], quality)
+    quality_index = part_rule.quality_part if part_rule else None
+    if quality_index is not None and quality_index <= len(parsed.parts):
+        quality = parsed.parts[quality_index - 1].strip() or None
+    allowed_quality = (
+        _allowed_quality_set(prefix, quality_index)
+        if quality_index is not None
+        else QUALITY_FLAGS
+    )
+    if (
+        quality_index is not None
+        and allowed_quality == QUALITY_FLAGS
+        and part_rule
+        and part_rule.allowed_quality
+    ):
+        allowed_quality = part_rule.allowed_quality
+    value: float | None
+    if part_rule and _is_missing_value(parsed.parts[0], part_rule):
+        value = None
+    else:
+        value = parsed.values[0]
+    if quality is not None and quality not in allowed_quality:
+        value = None
     if value is not None and part_rule and part_rule.scale is not None:
         value = value * part_rule.scale
     return {
@@ -210,6 +263,54 @@ def _should_parse_column(values: Iterable[str]) -> bool:
         if isinstance(value, str) and "," in value:
             return True
     return False
+
+
+def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
+    work = df.copy()
+
+    def _normalize_numeric(series: pd.Series) -> pd.Series:
+        return pd.to_numeric(series, errors="coerce")
+
+    if "LATITUDE" in work.columns:
+        series = _normalize_numeric(work["LATITUDE"])
+        series = series.where(series.between(-90.0, 90.0))
+        work["LATITUDE"] = series
+
+    if "LONGITUDE" in work.columns:
+        series = _normalize_numeric(work["LONGITUDE"])
+        series = series.where(series.between(-180.0, 180.0))
+        work["LONGITUDE"] = series
+
+    if "ELEVATION" in work.columns:
+        series = _normalize_numeric(work["ELEVATION"])
+        series = series.where(series.between(-400.0, 8850.0))
+        work["ELEVATION"] = series
+
+    if "CALL_SIGN" in work.columns:
+        series = work["CALL_SIGN"].astype(str).str.strip()
+        series = series.where(~series.isin({"99999", "nan", "None", ""}))
+        work["CALL_SIGN"] = series.where(series.notna())
+
+    if "SOURCE" in work.columns:
+        series = work["SOURCE"].astype(str).str.strip().str.upper()
+        series = series.where(series.isin(DATA_SOURCE_FLAGS))
+        series = series.where(series != "9")
+        work["SOURCE"] = series.where(series.notna())
+
+    if "REPORT_TYPE" in work.columns:
+        series = work["REPORT_TYPE"].astype(str).str.strip().str.upper()
+        series = series.where(series.isin(REPORT_TYPE_CODES))
+        series = series.where(series != "99999")
+        work["REPORT_TYPE"] = series.where(series.notna())
+
+    if "QUALITY_CONTROL" in work.columns:
+        series = work["QUALITY_CONTROL"].astype(str).str.strip().str.upper()
+        normalized = series.where(series.isin(QC_PROCESS_CODES))
+        normalized = normalized.where(~normalized.isna(), series.str.slice(0, 3))
+        normalized = normalized.where(normalized.isin(QC_PROCESS_CODES))
+        work["QUALITY_CONTROL"] = normalized.where(normalized.notna())
+
+    return work
 
 
 def clean_noaa_dataframe(df: pd.DataFrame, keep_raw: bool = True) -> pd.DataFrame:
@@ -257,6 +358,8 @@ def clean_noaa_dataframe(df: pd.DataFrame, keep_raw: bool = True) -> pd.DataFram
             if isinstance(value, str) and _is_missing_numeric(value)
             else value
         )
+
+    cleaned = _normalize_control_fields(cleaned)
 
     rename_map = {col: to_friendly_column(col) for col in cleaned.columns}
     if any(key != value for key, value in rename_map.items()):
