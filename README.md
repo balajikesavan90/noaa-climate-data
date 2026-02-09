@@ -375,6 +375,7 @@ Notes:
 - UA1 method code and sea state are categorical and are excluded from aggregation; wave measurement quality (part4) gates parts 1-3; sea state quality is part6 and gates part5.
 - UG1 swell direction uses a circular mean during aggregation when present; primary swell quality (part4) gates parts 1-3.
 - UA1/UG1 quality codes are restricted to {0, 1, 2, 3, 9} per ISD marine specs.
+- Additional cloud/solar groups parsed: GD*, GH1, GJ1, GK1, GL1, GM1, GN1, GO1 (see [src/noaa_climate_data/constants.py](src/noaa_climate_data/constants.py)).
 
 ---
 
