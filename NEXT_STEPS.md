@@ -1,0 +1,40 @@
+# Next steps: ISD alignment checklist
+
+- [ ] Implement remaining cloud/solar groups from Part 15 (e.g., below-station cloud layer sections and other GD/GH/GJ/GK/GL/GM/GN/GO adjuncts not yet mapped).
+- [ ] Add Part 16 sunshine observation group GL1 (sunshine duration + quality).
+- [ ] Add Part 17 solar irradiance group GM1 (global/direct/diffuse/UVB + flags + QC).
+- [ ] Add Part 18 net solar radiation group GO1 (net solar/infrared/radiation + QC).
+- [ ] Add Part 17 solar radiation group GN1 (upwelling/downwelling/thermal/PAR/zenith + QC).
+- [ ] Add Part 15 hourly solar radiation group GH1 (avg/min/max/std solar radiation + QC/flags) if not already covered.
+- [ ] Add Part 15 below-station cloud layer group GG1-GG6 (coverage, heights, type/top codes, and quality flags).
+- [ ] Add Part 15 modeled solar irradiance group GP1 (modeled global/direct/diffuse values, flags, and uncertainties).
+- [ ] Add precipitation groups from Part 4 beyond AA/AJ/AU (e.g., AB1 monthly total, AC1 precipitation history, AD1 greatest 24-hour amount).
+- [ ] Add Part 4 additional data section identifier ADD (section boundary for variable groups).
+- [ ] Add Part 4 snow-depth group AJ1 (snow depth + equivalent water, condition codes, quality).
+- [ ] Add Part 4 additional precipitation groups: AE1, AG1, AH1-AH6, AI1-AI6, AK1, AL1-AL4, AM1, AN1, AO1-AO4, AP1-AP4.
+- [ ] Add Part 4 snow-accumulation groups AL1-AL4 (accumulation period/depth), AM1 (greatest 24-hour amount), AN1 (day/month totals).
+- [ ] Add Part 4 additional liquid-precip groups AO1-AO4 (minutes-based), AP1-AP4 (HPD 15-min gauges with quality codes).
+- [ ] Add remaining marine groups from Part 30 (e.g., WA1 platform ice accretion, other marine sections listed in Part 30).
+- [ ] Add Part 30 secondary swell group UG2 and remaining marine groups (WA1, WD1, WG1, WJ1).
+- [ ] Add Part 30 marine groups UA1 (wave measurement) and UG1 (primary swell) plus associated quality flags.
+- [ ] Add Part 30 element quality data section (EQD with Q01-P01-R01/C01/D01/N01 identifiers, parameter/units codes, and marine-specific QC definitions).
+- [ ] Add EQD element-units table plus parameter-code flag conventions (Flag-1/Flag-2 definitions and element-name codes).
+- [ ] Add Part 30 remarks data section (REM) and remark type identifiers (SYN/AWY/MET/SOD/SOM/HPD).
+- [ ] Add Original Observation Data Section identifiers QNN (original NCEI surface hourly source codes/flags).
+- [ ] Add QNN original observation element identifiers (A-Y mapping for DS3280 elements) and data value format.
+- [ ] Add Part 27 pressure groups beyond MA1/MD1 (ME1, MF1, MG1, MH1, MK1).
+- [ ] Add Part 29 hourly/sub-hourly wind section OB1-OB2.
+- [ ] Add Part 5 weather occurrence groups AT1-AT8 (daily present weather) and AU1-AU9 (present weather observation components).
+- [ ] Add Part 6 CRN unique groups CB1-CB2 (secondary precip), CF1-CF3 (fan speed), CG1-CG3 (primary precip), CH1-CH2 (RH/Temp), CI1 (hourly RH/Temp stats), and CN1-CN4 (battery + diagnostics).
+- [ ] Add Part 7 network metadata groups CO1 (climate division + UTC offset), CO2-CO9 (element time offsets), CR1 (CRN control), CT1-CT3 (subhourly temp), CU1-CU3 (hourly temp + std dev).
+- [ ] Add Part 7 network metadata groups CV1-CV3 (hourly temp extremes + times), CW1 (subhourly wetness), CX1-CX3 (hourly Geonor vibrating wire summary).
+- [ ] Add Part 14 runway visual range group ED1 (runway designator, direction, visibility, quality).
+- [ ] Add Part 20 hourly solar angle group GQ1 (time period, mean zenith/azimuth angles, QC).
+- [ ] Add Part 20 hourly extraterrestrial radiation group GR1 (time period, horizontal/normal values, QC).
+- [ ] Add Hail data group from Part 20/22 (identifier + hail size/quality) once identifier is confirmed.
+- [ ] Add Part 23 ground surface groups IA1/IA2, IB1/IB2, IC1 (ground condition, min/max temps, snow depth), with quality codes.
+- [ ] Add Part 23 air temperature groups KA1-KA4 (extreme air temperature) and KB1-KB3 (average air temperature) with scaling/sentinels.
+- [ ] Add Part 23 ground/soil temperature groups KC1-KC2, KD1-KD2, KE1, KF1, KG1-KG2 (soil/ground temps and quality flags).
+- [ ] Add Part 26 soil temperature group ST1 (type, temp, depth, cover, subplot, quality codes).
+- [ ] Populate missing ISD docs in-repo (Parts 10/11/16/17/18/19/21/22/24/25) to verify KA*/SA1 scaling/sentinels and solar/sunshine/hail sections.
+- [ ] Add tests for new groups to ensure sentinel removal and quality filtering are applied consistently.
