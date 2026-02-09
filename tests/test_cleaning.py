@@ -187,6 +187,31 @@ class TestSentinelsInCleanedOutput:
         assert result["KG1__part3"] is None
         assert result["KG1__part4"] is None
 
+    def test_st1_missing_parts(self):
+        result = clean_value_quality("9,+9999,4,9999,4,99,4,9,4", "ST1")
+        assert result["ST1__part1"] is None
+        assert result["ST1__part2"] is None
+        assert result["ST1__part4"] is None
+        assert result["ST1__part6"] is None
+        assert result["ST1__part8"] is None
+
+    def test_me1_missing_parts(self):
+        result = clean_value_quality("9,9999,1", "ME1")
+        assert result["ME1__part1"] is None
+        assert result["ME1__part2"] is None
+
+    def test_mf1_missing_parts(self):
+        result = clean_value_quality("99999,1,99999,1", "MF1")
+        assert result["MF1__part1"] is None
+        assert result["MF1__part3"] is None
+
+    def test_mk1_missing_parts(self):
+        result = clean_value_quality("99999,999999,1,99999,999999,1", "MK1")
+        assert result["MK1__part1"] is None
+        assert result["MK1__part2"] is None
+        assert result["MK1__part4"] is None
+        assert result["MK1__part5"] is None
+
 
 # ── 2. Scale factors (÷10) ──────────────────────────────────────────────
 
@@ -259,6 +284,16 @@ class TestScaleFactors:
     def test_kg_scaled(self):
         result = clean_value_quality("024,D,0123,D,1", "KG1")
         assert result["KG1__part3"] == pytest.approx(12.3)
+
+    def test_st1_scaled(self):
+        result = clean_value_quality("1,0123,4,0050,4,01,4,2,4", "ST1")
+        assert result["ST1__part2"] == pytest.approx(12.3)
+        assert result["ST1__part4"] == pytest.approx(5.0)
+
+    def test_mf1_scaled(self):
+        result = clean_value_quality("10132,1,09876,1", "MF1")
+        assert result["MF1__part1"] == pytest.approx(1013.2)
+        assert result["MF1__part3"] == pytest.approx(987.6)
 
 
 class TestScaleFactorsInDataframe:
@@ -674,6 +709,18 @@ class TestQualityNullsCorrectPart:
     def test_kg_quality_rejects_8(self):
         result = clean_value_quality("024,D,0100,D,8", "KG1")
         assert result["KG1__part3"] is None
+
+    def test_st1_quality_rejects_2(self):
+        result = clean_value_quality("1,0123,2,0050,4,01,4,2,4", "ST1")
+        assert result["ST1__part2"] is None
+
+    def test_me1_quality_rejects_8(self):
+        result = clean_value_quality("1,0123,8", "ME1")
+        assert result["ME1__part2"] is None
+
+    def test_mg1_quality_rejects_1(self):
+        result = clean_value_quality("10132,1,09876,9", "MG1")
+        assert result["MG1__part1"] is None
 
     def test_ay_quality_rejects_4(self):
         result = clean_value_quality("1,4,12,1", "AY1")

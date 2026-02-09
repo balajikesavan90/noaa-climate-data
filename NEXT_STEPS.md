@@ -51,8 +51,8 @@
 - [x] Add Part 23 ground/soil temperature groups KC1-KC2, KD1-KD2, KE1, KF1, KG1-KG2 (soil/ground temps and quality flags).
 - [x] Add Part 24 temperature groups KC1-KC2 (extreme air temperature for month) and KD1-KD2 (heating/cooling degree days).
 - [x] Add Part 24 temperature groups KF1 (derived hourly air temperature) and KG1-KG2 (average dew point/wet bulb).
-- [ ] Add Part 26 soil temperature group ST1 (type, temp, depth, cover, subplot, quality codes).
-- [ ] Add Part 27 pressure groups beyond MA1/MD1 (ME1, MF1, MG1, MH1, MK1).
+- [x] Add Part 26 soil temperature group ST1 (type, temp, depth, cover, subplot, quality codes).
+- [x] Add Part 27 pressure groups beyond MA1/MD1 (ME1, MF1, MG1, MH1, MK1).
 - [ ] Add Part 28 relative humidity group RH1-RH3 (period, code, derived, QC).
 - [ ] Add Part 29 hourly/sub-hourly wind section OB1-OB2.
 - [ ] Add Part 29 supplementary wind group OE1-OE3 (summary-of-day wind).
