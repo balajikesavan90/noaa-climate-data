@@ -53,12 +53,12 @@
 - [x] Add Part 24 temperature groups KF1 (derived hourly air temperature) and KG1-KG2 (average dew point/wet bulb).
 - [x] Add Part 26 soil temperature group ST1 (type, temp, depth, cover, subplot, quality codes).
 - [x] Add Part 27 pressure groups beyond MA1/MD1 (ME1, MF1, MG1, MH1, MK1).
-- [ ] Add Part 28 relative humidity group RH1-RH3 (period, code, derived, QC).
-- [ ] Add Part 29 hourly/sub-hourly wind section OB1-OB2.
-- [ ] Add Part 29 supplementary wind group OE1-OE3 (summary-of-day wind).
-- [ ] Add remaining marine groups from Part 30 (e.g., WA1 platform ice accretion, other marine sections listed in Part 30).
-- [ ] Add Part 30 secondary swell group UG2 and remaining marine groups (WA1, WD1, WG1, WJ1).
-- [ ] Add Part 30 element quality data section (EQD with Q01-P01-R01/C01/D01/N01 identifiers, parameter/units codes, and marine-specific QC definitions).
+- [x] Add Part 28 relative humidity group RH1-RH3 (period, code, derived, QC).
+- [x] Add Part 29 hourly/sub-hourly wind section OB1-OB2.
+- [x] Add Part 29 supplementary wind group OE1-OE3 (summary-of-day wind).
+- [x] Add remaining marine groups from Part 30 (e.g., WA1 platform ice accretion, other marine sections listed in Part 30).
+- [x] Add Part 30 secondary swell group UG2 and remaining marine groups (WA1, WD1, WG1, WJ1).
+- [x] Add Part 30 element quality data section (EQD with Q01-P01-R01/C01/D01/N01 identifiers, parameter/units codes, and marine-specific QC definitions).
 - [ ] Add EQD element-units table plus parameter-code flag conventions (Flag-1/Flag-2 definitions and element-name codes).
 - [ ] Add Part 30 remarks data section (REM) and remark type identifiers (SYN/AWY/MET/SOD/SOM/HPD).
 - [ ] Add Original Observation Data Section identifiers QNN (original NCEI surface hourly source codes/flags).

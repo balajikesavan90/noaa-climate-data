@@ -144,6 +144,12 @@ def _expand_parsed(
         and parsed.parts[2].strip() == "9"
         and parsed.parts[3].strip() == "0000"
     )
+    is_oe_calm = (
+        prefix.startswith("OE")
+        and len(parsed.parts) >= 4
+        and parsed.parts[2].strip() == "00000"
+        and parsed.parts[3].strip() == "999"
+    )
     field_rule = get_field_rule(prefix)
     quality_value = None
     if allow_quality:
@@ -171,6 +177,9 @@ def _expand_parsed(
             payload[key] = "C"
             continue
         if is_od_calm and idx == 3:
+            payload[key] = 0.0
+            continue
+        if is_oe_calm and idx == 4:
             payload[key] = 0.0
             continue
         part_quality = _quality_for_part(prefix, idx, parsed.parts) if allow_quality else None

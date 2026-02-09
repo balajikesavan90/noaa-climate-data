@@ -132,6 +132,27 @@ SOLAR_IRRADIANCE_QC_FLAGS = {"0", "1", "2", "3", "9"}
 
 SUNSHINE_PERCENT_QC_FLAGS = {"4", "5", "6", "7", "9", "M"}
 
+EQD_REASON_CODES = {"0", "1", "2", "3", "4", "5", "6", "7"}
+EQD_UNIT_CODES = {
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "O",
+    "P",
+    "Q",
+    "R",
+}
+
 DEFAULT_START_YEAR = 2000
 DEFAULT_END_YEAR = 2019
 
@@ -164,6 +185,33 @@ class FieldRegistryEntry:
     missing_values: set[str] | None
     quality_part: int | None
     agg: str
+
+
+EQD_REASON_RULE = FieldRule(
+    code="EQD",
+    parts={
+        1: FieldPartRule(kind="categorical", agg="drop", missing_values={"__none__"}),
+        2: FieldPartRule(
+            kind="categorical",
+            agg="drop",
+            allowed_values=EQD_REASON_CODES,
+        ),
+        3: FieldPartRule(kind="categorical", agg="drop", missing_values={"__none__"}),
+    },
+)
+
+EQD_UNIT_RULE = FieldRule(
+    code="EQD",
+    parts={
+        1: FieldPartRule(kind="categorical", agg="drop", missing_values={"__none__"}),
+        2: FieldPartRule(
+            kind="categorical",
+            agg="drop",
+            allowed_values=EQD_UNIT_CODES,
+        ),
+        3: FieldPartRule(kind="categorical", agg="drop", missing_values={"__none__"}),
+    },
+)
 
 
 FIELD_RULES: dict[str, FieldRule] = {
@@ -342,10 +390,173 @@ FIELD_RULES: dict[str, FieldRule] = {
             ),  # sea state quality
         },
     ),
+    "WA1": FieldRule(
+        code="WA1",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                quality_part=4,
+            ),  # source code
+            2: FieldPartRule(
+                scale=0.1,
+                missing_values={"999"},
+                quality_part=4,
+            ),  # thickness cm
+            3: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                quality_part=4,
+            ),  # tendency code
+            4: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),  # quality code
+        },
+    ),
+    "WD1": FieldRule(
+        code="WD1",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=11,
+            ),
+            2: FieldPartRule(missing_values={"999"}, quality_part=11),
+            3: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=11,
+            ),
+            4: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                quality_part=11,
+            ),
+            5: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                quality_part=11,
+            ),
+            6: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                quality_part=11,
+            ),
+            7: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=11,
+            ),
+            8: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                quality_part=11,
+            ),
+            9: FieldPartRule(missing_values={"999"}, quality_part=11),
+            10: FieldPartRule(missing_values={"999"}, quality_part=11),
+            11: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+        },
+    ),
+    "WG1": FieldRule(
+        code="WG1",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=6,
+            ),
+            2: FieldPartRule(
+                missing_values={"99"},
+                agg="drop",
+                quality_part=6,
+            ),
+            3: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=6,
+            ),
+            4: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=6,
+            ),
+            5: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=6,
+            ),
+            6: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+        },
+    ),
+    "WJ1": FieldRule(
+        code="WJ1",
+        parts={
+            1: FieldPartRule(missing_values={"999"}),
+            2: FieldPartRule(missing_values={"99999"}),
+            3: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+            ),
+            4: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+            ),
+            5: FieldPartRule(missing_values={"9999"}),
+            6: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+            ),
+            7: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                allowed_values={"B", "H", "N", "O"},
+            ),
+        },
+    ),
     "UG1": FieldRule(
         code="UG1",
         parts={
             1: FieldPartRule(missing_values={"99"}, quality_part=4),  # primary swell period (seconds)
+            2: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
+            3: FieldPartRule(missing_values={"999"}, agg="circular_mean", quality_part=4),
+            4: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),  # swell height quality
+        },
+    ),
+    "UG2": FieldRule(
+        code="UG2",
+        parts={
+            1: FieldPartRule(missing_values={"99"}, quality_part=4),  # secondary swell period (seconds)
             2: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
             3: FieldPartRule(missing_values={"999"}, agg="circular_mean", quality_part=4),
             4: FieldPartRule(
@@ -1758,6 +1969,108 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
             ),
         },
     ),
+    "OB": FieldRule(
+        code="OB*",
+        parts={
+            1: FieldPartRule(missing_values={"999"}, agg="drop"),  # period minutes
+            2: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=3),
+            3: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"1", "3", "9"},
+            ),
+            4: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
+            ),
+            5: FieldPartRule(missing_values={"999"}, agg="circular_mean", quality_part=6),
+            6: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"1", "3", "9"},
+            ),
+            7: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
+            ),
+            8: FieldPartRule(scale=0.01, missing_values={"99999"}, quality_part=9),
+            9: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"1", "3", "9"},
+            ),
+            10: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
+            ),
+            11: FieldPartRule(scale=0.01, missing_values={"99999"}, quality_part=12),
+            12: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"1", "3", "9"},
+            ),
+            13: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
+            ),
+        },
+    ),
+    "OE": FieldRule(
+        code="OE*",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                allowed_values={"1", "2", "3", "4", "5"},
+            ),  # summary type code
+            2: FieldPartRule(missing_values={"99"}, agg="drop"),  # period hours
+            3: FieldPartRule(scale=0.01, missing_values={"99999"}, quality_part=6),
+            4: FieldPartRule(
+                missing_values={"999"},
+                agg="circular_mean",
+                quality_part=6,
+            ),
+            5: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9999"},
+                quality_part=6,
+            ),
+            6: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"4", "5", "6", "7", "9", "M"},
+            ),
+        },
+    ),
+    "RH": FieldRule(
+        code="RH*",
+        parts={
+            1: FieldPartRule(missing_values={"999"}, agg="drop"),  # period hours
+            2: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                allowed_values={"M", "N", "X"},
+            ),  # relative humidity code
+            3: FieldPartRule(missing_values={"999"}, quality_part=5),  # relative humidity percent
+            4: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                allowed_values={"D"},
+            ),  # derived code
+            5: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "9"},
+            ),  # quality code
+        },
+    ),
     "ED1": FieldRule(
         code="ED1",
         parts={
@@ -1992,6 +2305,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     ),
 }
 
+_EQD_PREFIX_RULES: dict[str, FieldRule] = {}
+for _letter in ("Q", "P", "R", "C", "D"):
+    _EQD_PREFIX_RULES.update({f"{_letter}{digit}": EQD_REASON_RULE for digit in "0123456789"})
+_EQD_PREFIX_RULES.update({f"N{digit}": EQD_UNIT_RULE for digit in "0123456789"})
+FIELD_RULE_PREFIXES.update(_EQD_PREFIX_RULES)
+
 
 def get_field_rule(prefix: str) -> FieldRule | None:
     if prefix in FIELD_RULES:
@@ -2051,6 +2370,38 @@ FRIENDLY_COLUMN_MAP: dict[str, str] = {
     "UG1__part2": "swell_height_m",
     "UG1__part3": "swell_direction_deg",
     "UG1__part4": "swell_height_quality_code",
+    "UG2__part1": "secondary_swell_period_seconds",
+    "UG2__part2": "secondary_swell_height_m",
+    "UG2__part3": "secondary_swell_direction_deg",
+    "UG2__part4": "secondary_swell_height_quality_code",
+    "WA1__part1": "platform_ice_source_code",
+    "WA1__part2": "platform_ice_thickness_cm",
+    "WA1__part3": "platform_ice_tendency_code",
+    "WA1__part4": "platform_ice_quality_code",
+    "WD1__part1": "water_surface_ice_edge_bearing_code",
+    "WD1__part2": "water_surface_ice_concentration_pct",
+    "WD1__part3": "water_surface_ice_non_uniform_code",
+    "WD1__part4": "water_surface_ice_ship_position_code",
+    "WD1__part5": "water_surface_ice_ship_penetrability_code",
+    "WD1__part6": "water_surface_ice_trend_code",
+    "WD1__part7": "water_surface_ice_development_code",
+    "WD1__part8": "water_surface_ice_growler_presence_code",
+    "WD1__part9": "water_surface_ice_growler_quantity",
+    "WD1__part10": "water_surface_ice_iceberg_quantity",
+    "WD1__part11": "water_surface_ice_quality_code",
+    "WG1__part1": "water_surface_ice_hist_edge_bearing_code",
+    "WG1__part2": "water_surface_ice_hist_edge_distance_km",
+    "WG1__part3": "water_surface_ice_hist_edge_orientation_code",
+    "WG1__part4": "water_surface_ice_hist_formation_code",
+    "WG1__part5": "water_surface_ice_hist_navigation_code",
+    "WG1__part6": "water_surface_ice_hist_quality_code",
+    "WJ1__part1": "water_level_ice_thickness_cm",
+    "WJ1__part2": "water_level_discharge_m3s",
+    "WJ1__part3": "water_level_primary_ice_code",
+    "WJ1__part4": "water_level_secondary_ice_code",
+    "WJ1__part5": "water_level_stage_height_cm",
+    "WJ1__part6": "water_level_slush_code",
+    "WJ1__part7": "water_level_state_code",
     "GE1__part1": "convective_cloud_code",
     "GE1__part2": "cloud_vertical_datum_code",
     "GE1__part3": "cloud_base_height_upper_m",
@@ -2467,6 +2818,48 @@ _FRIENDLY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^OD(?P<idx>\d+)__part3$"), "supp_wind_direction_deg_{idx}"),
     (re.compile(r"^OD(?P<idx>\d+)__part4$"), "supp_wind_speed_ms_{idx}"),
     (re.compile(r"^OD(?P<idx>\d+)__part5$"), "supp_wind_speed_quality_code_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part1$"), "wind_avg_period_minutes_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part2$"), "wind_max_gust_ms_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part3$"), "wind_max_gust_qc_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part4$"), "wind_max_gust_flag_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part5$"), "wind_max_direction_deg_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part6$"), "wind_max_direction_qc_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part7$"), "wind_max_direction_flag_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part8$"), "wind_speed_std_ms_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part9$"), "wind_speed_std_qc_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part10$"), "wind_speed_std_flag_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part11$"), "wind_direction_std_deg_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part12$"), "wind_direction_std_qc_{idx}"),
+    (re.compile(r"^OB(?P<idx>\d+)__part13$"), "wind_direction_std_flag_{idx}"),
+    (re.compile(r"^Q(?P<idx>\d+)__part1$"), "eqd_original_value_q{idx}"),
+    (re.compile(r"^Q(?P<idx>\d+)__part2$"), "eqd_reason_code_q{idx}"),
+    (re.compile(r"^Q(?P<idx>\d+)__part3$"), "eqd_parameter_code_q{idx}"),
+    (re.compile(r"^P(?P<idx>\d+)__part1$"), "eqd_original_value_p{idx}"),
+    (re.compile(r"^P(?P<idx>\d+)__part2$"), "eqd_reason_code_p{idx}"),
+    (re.compile(r"^P(?P<idx>\d+)__part3$"), "eqd_parameter_code_p{idx}"),
+    (re.compile(r"^R(?P<idx>\d+)__part1$"), "eqd_original_value_r{idx}"),
+    (re.compile(r"^R(?P<idx>\d+)__part2$"), "eqd_reason_code_r{idx}"),
+    (re.compile(r"^R(?P<idx>\d+)__part3$"), "eqd_parameter_code_r{idx}"),
+    (re.compile(r"^C(?P<idx>\d+)__part1$"), "eqd_original_value_c{idx}"),
+    (re.compile(r"^C(?P<idx>\d+)__part2$"), "eqd_reason_code_c{idx}"),
+    (re.compile(r"^C(?P<idx>\d+)__part3$"), "eqd_parameter_code_c{idx}"),
+    (re.compile(r"^D(?P<idx>\d+)__part1$"), "eqd_original_value_d{idx}"),
+    (re.compile(r"^D(?P<idx>\d+)__part2$"), "eqd_reason_code_d{idx}"),
+    (re.compile(r"^D(?P<idx>\d+)__part3$"), "eqd_parameter_code_d{idx}"),
+    (re.compile(r"^N(?P<idx>\d+)__part1$"), "eqd_original_value_n{idx}"),
+    (re.compile(r"^N(?P<idx>\d+)__part2$"), "eqd_units_code_n{idx}"),
+    (re.compile(r"^N(?P<idx>\d+)__part3$"), "eqd_parameter_code_n{idx}"),
+    (re.compile(r"^OE(?P<idx>\d+)__part1$"), "summary_wind_type_code_{idx}"),
+    (re.compile(r"^OE(?P<idx>\d+)__part2$"), "summary_wind_period_hours_{idx}"),
+    (re.compile(r"^OE(?P<idx>\d+)__part3$"), "summary_wind_speed_ms_{idx}"),
+    (re.compile(r"^OE(?P<idx>\d+)__part4$"), "summary_wind_direction_deg_{idx}"),
+    (re.compile(r"^OE(?P<idx>\d+)__part5$"), "summary_wind_time_hhmm_{idx}"),
+    (re.compile(r"^OE(?P<idx>\d+)__part6$"), "summary_wind_quality_code_{idx}"),
+    (re.compile(r"^RH(?P<idx>\d+)__part1$"), "relative_humidity_period_hours_{idx}"),
+    (re.compile(r"^RH(?P<idx>\d+)__part2$"), "relative_humidity_code_{idx}"),
+    (re.compile(r"^RH(?P<idx>\d+)__part3$"), "relative_humidity_percent_{idx}"),
+    (re.compile(r"^RH(?P<idx>\d+)__part4$"), "relative_humidity_derived_code_{idx}"),
+    (re.compile(r"^RH(?P<idx>\d+)__part5$"), "relative_humidity_quality_code_{idx}"),
 ]
 
 _INTERNAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
@@ -2804,6 +3197,48 @@ _INTERNAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^supp_wind_direction_deg_(?P<idx>\d+)$"), "OD{idx}__part3"),
     (re.compile(r"^supp_wind_speed_ms_(?P<idx>\d+)$"), "OD{idx}__part4"),
     (re.compile(r"^supp_wind_speed_quality_code_(?P<idx>\d+)$"), "OD{idx}__part5"),
+    (re.compile(r"^wind_avg_period_minutes_(?P<idx>\d+)$"), "OB{idx}__part1"),
+    (re.compile(r"^wind_max_gust_ms_(?P<idx>\d+)$"), "OB{idx}__part2"),
+    (re.compile(r"^wind_max_gust_qc_(?P<idx>\d+)$"), "OB{idx}__part3"),
+    (re.compile(r"^wind_max_gust_flag_(?P<idx>\d+)$"), "OB{idx}__part4"),
+    (re.compile(r"^wind_max_direction_deg_(?P<idx>\d+)$"), "OB{idx}__part5"),
+    (re.compile(r"^wind_max_direction_qc_(?P<idx>\d+)$"), "OB{idx}__part6"),
+    (re.compile(r"^wind_max_direction_flag_(?P<idx>\d+)$"), "OB{idx}__part7"),
+    (re.compile(r"^wind_speed_std_ms_(?P<idx>\d+)$"), "OB{idx}__part8"),
+    (re.compile(r"^wind_speed_std_qc_(?P<idx>\d+)$"), "OB{idx}__part9"),
+    (re.compile(r"^wind_speed_std_flag_(?P<idx>\d+)$"), "OB{idx}__part10"),
+    (re.compile(r"^wind_direction_std_deg_(?P<idx>\d+)$"), "OB{idx}__part11"),
+    (re.compile(r"^wind_direction_std_qc_(?P<idx>\d+)$"), "OB{idx}__part12"),
+    (re.compile(r"^wind_direction_std_flag_(?P<idx>\d+)$"), "OB{idx}__part13"),
+    (re.compile(r"^eqd_original_value_q(?P<idx>\d+)$"), "Q{idx}__part1"),
+    (re.compile(r"^eqd_reason_code_q(?P<idx>\d+)$"), "Q{idx}__part2"),
+    (re.compile(r"^eqd_parameter_code_q(?P<idx>\d+)$"), "Q{idx}__part3"),
+    (re.compile(r"^eqd_original_value_p(?P<idx>\d+)$"), "P{idx}__part1"),
+    (re.compile(r"^eqd_reason_code_p(?P<idx>\d+)$"), "P{idx}__part2"),
+    (re.compile(r"^eqd_parameter_code_p(?P<idx>\d+)$"), "P{idx}__part3"),
+    (re.compile(r"^eqd_original_value_r(?P<idx>\d+)$"), "R{idx}__part1"),
+    (re.compile(r"^eqd_reason_code_r(?P<idx>\d+)$"), "R{idx}__part2"),
+    (re.compile(r"^eqd_parameter_code_r(?P<idx>\d+)$"), "R{idx}__part3"),
+    (re.compile(r"^eqd_original_value_c(?P<idx>\d+)$"), "C{idx}__part1"),
+    (re.compile(r"^eqd_reason_code_c(?P<idx>\d+)$"), "C{idx}__part2"),
+    (re.compile(r"^eqd_parameter_code_c(?P<idx>\d+)$"), "C{idx}__part3"),
+    (re.compile(r"^eqd_original_value_d(?P<idx>\d+)$"), "D{idx}__part1"),
+    (re.compile(r"^eqd_reason_code_d(?P<idx>\d+)$"), "D{idx}__part2"),
+    (re.compile(r"^eqd_parameter_code_d(?P<idx>\d+)$"), "D{idx}__part3"),
+    (re.compile(r"^eqd_original_value_n(?P<idx>\d+)$"), "N{idx}__part1"),
+    (re.compile(r"^eqd_units_code_n(?P<idx>\d+)$"), "N{idx}__part2"),
+    (re.compile(r"^eqd_parameter_code_n(?P<idx>\d+)$"), "N{idx}__part3"),
+    (re.compile(r"^summary_wind_type_code_(?P<idx>\d+)$"), "OE{idx}__part1"),
+    (re.compile(r"^summary_wind_period_hours_(?P<idx>\d+)$"), "OE{idx}__part2"),
+    (re.compile(r"^summary_wind_speed_ms_(?P<idx>\d+)$"), "OE{idx}__part3"),
+    (re.compile(r"^summary_wind_direction_deg_(?P<idx>\d+)$"), "OE{idx}__part4"),
+    (re.compile(r"^summary_wind_time_hhmm_(?P<idx>\d+)$"), "OE{idx}__part5"),
+    (re.compile(r"^summary_wind_quality_code_(?P<idx>\d+)$"), "OE{idx}__part6"),
+    (re.compile(r"^relative_humidity_period_hours_(?P<idx>\d+)$"), "RH{idx}__part1"),
+    (re.compile(r"^relative_humidity_code_(?P<idx>\d+)$"), "RH{idx}__part2"),
+    (re.compile(r"^relative_humidity_percent_(?P<idx>\d+)$"), "RH{idx}__part3"),
+    (re.compile(r"^relative_humidity_derived_code_(?P<idx>\d+)$"), "RH{idx}__part4"),
+    (re.compile(r"^relative_humidity_quality_code_(?P<idx>\d+)$"), "RH{idx}__part5"),
 ]
 
 _INTERNAL_COLUMN_MAP = {v: k for k, v in FRIENDLY_COLUMN_MAP.items()}

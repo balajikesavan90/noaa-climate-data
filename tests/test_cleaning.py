@@ -212,6 +212,77 @@ class TestSentinelsInCleanedOutput:
         assert result["MK1__part4"] is None
         assert result["MK1__part5"] is None
 
+    def test_rh1_missing_parts(self):
+        result = clean_value_quality("999,9,999,9,9", "RH1")
+        assert result["RH1__part1"] is None
+        assert result["RH1__part2"] is None
+        assert result["RH1__part3"] is None
+        assert result["RH1__part4"] is None
+
+    def test_rh1_valid_values(self):
+        result = clean_value_quality("024,M,085,D,1", "RH1")
+        assert result["RH1__part1"] == pytest.approx(24.0)
+        assert result["RH1__part2"] == "M"
+        assert result["RH1__part3"] == pytest.approx(85.0)
+        assert result["RH1__part4"] == "D"
+        assert result["RH1__quality"] == "1"
+
+    def test_ob1_missing_parts(self):
+        result = clean_value_quality(
+            "999,9999,9,9,999,9,9,99999,9,9,99999,9,9",
+            "OB1",
+        )
+        assert result["OB1__part1"] is None
+        assert result["OB1__part2"] is None
+        assert result["OB1__part5"] is None
+        assert result["OB1__part8"] is None
+        assert result["OB1__part11"] is None
+
+    def test_oe1_missing_parts(self):
+        result = clean_value_quality("9,99,99999,999,9999,9", "OE1")
+        assert result["OE1__part1"] is None
+        assert result["OE1__part2"] is None
+        assert result["OE1__part3"] is None
+        assert result["OE1__part4"] is None
+        assert result["OE1__part5"] is None
+
+    def test_wa1_missing_parts(self):
+        result = clean_value_quality("9,999,9,9", "WA1")
+        assert result["WA1__part1"] is None
+        assert result["WA1__part2"] is None
+        assert result["WA1__part3"] is None
+
+    def test_wd1_missing_parts(self):
+        result = clean_value_quality("99,999,99,9,9,9,99,9,999,999,9", "WD1")
+        assert result["WD1__part1"] is None
+        assert result["WD1__part2"] is None
+        assert result["WD1__part3"] is None
+        assert result["WD1__part4"] is None
+        assert result["WD1__part5"] is None
+        assert result["WD1__part6"] is None
+        assert result["WD1__part7"] is None
+        assert result["WD1__part8"] is None
+        assert result["WD1__part9"] is None
+        assert result["WD1__part10"] is None
+
+    def test_wg1_missing_parts(self):
+        result = clean_value_quality("99,99,99,99,99,9", "WG1")
+        assert result["WG1__part1"] is None
+        assert result["WG1__part2"] is None
+        assert result["WG1__part3"] is None
+        assert result["WG1__part4"] is None
+        assert result["WG1__part5"] is None
+
+    def test_wj1_missing_parts(self):
+        result = clean_value_quality("999,99999,99,99,9999,9,9", "WJ1")
+        assert result["WJ1__part1"] is None
+        assert result["WJ1__part2"] is None
+        assert result["WJ1__part3"] is None
+        assert result["WJ1__part4"] is None
+        assert result["WJ1__part5"] is None
+        assert result["WJ1__part6"] is None
+        assert result["WJ1__part7"] is None
+
 
 # ── 2. Scale factors (÷10) ──────────────────────────────────────────────
 
@@ -443,6 +514,18 @@ class TestQualityNullsCorrectPart:
         assert result["UG1__part2"] is None
         assert result["UG1__part3"] is None
 
+    def test_ug2_bad_swell_quality_nulls_swell_parts(self):
+        result = clean_value_quality("10,050,180,8", "UG2")
+        assert result["UG2__part1"] is None
+        assert result["UG2__part2"] is None
+        assert result["UG2__part3"] is None
+
+    def test_ug2_quality_code_outside_marine_domain(self):
+        result = clean_value_quality("10,050,180,4", "UG2")
+        assert result["UG2__part1"] is None
+        assert result["UG2__part2"] is None
+        assert result["UG2__part3"] is None
+
     def test_quality_in_dataframe(self):
         df = pd.DataFrame(
             {
@@ -637,6 +720,49 @@ class TestQualityNullsCorrectPart:
         assert result["GG1__part3"] is None
         assert result["GG1__part5"] is None
         assert result["GG1__part7"] is None
+
+    def test_ob1_quality_rejects_8(self):
+        result = clean_value_quality(
+            "060,0100,8,0,090,1,0,00010,1,0,00020,1,0",
+            "OB1",
+        )
+        assert result["OB1__part2"] is None
+        assert result["OB1__part5"] == pytest.approx(90.0)
+
+    def test_oe1_quality_rejects_8(self):
+        result = clean_value_quality("1,24,00100,090,1230,8", "OE1")
+        assert result["OE1__part3"] is None
+
+    def test_oe1_calm_direction(self):
+        result = clean_value_quality("1,24,00000,999,1200,4", "OE1")
+        assert result["OE1__part4"] == pytest.approx(0.0)
+
+    def test_wa1_quality_rejects_8(self):
+        result = clean_value_quality("1,001,1,8", "WA1")
+        assert result["WA1__part1"] is None
+        assert result["WA1__part2"] is None
+        assert result["WA1__part3"] is None
+
+    def test_wd1_quality_rejects_8(self):
+        result = clean_value_quality("01,050,06,0,1,1,01,1,010,020,8", "WD1")
+        assert result["WD1__part1"] is None
+        assert result["WD1__part2"] is None
+        assert result["WD1__part3"] is None
+
+    def test_wg1_quality_rejects_8(self):
+        result = clean_value_quality("01,10,01,01,01,8", "WG1")
+        assert result["WG1__part1"] is None
+        assert result["WG1__part2"] is None
+
+    def test_eqd_q01_reason_code_rejects_8(self):
+        result = clean_value_quality("123456,8,APC3", "Q01")
+        assert result["Q01__part1"] == pytest.approx(123456.0)
+        assert result["Q01__part2"] is None
+
+    def test_eqd_n01_units_code_rejects_z(self):
+        result = clean_value_quality("ABCDEF,Z,ALTP0A", "N01")
+        assert result["N01__part1"] == "ABCDEF"
+        assert result["N01__part2"] is None
 
     def test_gp1_missing_parts(self):
         result = clean_value_quality("9999,9999,99,999,9999,99,999,9999,99,999", "GP1")
