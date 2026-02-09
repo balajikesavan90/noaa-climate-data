@@ -89,6 +89,10 @@ class TestSentinelsInCleanedOutput:
         result = clean_value_quality("99999,1", "SLP")
         assert result["SLP__value"] is None
 
+    def test_slp_quality_rejects_alpha_codes(self):
+        result = clean_value_quality("10132,A", "SLP")
+        assert result["SLP__value"] is None
+
     def test_wnd_sentinels_become_none(self):
         # direction=999, type=N, speed=9999
         result = clean_value_quality("999,1,N,9999,1", "WND")
@@ -491,6 +495,67 @@ class TestQualityNullsCorrectPart:
     def test_cx_precip_quality_rejects_2(self):
         result = clean_value_quality("+00100,2,0,1000,1,0,1000,1,0,1000,1,0", "CX1")
         assert result["CX1__part1"] is None
+
+    def test_ed1_missing_parts(self):
+        result = clean_value_quality("99,9,9999,1", "ED1")
+        assert result["ED1__part1"] is None
+        assert result["ED1__part2"] is None
+        assert result["ED1__part3"] is None
+
+    def test_ed1_quality_rejects_8(self):
+        result = clean_value_quality("18,L,0800,8", "ED1")
+        assert result["ED1__part1"] is None
+        assert result["ED1__part2"] is None
+        assert result["ED1__part3"] is None
+
+    def test_gg_missing_parts(self):
+        result = clean_value_quality("99,9,99999,9,99,9,99,9", "GG1")
+        assert result["GG1__part1"] is None
+        assert result["GG1__part3"] is None
+        assert result["GG1__part5"] is None
+        assert result["GG1__part7"] is None
+
+    def test_gg_quality_rejects_8(self):
+        result = clean_value_quality("01,8,00100,8,01,8,01,8", "GG1")
+        assert result["GG1__part1"] is None
+        assert result["GG1__part3"] is None
+        assert result["GG1__part5"] is None
+        assert result["GG1__part7"] is None
+
+    def test_gp1_missing_parts(self):
+        result = clean_value_quality("9999,9999,99,999,9999,99,999,9999,99,999", "GP1")
+        assert result["GP1__part1"] is None
+        assert result["GP1__part2"] is None
+        assert result["GP1__part3"] is None
+        assert result["GP1__part4"] is None
+        assert result["GP1__part5"] is None
+        assert result["GP1__part6"] is None
+        assert result["GP1__part7"] is None
+        assert result["GP1__part8"] is None
+        assert result["GP1__part9"] is None
+        assert result["GP1__part10"] is None
+
+    def test_gq1_missing_parts(self):
+        result = clean_value_quality("9999,9999,9,9999,9", "GQ1")
+        assert result["GQ1__part1"] is None
+        assert result["GQ1__part2"] is None
+        assert result["GQ1__part4"] is None
+
+    def test_gq1_quality_rejects_8(self):
+        result = clean_value_quality("0060,0123,8,0456,1", "GQ1")
+        assert result["GQ1__part2"] is None
+        assert result["GQ1__part4"] == pytest.approx(45.6)
+
+    def test_gr1_missing_parts(self):
+        result = clean_value_quality("9999,9999,9,9999,9", "GR1")
+        assert result["GR1__part1"] is None
+        assert result["GR1__part2"] is None
+        assert result["GR1__part4"] is None
+
+    def test_gr1_quality_rejects_8(self):
+        result = clean_value_quality("0060,0800,8,0900,1", "GR1")
+        assert result["GR1__part2"] is None
+        assert result["GR1__part4"] == pytest.approx(900.0)
 
     def test_ay_quality_rejects_4(self):
         result = clean_value_quality("1,4,12,1", "AY1")

@@ -38,13 +38,13 @@
 - [x] Add Part 6 CRN unique groups CB1-CB2 (secondary precip), CF1-CF3 (fan speed), CG1-CG3 (primary precip), CH1-CH2 (RH/Temp), CI1 (hourly RH/Temp stats), and CN1-CN4 (battery + diagnostics).
 - [x] Add Part 7 network metadata groups CO1 (climate division + UTC offset), CO2-CO9 (element time offsets), CR1 (CRN control), CT1-CT3 (subhourly temp), CU1-CU3 (hourly temp + std dev).
 - [x] Add Part 7 network metadata groups CV1-CV3 (hourly temp extremes + times), CW1 (subhourly wetness), CX1-CX3 (hourly Geonor vibrating wire summary).
-- [ ] Add Part 8 CRN control section fields (air temp QC, dew point + QC, sea level pressure + QC).
-- [ ] Add Part 14 runway visual range group ED1 (runway designator, direction, visibility, quality).
-- [ ] Implement remaining cloud/solar groups from Part 15 (e.g., below-station cloud layer sections not yet mapped).
-- [ ] Add Part 15 below-station cloud layer group GG1-GG6 (coverage, heights, type/top codes, and quality flags).
-- [ ] Add Part 15 modeled solar irradiance group GP1 (modeled global/direct/diffuse values, flags, and uncertainties).
-- [ ] Add Part 20 hourly solar angle group GQ1 (time period, mean zenith/azimuth angles, QC).
-- [ ] Add Part 20 hourly extraterrestrial radiation group GR1 (time period, horizontal/normal values, QC).
+- [x] Add Part 8 CRN control section fields (air temp QC, dew point + QC, sea level pressure + QC).
+- [x] Add Part 14 runway visual range group ED1 (runway designator, direction, visibility, quality).
+- [x] Implement remaining cloud/solar groups from Part 15 (e.g., below-station cloud layer sections not yet mapped).
+- [x] Add Part 15 below-station cloud layer group GG1-GG6 (coverage, heights, type/top codes, and quality flags).
+- [x] Add Part 15 modeled solar irradiance group GP1 (modeled global/direct/diffuse values, flags, and uncertainties).
+- [x] Add Part 20 hourly solar angle group GQ1 (time period, mean zenith/azimuth angles, QC).
+- [x] Add Part 20 hourly extraterrestrial radiation group GR1 (time period, horizontal/normal values, QC).
 - [ ] Add Hail data group from Part 20/22 (identifier + hail size/quality); master doc labels a HAIL identifier but does not show its code.
 - [ ] Add Part 23 ground surface groups IA1/IA2, IB1/IB2, IC1 (ground condition, min/max temps, snow depth), with quality codes.
 - [ ] Add Part 23 air temperature groups KB1-KB3 (average air temperature) with scaling/sentinels.

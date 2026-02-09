@@ -218,15 +218,36 @@ FIELD_RULES: dict[str, FieldRule] = {
     ),
     "TMP": FieldRule(
         code="TMP",
-        parts={1: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=2)},
+        parts={
+            1: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=2,
+                allowed_quality=QUALITY_FLAGS,
+            )
+        },
     ),
     "DEW": FieldRule(
         code="DEW",
-        parts={1: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=2)},
+        parts={
+            1: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=2,
+                allowed_quality=QUALITY_FLAGS,
+            )
+        },
     ),
     "SLP": FieldRule(
         code="SLP",
-        parts={1: FieldPartRule(scale=0.1, missing_values={"99999"}, quality_part=2)},
+        parts={
+            1: FieldPartRule(
+                scale=0.1,
+                missing_values={"99999"},
+                quality_part=2,
+                allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "9"},
+            )
+        },
     ),
     "OC1": FieldRule(
         code="OC1",
@@ -1049,6 +1070,45 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
             ),
         },
     ),
+    "GG": FieldRule(
+        code="GG*",
+        parts={
+            1: FieldPartRule(missing_values={"99"}, quality_part=2, agg="mean"),
+            2: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+            3: FieldPartRule(missing_values={"99999"}, quality_part=4),
+            4: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+            5: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=6,
+            ),
+            6: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+            7: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=8,
+            ),
+            8: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+        },
+    ),
     "KA": FieldRule(
         code="KA*",
         parts={
@@ -1218,6 +1278,57 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
             ),
         },
     ),
+    "GP1": FieldRule(
+        code="GP1",
+        parts={
+            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9999"}),
+            2: FieldPartRule(missing_values={"9999"}),
+            3: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
+            4: FieldPartRule(missing_values={"999"}),
+            5: FieldPartRule(missing_values={"9999"}),
+            6: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
+            7: FieldPartRule(missing_values={"999"}),
+            8: FieldPartRule(missing_values={"9999"}),
+            9: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
+            10: FieldPartRule(missing_values={"999"}),
+        },
+    ),
+    "GQ1": FieldRule(
+        code="GQ1",
+        parts={
+            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9999"}),
+            2: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=3),
+            3: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+            4: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=5),
+            5: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+        },
+    ),
+    "GR1": FieldRule(
+        code="GR1",
+        parts={
+            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9999"}),
+            2: FieldPartRule(missing_values={"9999"}, quality_part=3),
+            3: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+            4: FieldPartRule(missing_values={"9999"}, quality_part=5),
+            5: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+        },
+    ),
     "OA": FieldRule(
         code="OA*",
         parts={
@@ -1240,6 +1351,25 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
             4: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=5),
             5: FieldPartRule(
                 missing_values={"9"},
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),
+        },
+    ),
+    "ED1": FieldRule(
+        code="ED1",
+        parts={
+            1: FieldPartRule(scale=10.0, missing_values={"99"}, quality_part=4),
+            2: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                allowed_values={"L", "C", "R", "U"},
+                quality_part=4,
+            ),
+            3: FieldPartRule(missing_values={"9999"}, quality_part=4),
+            4: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "9"},
@@ -1542,6 +1672,20 @@ FRIENDLY_COLUMN_MAP: dict[str, str] = {
     "CR1__part1": "crn_datalogger_version",
     "CR1__part2": "crn_datalogger_version_qc",
     "CR1__part3": "crn_datalogger_version_flag",
+    "ED1__part1": "runway_direction_deg",
+    "ED1__part2": "runway_designator_code",
+    "ED1__part3": "runway_visibility_m",
+    "ED1__part4": "runway_visibility_quality_code",
+    "GQ1__part1": "solar_angle_period_minutes",
+    "GQ1__part2": "solar_zenith_angle_deg_mean",
+    "GQ1__part3": "solar_zenith_angle_quality_code",
+    "GQ1__part4": "solar_azimuth_angle_deg_mean",
+    "GQ1__part5": "solar_azimuth_angle_quality_code",
+    "GR1__part1": "extraterrestrial_radiation_period_minutes",
+    "GR1__part2": "extraterrestrial_radiation_horizontal_wm2",
+    "GR1__part3": "extraterrestrial_radiation_horizontal_quality_code",
+    "GR1__part4": "extraterrestrial_radiation_normal_wm2",
+    "GR1__part5": "extraterrestrial_radiation_normal_quality_code",
 }
 
 _FRIENDLY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
@@ -1750,6 +1894,14 @@ _FRIENDLY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^GD(?P<idx>\d+)__part4$"), "sky_cover_summation_height_m_{idx}"),
     (re.compile(r"^GD(?P<idx>\d+)__part5$"), "sky_cover_summation_height_quality_code_{idx}"),
     (re.compile(r"^GD(?P<idx>\d+)__part6$"), "sky_cover_summation_characteristic_code_{idx}"),
+    (re.compile(r"^GG(?P<idx>\d+)__part1$"), "below_station_cloud_coverage_{idx}"),
+    (re.compile(r"^GG(?P<idx>\d+)__part2$"), "below_station_cloud_coverage_quality_code_{idx}"),
+    (re.compile(r"^GG(?P<idx>\d+)__part3$"), "below_station_cloud_top_height_m_{idx}"),
+    (re.compile(r"^GG(?P<idx>\d+)__part4$"), "below_station_cloud_top_height_quality_code_{idx}"),
+    (re.compile(r"^GG(?P<idx>\d+)__part5$"), "below_station_cloud_type_code_{idx}"),
+    (re.compile(r"^GG(?P<idx>\d+)__part6$"), "below_station_cloud_type_quality_code_{idx}"),
+    (re.compile(r"^GG(?P<idx>\d+)__part7$"), "below_station_cloud_top_code_{idx}"),
+    (re.compile(r"^GG(?P<idx>\d+)__part8$"), "below_station_cloud_top_quality_code_{idx}"),
     (re.compile(r"^GH(?P<idx>\d+)__part1$"), "solar_radiation_avg_wm2_{idx}"),
     (re.compile(r"^GH(?P<idx>\d+)__part2$"), "solar_radiation_avg_qc_{idx}"),
     (re.compile(r"^GH(?P<idx>\d+)__part3$"), "solar_radiation_avg_flag_{idx}"),
@@ -1799,6 +1951,16 @@ _FRIENDLY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^GO(?P<idx>\d+)__part5$"), "net_infrared_radiation_quality_code_{idx}"),
     (re.compile(r"^GO(?P<idx>\d+)__part6$"), "net_radiation_wm2_{idx}"),
     (re.compile(r"^GO(?P<idx>\d+)__part7$"), "net_radiation_quality_code_{idx}"),
+    (re.compile(r"^GP1__part1$"), "modeled_solar_period_minutes"),
+    (re.compile(r"^GP1__part2$"), "modeled_global_horizontal_wm2"),
+    (re.compile(r"^GP1__part3$"), "modeled_global_horizontal_source_flag"),
+    (re.compile(r"^GP1__part4$"), "modeled_global_horizontal_uncertainty_pct"),
+    (re.compile(r"^GP1__part5$"), "modeled_direct_normal_wm2"),
+    (re.compile(r"^GP1__part6$"), "modeled_direct_normal_source_flag"),
+    (re.compile(r"^GP1__part7$"), "modeled_direct_normal_uncertainty_pct"),
+    (re.compile(r"^GP1__part8$"), "modeled_diffuse_horizontal_wm2"),
+    (re.compile(r"^GP1__part9$"), "modeled_diffuse_horizontal_source_flag"),
+    (re.compile(r"^GP1__part10$"), "modeled_diffuse_horizontal_uncertainty_pct"),
     (re.compile(r"^OA(?P<idx>\d+)__part1$"), "supp_wind_oa_type_code_{idx}"),
     (re.compile(r"^OA(?P<idx>\d+)__part2$"), "supp_wind_oa_period_hours_{idx}"),
     (re.compile(r"^OA(?P<idx>\d+)__part3$"), "supp_wind_oa_speed_ms_{idx}"),
@@ -2016,6 +2178,14 @@ _INTERNAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^sky_cover_summation_height_m_(?P<idx>\d+)$"), "GD{idx}__part4"),
     (re.compile(r"^sky_cover_summation_height_quality_code_(?P<idx>\d+)$"), "GD{idx}__part5"),
     (re.compile(r"^sky_cover_summation_characteristic_code_(?P<idx>\d+)$"), "GD{idx}__part6"),
+    (re.compile(r"^below_station_cloud_coverage_(?P<idx>\d+)$"), "GG{idx}__part1"),
+    (re.compile(r"^below_station_cloud_coverage_quality_code_(?P<idx>\d+)$"), "GG{idx}__part2"),
+    (re.compile(r"^below_station_cloud_top_height_m_(?P<idx>\d+)$"), "GG{idx}__part3"),
+    (re.compile(r"^below_station_cloud_top_height_quality_code_(?P<idx>\d+)$"), "GG{idx}__part4"),
+    (re.compile(r"^below_station_cloud_type_code_(?P<idx>\d+)$"), "GG{idx}__part5"),
+    (re.compile(r"^below_station_cloud_type_quality_code_(?P<idx>\d+)$"), "GG{idx}__part6"),
+    (re.compile(r"^below_station_cloud_top_code_(?P<idx>\d+)$"), "GG{idx}__part7"),
+    (re.compile(r"^below_station_cloud_top_quality_code_(?P<idx>\d+)$"), "GG{idx}__part8"),
     (re.compile(r"^solar_radiation_avg_wm2_(?P<idx>\d+)$"), "GH{idx}__part1"),
     (re.compile(r"^solar_radiation_avg_qc_(?P<idx>\d+)$"), "GH{idx}__part2"),
     (re.compile(r"^solar_radiation_avg_flag_(?P<idx>\d+)$"), "GH{idx}__part3"),
@@ -2065,6 +2235,21 @@ _INTERNAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^net_infrared_radiation_quality_code_(?P<idx>\d+)$"), "GO{idx}__part5"),
     (re.compile(r"^net_radiation_wm2_(?P<idx>\d+)$"), "GO{idx}__part6"),
     (re.compile(r"^net_radiation_quality_code_(?P<idx>\d+)$"), "GO{idx}__part7"),
+    (re.compile(r"^modeled_solar_period_minutes$"), "GP1__part1"),
+    (re.compile(r"^modeled_global_horizontal_wm2$"), "GP1__part2"),
+    (re.compile(r"^modeled_global_horizontal_source_flag$"), "GP1__part3"),
+    (re.compile(r"^modeled_global_horizontal_uncertainty_pct$"), "GP1__part4"),
+    (re.compile(r"^modeled_direct_normal_wm2$"), "GP1__part5"),
+    (re.compile(r"^modeled_direct_normal_source_flag$"), "GP1__part6"),
+    (re.compile(r"^modeled_direct_normal_uncertainty_pct$"), "GP1__part7"),
+    (re.compile(r"^modeled_diffuse_horizontal_wm2$"), "GP1__part8"),
+    (re.compile(r"^modeled_diffuse_horizontal_source_flag$"), "GP1__part9"),
+    (re.compile(r"^modeled_diffuse_horizontal_uncertainty_pct$"), "GP1__part10"),
+    (re.compile(r"^extraterrestrial_radiation_period_minutes$"), "GR1__part1"),
+    (re.compile(r"^extraterrestrial_radiation_horizontal_wm2$"), "GR1__part2"),
+    (re.compile(r"^extraterrestrial_radiation_horizontal_quality_code$"), "GR1__part3"),
+    (re.compile(r"^extraterrestrial_radiation_normal_wm2$"), "GR1__part4"),
+    (re.compile(r"^extraterrestrial_radiation_normal_quality_code$"), "GR1__part5"),
     (re.compile(r"^supp_wind_oa_type_code_(?P<idx>\d+)$"), "OA{idx}__part1"),
     (re.compile(r"^supp_wind_oa_period_hours_(?P<idx>\d+)$"), "OA{idx}__part2"),
     (re.compile(r"^supp_wind_oa_speed_ms_(?P<idx>\d+)$"), "OA{idx}__part3"),
