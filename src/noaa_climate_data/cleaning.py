@@ -323,6 +323,11 @@ def clean_noaa_dataframe(df: pd.DataFrame, keep_raw: bool = True) -> pd.DataFram
     `<column>__quality` column.
     """
     cleaned = df.copy()
+    if "ADD" in cleaned.columns:
+        add_series = cleaned["ADD"].astype(str).str.strip().str.upper()
+        add_mask = add_series.replace("", pd.NA).dropna().eq("ADD")
+        if add_mask.empty or add_mask.all():
+            cleaned = cleaned.drop(columns=["ADD"])
     expansion_frames: list[pd.DataFrame] = []
 
     for column in cleaned.columns:

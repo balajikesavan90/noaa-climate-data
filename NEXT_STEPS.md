@@ -28,15 +28,16 @@
 
 ## P1: Missing ISD groups and sections (implementation gaps)
 
-- [ ] Add Part 4 additional data section identifier ADD (section boundary for variable groups).
-- [ ] Add precipitation groups from Part 4 beyond AA/AJ/AU (e.g., AB1 monthly total, AC1 precipitation history, AD1 greatest 24-hour amount).
-- [ ] Add Part 4 additional precipitation groups: AE1, AG1, AH1-AH6, AI1-AI6, AK1, AL1-AL4, AM1, AN1, AO1-AO4, AP1-AP4.
-- [ ] Add Part 4 snow-accumulation groups AL1-AL4 (accumulation period/depth), AM1 (greatest 24-hour amount), AN1 (day/month totals).
-- [ ] Add Part 4 additional liquid-precip groups AO1-AO4 (minutes-based), AP1-AP4 (HPD 15-min gauges with quality codes).
-- [ ] Add Part 5 weather occurrence groups AT1-AT8 (daily present weather) and AU1-AU9 (present weather observation components).
-- [ ] Add Part 6 CRN unique groups CB1-CB2 (secondary precip), CF1-CF3 (fan speed), CG1-CG3 (primary precip), CH1-CH2 (RH/Temp), CI1 (hourly RH/Temp stats), and CN1-CN4 (battery + diagnostics).
-- [ ] Add Part 7 network metadata groups CO1 (climate division + UTC offset), CO2-CO9 (element time offsets), CR1 (CRN control), CT1-CT3 (subhourly temp), CU1-CU3 (hourly temp + std dev).
-- [ ] Add Part 7 network metadata groups CV1-CV3 (hourly temp extremes + times), CW1 (subhourly wetness), CX1-CX3 (hourly Geonor vibrating wire summary).
+- [x] Add Part 4 additional data section identifier ADD (section boundary for variable groups).
+- [x] Add precipitation groups from Part 4 beyond AA/AJ/AU (e.g., AB1 monthly total, AC1 precipitation history, AD1 greatest 24-hour amount).
+- [x] Add Part 4 additional precipitation groups: AE1, AG1.
+- [x] Add Part 4 additional precipitation groups: AH1-AH6, AI1-AI6, AK1, AL1-AL4, AM1, AN1, AO1-AO4, AP1-AP4.
+- [x] Add Part 4 snow-accumulation groups AL1-AL4 (accumulation period/depth), AM1 (greatest 24-hour amount), AN1 (day/month totals).
+- [x] Add Part 4 additional liquid-precip groups AO1-AO4 (minutes-based), AP1-AP4 (HPD 15-min gauges with quality codes).
+- [x] Add Part 5 weather occurrence groups AT1-AT8 (daily present weather) and AU1-AU9 (present weather observation components).
+- [x] Add Part 6 CRN unique groups CB1-CB2 (secondary precip), CF1-CF3 (fan speed), CG1-CG3 (primary precip), CH1-CH2 (RH/Temp), CI1 (hourly RH/Temp stats), and CN1-CN4 (battery + diagnostics).
+- [x] Add Part 7 network metadata groups CO1 (climate division + UTC offset), CO2-CO9 (element time offsets), CR1 (CRN control), CT1-CT3 (subhourly temp), CU1-CU3 (hourly temp + std dev).
+- [x] Add Part 7 network metadata groups CV1-CV3 (hourly temp extremes + times), CW1 (subhourly wetness), CX1-CX3 (hourly Geonor vibrating wire summary).
 - [ ] Add Part 8 CRN control section fields (air temp QC, dew point + QC, sea level pressure + QC).
 - [ ] Add Part 14 runway visual range group ED1 (runway designator, direction, visibility, quality).
 - [ ] Implement remaining cloud/solar groups from Part 15 (e.g., below-station cloud layer sections not yet mapped).

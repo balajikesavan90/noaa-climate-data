@@ -398,6 +398,100 @@ class TestQualityNullsCorrectPart:
         assert result["AU1__part5"] is None
         assert result["AU1__part6"] is None
 
+    def test_at_quality_rejects_8(self):
+        result = clean_value_quality("AU,01,FG,8", "AT1")
+        assert result["AT1__part1"] is None
+        assert result["AT1__part2"] is None
+        assert result["AT1__part3"] is None
+
+    def test_at_invalid_source_code(self):
+        result = clean_value_quality("XX,01,FG,1", "AT1")
+        assert result["AT1__part1"] is None
+        assert result["AT1__part2"] == pytest.approx(1.0)
+        assert result["AT1__part3"] == "FG"
+
+    def test_at_invalid_weather_type(self):
+        result = clean_value_quality("AU,99,FG,1", "AT1")
+        assert result["AT1__part2"] is None
+
+    def test_cb_quality_rejects_2(self):
+        result = clean_value_quality("05,+000123,2,0", "CB1")
+        assert result["CB1__part2"] is None
+
+    def test_cf_quality_rejects_2(self):
+        result = clean_value_quality("0123,2,0", "CF1")
+        assert result["CF1__part1"] is None
+
+    def test_cg_quality_rejects_2(self):
+        result = clean_value_quality("+000123,2,0", "CG1")
+        assert result["CG1__part1"] is None
+
+    def test_ch_temp_quality_rejects_2(self):
+        result = clean_value_quality("30,+01234,2,0,0456,1,0", "CH1")
+        assert result["CH1__part2"] is None
+        assert result["CH1__part5"] == pytest.approx(45.6)
+
+    def test_ci_std_rh_quality_rejects_2(self):
+        result = clean_value_quality("00010,1,0,00020,1,0,00030,1,0,00040,2,0", "CI1")
+        assert result["CI1__part10"] is None
+
+    def test_cn1_datalogger_quality_rejects_2(self):
+        result = clean_value_quality("0123,1,0,0456,1,0,0789,2,0", "CN1")
+        assert result["CN1__part7"] is None
+
+    def test_cn2_door_open_missing(self):
+        result = clean_value_quality("0001,1,0,0002,1,0,99,1,0", "CN2")
+        assert result["CN2__part7"] is None
+
+    def test_cn3_signature_quality_rejects_2(self):
+        result = clean_value_quality("000100,1,0,000200,2,0", "CN3")
+        assert result["CN3__part4"] is None
+
+    def test_cn4_flag_missing_and_quality_rejects_2(self):
+        result = clean_value_quality("9,1,0,0001,1,0,100,2,0,100,1,0", "CN4")
+        assert result["CN4__part1"] is None
+        assert result["CN4__part7"] is None
+        assert result["CN4__part10"] == pytest.approx(10.0)
+
+    def test_co1_missing_parts(self):
+        result = clean_value_quality("99,+99", "CO1")
+        assert result["CO1__part1"] is None
+        assert result["CO1__part2"] is None
+
+    def test_co2_missing_element(self):
+        result = clean_value_quality("999,+0010", "CO2")
+        assert result["CO2__part1"] is None
+        assert result["CO2__part2"] == pytest.approx(1.0)
+
+    def test_cr1_quality_rejects_2(self):
+        result = clean_value_quality("00123,2,0", "CR1")
+        assert result["CR1__part1"] is None
+
+    def test_ct_quality_rejects_2(self):
+        result = clean_value_quality("+00123,2,0", "CT1")
+        assert result["CT1__part1"] is None
+
+    def test_cu_std_quality_rejects_2(self):
+        result = clean_value_quality("+00123,1,0,0100,2,0", "CU1")
+        assert result["CU1__part4"] is None
+
+    def test_cv_min_quality_rejects_2(self):
+        result = clean_value_quality("+00123,2,0,1200,1,0,+00234,1,0,1300,1,0", "CV1")
+        assert result["CV1__part1"] is None
+        assert result["CV1__part7"] == pytest.approx(23.4)
+
+    def test_cv_max_time_missing(self):
+        result = clean_value_quality("+00123,1,0,1200,1,0,+00234,1,0,9999,1,0", "CV1")
+        assert result["CV1__part10"] is None
+
+    def test_cw_wet2_missing(self):
+        result = clean_value_quality("00010,1,0,99999,1,0", "CW1")
+        assert result["CW1__part4"] is None
+
+    def test_cx_precip_quality_rejects_2(self):
+        result = clean_value_quality("+00100,2,0,1000,1,0,1000,1,0,1000,1,0", "CX1")
+        assert result["CX1__part1"] is None
+
     def test_ay_quality_rejects_4(self):
         result = clean_value_quality("1,4,12,1", "AY1")
         assert result["AY1__part1"] is None
@@ -429,6 +523,117 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("9,05,120,1,99,1", "UA1")
         assert result["UA1__part1"] is None
         assert result["UA1__part5"] is None
+
+    def test_ab_monthly_total_quality(self):
+        result = clean_value_quality("00500,1,8", "AB1")
+        assert result["AB1__part1"] is None
+
+    def test_ac_duration_characteristic_codes(self):
+        result = clean_value_quality("4,C,1", "AC1")
+        assert result["AC1__part1"] is None
+        assert result["AC1__part2"] == "C"
+
+    def test_ac_characteristic_missing(self):
+        result = clean_value_quality("1,9,1", "AC1")
+        assert result["AC1__part2"] is None
+
+    def test_ad_missing_dates(self):
+        result = clean_value_quality("01000,2,9999,0102,9999,1", "AD1")
+        assert result["AD1__part3"] is None
+        assert result["AD1__part5"] is None
+
+    def test_ae_missing_and_quality(self):
+        result = clean_value_quality("99,1,05,8,10,1,00,1", "AE1")
+        assert result["AE1__part1"] is None
+        assert result["AE1__part3"] is None
+
+    def test_ag_discrepancy_and_missing_depth(self):
+        result = clean_value_quality("9,999", "AG1")
+        assert result["AG1__part1"] is None
+        assert result["AG1__part2"] is None
+
+    def test_ah_missing_and_quality(self):
+        result = clean_value_quality("999,9999,9,999999,1", "AH1")
+        assert result["AH1__part1"] is None
+        assert result["AH1__part2"] is None
+        assert result["AH1__part3"] is None
+        assert result["AH1__part4"] is None
+
+    def test_ah_quality_rejects_c(self):
+        result = clean_value_quality("015,0123,1,010100,C", "AH1")
+        assert result["AH1__part2"] is None
+
+    def test_ai_missing_and_quality(self):
+        result = clean_value_quality("999,9999,9,999999,1", "AI1")
+        assert result["AI1__part1"] is None
+        assert result["AI1__part2"] is None
+        assert result["AI1__part3"] is None
+        assert result["AI1__part4"] is None
+
+    def test_ai_quality_rejects_c(self):
+        result = clean_value_quality("060,0123,1,010100,C", "AI1")
+        assert result["AI1__part2"] is None
+
+    def test_ak_missing_and_quality(self):
+        result = clean_value_quality("9999,9,999999,1", "AK1")
+        assert result["AK1__part1"] is None
+        assert result["AK1__part2"] is None
+        assert result["AK1__part3"] is None
+
+    def test_ak_quality_rejects_c(self):
+        result = clean_value_quality("0100,1,010203,C", "AK1")
+        assert result["AK1__part1"] is None
+
+    def test_al_missing_and_quality(self):
+        result = clean_value_quality("99,999,9,1", "AL1")
+        assert result["AL1__part1"] is None
+        assert result["AL1__part2"] is None
+        assert result["AL1__part3"] is None
+
+    def test_al_quality_rejects_c(self):
+        result = clean_value_quality("24,010,1,C", "AL1")
+        assert result["AL1__part2"] is None
+
+    def test_am_missing_and_quality(self):
+        result = clean_value_quality("9999,9,9999,9999,9999,1", "AM1")
+        assert result["AM1__part1"] is None
+        assert result["AM1__part2"] is None
+        assert result["AM1__part3"] is None
+        assert result["AM1__part4"] is None
+        assert result["AM1__part5"] is None
+
+    def test_am_quality_rejects_c(self):
+        result = clean_value_quality("0100,1,0102,0203,0304,C", "AM1")
+        assert result["AM1__part1"] is None
+
+    def test_an_missing_and_quality(self):
+        result = clean_value_quality("999,9999,9,1", "AN1")
+        assert result["AN1__part1"] is None
+        assert result["AN1__part2"] is None
+        assert result["AN1__part3"] is None
+
+    def test_an_quality_rejects_c(self):
+        result = clean_value_quality("024,0100,1,C", "AN1")
+        assert result["AN1__part2"] is None
+
+    def test_ao_missing_and_quality(self):
+        result = clean_value_quality("99,9999,9,1", "AO1")
+        assert result["AO1__part1"] is None
+        assert result["AO1__part2"] is None
+        assert result["AO1__part3"] is None
+
+    def test_ao_quality_rejects_8(self):
+        result = clean_value_quality("15,0010,1,8", "AO1")
+        assert result["AO1__part2"] is None
+
+    def test_ap_missing_and_quality(self):
+        result = clean_value_quality("9999,9,1", "AP1")
+        assert result["AP1__part1"] is None
+        assert result["AP1__part2"] is None
+
+    def test_ap_quality_rejects_8(self):
+        result = clean_value_quality("0010,9,8", "AP1")
+        assert result["AP1__part1"] is None
 
 
 class TestTwoPartFieldNamingAndQuality:
@@ -486,6 +691,16 @@ class TestCleanDataframeEdgeCases:
         )
         cleaned = clean_noaa_dataframe(df, keep_raw=False)
         assert cleaned.loc[0, "visibility_m"] == pytest.approx(9999.0)
+
+    def test_add_section_marker_dropped(self):
+        df = pd.DataFrame(
+            {
+                "ADD": ["ADD", "ADD"],
+                "TMP": ["+0250,1", "+0260,1"],
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=True)
+        assert "ADD" not in cleaned.columns
 
 
 class TestControlAndMandatoryNormalization:

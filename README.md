@@ -40,7 +40,7 @@ The test suite contains:
 
 | File | Tests | What it covers |
 |------|-------|----------------|
-| `tests/test_cleaning.py` | 42 | Sentinel detection, scale factors, quality-flag filtering |
+| `tests/test_cleaning.py` | 124 | Sentinel detection, scale factors, quality-flag filtering |
 | `tests/test_aggregation.py` | 19 | Column classification, per-field agg functions, categorical exclusion |
 | `tests/test_integration.py` | 165 | End-to-end checks across 11 real station outputs |
 
@@ -366,6 +366,25 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 | MW\* | 2 | 1=weather code | — | — | 2 | drop | categorical |
 | MV\* | 2 | 1=vicinity weather code | — | 99 | 2 | drop | categorical |
 | AY\* | 4 | 1=condition, 3=period | —, 1 | —, 99 | 2, 4 | drop | categorical |
+| AT\* | 4 | 1=source, 2=type, 3=abbr | — | — | 4 | drop | categorical |
+| AU\* | 7 | 1=intensity, 2=descriptor, 3=precip, 4=obscuration, 5=other, 6=combo | — | 9, 99 | 7 | drop | categorical |
+| CB\* | 4 | 1=period, 2=secondary depth | 1, 0.1 | 99, 99999 | 3 | mean/drop | mixed |
+| CF\* | 3 | 1=fan speed | 0.1 | 9999 | 2 | mean/drop | mixed |
+| CG\* | 3 | 1=primary depth | 0.1 | 99999 | 2 | mean/drop | mixed |
+| CH\* | 7 | 1=period, 2=temp, 5=RH | 1, 0.1 | 99, 9999 | 3, 6 | mean/drop | mixed |
+| CI1 | 12 | 1=min temp, 4=max temp, 7=temp std, 10=RH std | 0.1 | 9999, 99999 | 2, 5, 8, 11 | mean/drop | mixed |
+| CN1 | 9 | 1=avg volt, 4=full load, 7=datalogger | 0.1 | 9999 | 2, 5, 8 | mean/drop | mixed |
+| CN2 | 9 | 1=panel temp, 4=inlet max, 7=door minutes | 0.1 | 9999, 99 | 2, 5, 8 | mean/drop | mixed |
+| CN3 | 6 | 1=ref resistance, 4=signature | 0.1 | 999999 | 2, 5 | mean/drop | mixed |
+| CN4 | 12 | 1=heater flag, 4=door flag, 7/10=tx power | 0.1 | 9, 9999, 999 | 2, 5, 8, 11 | mean/drop | mixed |
+| CO1 | 2 | 1=climate division, 2=UTC offset | 1 | 99 | — | drop | categorical |
+| CO\* | 2 | 1=element id, 2=time offset | 1, 0.1 | 999, 9999 | — | drop/mean | mixed |
+| CR1 | 3 | 1=datalogger version | 0.001 | 99999 | 2 | mean/drop | mixed |
+| CT\* | 3 | 1=subhourly temp | 0.1 | 9999 | 2 | mean/drop | mixed |
+| CU\* | 6 | 1=temp avg, 4=temp std | 0.1 | 9999 | 2, 5 | mean/drop | mixed |
+| CV\* | 12 | 1=min temp, 4=min time, 7=max temp, 10=max time | 0.1 | 9999 | 2, 5, 8, 11 | mean/drop | mixed |
+| CW\* | 6 | 1=wetness ch1, 4=wetness ch2 | 0.1 | 99999 | 2, 5 | mean/drop | mixed |
+| CX\* | 12 | 1=precip total, 4=freq avg, 7=freq min, 10=freq max | 0.1 | 99999, 9999 | 2, 5, 8, 11 | mean/drop | mixed |
 | GE1 | 4 | 1=convective cloud code, 3-4=base height range | 1 | 99999 | — | drop/mean | mixed |
 | SA1 | 2 | 1=SST | 0.1 | 999 | 2 | mean | numeric |
 | UA1 | 6 | 1=method, 2=period (sec), 3=wave ht, 5=sea state | 1, 0.1 | 99, 999 | 4, 6 | mean/drop | mixed |
@@ -387,5 +406,5 @@ completed and planned improvements, including:
 - **P0 ✅** — Sentinel removal, scale factors, per-value quality-flag mapping
 - **P1 ✅** — Categorical exclusion from aggregation, field-appropriate agg functions
 - **P2 ✅** — Human-readable column names, unit-conversion options
-- **P3 (in progress)** — Precipitation groups AA/AJ/AU implemented; derived quantities (RH, wind chill, heat index)
+- **P3 (in progress)** — Precipitation groups AA/AJ/AU and daily present weather AT implemented; derived quantities (RH, wind chill, heat index)
   and additional precipitation groups pending
