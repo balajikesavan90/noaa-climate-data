@@ -71,7 +71,7 @@
 
 ## P3: Supporting docs, validation, and tests
 
-- [ ] Populate missing ISD docs in-repo (Parts 10/11/16/17/18/19/21/22/24/25) to verify KA*/SA1 scaling/sentinels and solar/sunshine/hail sections.
+- [x] Populate missing ISD docs in-repo (Parts 10/11/16/17/18/19/21/22/24/25) to verify KA*/SA1 scaling/sentinels and solar/sunshine/hail sections.
 - [ ] Add tests for new groups to ensure sentinel removal and quality filtering are applied consistently.
 - [ ] Capture Domain Value ID tables for code validation (e.g., pressure tendency, geopotential levels, weather codes) if used in parsing.
 - [ ] Consider enforcing record/section length constraints (control=60, mandatory=45, max record 2844, max block 8192) if parser validates structure.
