@@ -134,43 +134,47 @@ These are scoping issues where part boundaries don't cleanly separate content, c
 
 ### Overlap 1 — Part 15 contains Parts 16, 17, 18, 19
 
-- **File**: `part-15-cloud-and-solar-data.md` (1,496 lines)
+- **File**: `part-15-cloud-and-solar-data.md` (1,496 → 881 lines)
 - **Issue**: Part 15 includes the full content that was also extracted into separate Parts 16 (Sunshine), 17 (Solar Irradiance), 18 (Net Solar Radiation), and 19 (Modeled Solar Irradiance). All four sub-parts are complete duplicates of subsets of Part 15.
 - **Note**: In the source document, Parts 16–19 are subsections within Part 15 — they don't have their own `## Part` headings.
+- **Resolution**: Removed ~615 lines of duplicated content (GJ1/GK1/GL1, GM1/GN1, GO1, GP1 sections) from Part 15. Added a cross-reference note at the end pointing to the standalone Part 16–19 files. Part 15 now contains only its own unique identifiers: GA1, GD1–GD6, GE1, GF1, GG1–GG6, GH1.
 
-- [ ] Resolved
+- [x] Resolved
 
 ---
 
 ### Overlap 2 — Part 20 contains Parts 21 and 22
 
-- **File**: `part-20-hourly-solar-angle-section.md` (169 lines)
+- **File**: `part-20-hourly-solar-angle-section.md` (169 → 67 lines)
 - **Issue**: Part 20 includes the Hourly Extraterrestrial Radiation Section (Part 21 content, GR1) and Hail Data (Part 22 content) in addition to its own Solar Angle content (GQ1). Parts 21 and 22 also exist as separate standalone files, creating full duplication.
+- **Resolution**: Removed ~102 lines of duplicated content (GR1 and Hail sections) from Part 20. Added a cross-reference note at the end pointing to the standalone Part 21 and Part 22 files. Part 20 now contains only its own unique identifier: GQ1.
 
-- [ ] Resolved
+- [x] Resolved
 
 ---
 
 ### Overlap 3 — Part 23 contains Part 24 content
 
-- **File**: `part-23-ground-surface-data.md` (934 lines)
+- **File**: `part-23-ground-surface-data.md` (934 → 477 lines)
 - **Issue**: After its own Ground Surface Data content (~450 lines: IA1, IA2, IB1, IB2, IC1), Part 23 continues with ~480 lines of Temperature Data (KA1–KG2) that belongs to Part 24. This content is duplicated verbatim in Part 24.
+- **Resolution**: Removed ~457 lines of duplicated Temperature Data content (KA1–KA4, KB1–KB3, KC1–KC2, KD1–KD2, KE1, KF1, KG1–KG2) from Part 23. Added a cross-reference note at the end pointing to the standalone Part 24 file. Part 23 now contains only its own unique identifiers: IA1, IA2, IB1, IB2, IC1.
 
-- [ ] Resolved
+- [x] Resolved
 
 ---
 
 ### Overlap 4 — Part 24 contains Parts 27, 28, 29 content
 
-- **File**: `part-24-temperature-data.md` (1,643 lines)
+- **File**: `part-24-temperature-data.md` (1,643 → 465 lines)
 - **Issue**: After its own Temperature Data content (~490 lines: KA1–KG2), Part 24 continues with:
   - ~380 lines of Pressure Data (MA1–MK1) — belongs to Part 27
   - ~330 lines of Weather Occurrence Extended (MV1–MW7) — belongs to Part 28
   - ~380 lines of Wind Data (OA1–OE3) — belongs to Part 29
-  - ~60 lines of Relative Humidity (RH1–RH3)
+  - ~60 lines of Relative Humidity (RH1–RH3) — belongs to Part 29
 - All this spillover content is duplicated in the correct standalone part files.
+- **Resolution**: Removed ~1,178 lines of duplicated content from Part 24. Added a cross-reference note at the end pointing to the standalone Part 27, 28, and 29 files. Part 24 now contains only its own unique identifiers: KA1–KA4, KB1–KB3, KC1–KC2, KD1–KD2, KE1, KF1, KG1–KG2.
 
-- [ ] Resolved
+- [x] Resolved
 
 ---
 
@@ -184,9 +188,9 @@ These are scoping issues where part boundaries don't cleanly separate content, c
 | 4 | Part 12 | Empty stub — all content missing | Major | ☑ |
 | 5 | Part 13 | Empty stub — all content missing | Major | ☑ |
 | 6 | Part 17 | GN1 identifier list truncated (6 of 11 items missing) | Minor | ☑ (no change needed) |
-| 7 | Parts 15↔16/17/18/19 | Content duplication (subsections extracted as separate parts) | Overlap | ☐ |
-| 8 | Part 20↔21/22 | Content duplication | Overlap | ☐ |
-| 9 | Part 23↔24 | Content duplication (~480 lines) | Overlap | ☐ |
-| 10 | Part 24↔27/28/29 | Content duplication (~1,150 lines) | Overlap | ☐ |
+| 7 | Parts 15↔16/17/18/19 | Content duplication (subsections extracted as separate parts) | Overlap | ☑ |
+| 8 | Part 20↔21/22 | Content duplication | Overlap | ☑ |
+| 9 | Part 23↔24 | Content duplication (~480 lines) | Overlap | ☑ |
+| 10 | Part 24↔27/28/29 | Content duplication (~1,150 lines) | Overlap | ☑ |
 
 **19 of 30 parts are clean** — Parts 2, 4, 5, 6, 7, 8, 10, 11, 14, 15, 16, 18, 19, 22, 25, 26, 27, 28, 29, 30.
