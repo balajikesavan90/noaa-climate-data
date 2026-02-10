@@ -28,7 +28,7 @@ Accuracy review of the 30 part files in `isd-format-document-parts/` compared ag
 
 **Source reference**: `isd-format-document.md` lines 147–223, or `isd-format-document.txt` lines 69–118.
 
-- [ ] Fixed
+- [x] Fixed
 
 ---
 
@@ -186,7 +186,7 @@ These are scoping issues where part boundaries don't cleanly separate content, c
 
 | # | Part | Issue | Severity | Status |
 |---|---|---|---|---|
-| 1 | Part 1 | Truncated — ~75 lines missing | Major | ☐ |
+| 1 | Part 1 | Truncated — ~75 lines missing | Major | ☑ |
 | 2 | Part 3 | Wrong field names, wrong MIN/MAX values, missing quality codes | Major | ☐ |
 | 3 | Part 9 | Contains wrong content entirely | Critical | ☐ |
 | 4 | Part 12 | Empty stub — all content missing | Major | ☐ |
