@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import Iterable
 
 import pandas as pd
 
 from .constants import (
     DATA_SOURCE_FLAGS,
+    EQD_ELEMENT_NAMES,
+    EQD_FLAG1_CODES,
+    EQD_FLAG2_CODES,
+    QNN_ELEMENT_IDENTIFIERS,
+    REM_TYPE_CODES,
     QUALITY_FLAGS,
     QC_PROCESS_CODES,
     REPORT_TYPE_CODES,
@@ -94,6 +100,66 @@ def _single_quality_part(prefix: str) -> int | None:
     return None
 
 
+def _is_eqd_prefix(prefix: str) -> bool:
+    return len(prefix) == 3 and prefix[0] in {"Q", "P", "R", "C", "D", "N"} and prefix[1:].isdigit()
+
+
+def _is_valid_eqd_parameter_code(value: str) -> bool:
+    if len(value) != 6:
+        return False
+    element = value[:4]
+    flag1 = value[4]
+    flag2 = value[5]
+    return (
+        element in EQD_ELEMENT_NAMES
+        and flag1 in EQD_FLAG1_CODES
+        and flag2 in EQD_FLAG2_CODES
+    )
+
+
+def _parse_remark(value: object) -> tuple[str | None, str | None]:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None, None
+    text = str(value).strip()
+    if text in {"", "nan", "None"}:
+        return None, None
+    prefix = text[:3].upper()
+    if prefix in REM_TYPE_CODES:
+        remainder = text[3:].strip()
+        return prefix, remainder or None
+    return None, text
+
+
+def _parse_qnn(value: object) -> tuple[str | None, str | None, str | None]:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None, None, None
+    text = str(value).strip()
+    if text in {"", "nan", "None"}:
+        return None, None, None
+    if not text.upper().startswith("QNN"):
+        return None, None, None
+    payload = text[3:]
+    payload_upper = payload.upper()
+    element_ids: list[str] = []
+    source_flags: list[str] = []
+    pattern = re.compile(r"([A-Y])(\d{4})")
+    for match in pattern.finditer(payload_upper):
+        element = match.group(1)
+        flags = match.group(2)
+        if element not in QNN_ELEMENT_IDENTIFIERS:
+            continue
+        element_ids.append(element)
+        source_flags.append(flags)
+    if not element_ids:
+        return None, None, None
+    remainder = pattern.sub("", payload_upper)
+    remainder = re.sub(r"[^A-Z0-9]", "", remainder)
+    data_values: list[str] = []
+    if remainder and len(remainder) % 6 == 0:
+        data_values = [remainder[i : i + 6] for i in range(0, len(remainder), 6)]
+    return ",".join(element_ids), ",".join(source_flags), ",".join(data_values) or None
+
+
 def _to_float(value: str) -> float | None:
     value = value.strip()
     if value == "":
@@ -150,6 +216,7 @@ def _expand_parsed(
         and parsed.parts[2].strip() == "00000"
         and parsed.parts[3].strip() == "999"
     )
+    is_eqd = _is_eqd_prefix(prefix)
     field_rule = get_field_rule(prefix)
     quality_value = None
     if allow_quality:
@@ -197,6 +264,11 @@ def _expand_parsed(
             continue
         if part_rule and part_rule.allowed_values:
             if part.strip().upper() not in part_rule.allowed_values:
+                payload[key] = None
+                continue
+        if is_eqd and idx == 3:
+            param_code = part if len(part) == 6 else part.strip()
+            if param_code != "" and not _is_valid_eqd_parameter_code(param_code):
                 payload[key] = None
                 continue
         if value is None:
@@ -362,6 +434,29 @@ def clean_noaa_dataframe(df: pd.DataFrame, keep_raw: bool = True) -> pd.DataFram
 
     if expansion_frames:
         cleaned = pd.concat([cleaned] + expansion_frames, axis=1)
+
+    if "REM" in cleaned.columns:
+        remark_types = []
+        remark_texts = []
+        for value in cleaned["REM"]:
+            remark_type, remark_text = _parse_remark(value)
+            remark_types.append(remark_type)
+            remark_texts.append(remark_text)
+        cleaned["REM__type"] = remark_types
+        cleaned["REM__text"] = remark_texts
+
+    if "QNN" in cleaned.columns:
+        qnn_elements = []
+        qnn_flags = []
+        qnn_values = []
+        for value in cleaned["QNN"]:
+            element_ids, source_flags, data_values = _parse_qnn(value)
+            qnn_elements.append(element_ids)
+            qnn_flags.append(source_flags)
+            qnn_values.append(data_values)
+        cleaned["QNN__elements"] = qnn_elements
+        cleaned["QNN__source_flags"] = qnn_flags
+        cleaned["QNN__data_values"] = qnn_values
 
     for column in cleaned.columns:
         series = cleaned[column]

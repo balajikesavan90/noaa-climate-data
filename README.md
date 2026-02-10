@@ -139,7 +139,7 @@ Output files per station:
 |------|-------------|
 | `LocationData_Raw.csv` | Raw NOAA CSV concatenated across years |
 | `LocationData_Cleaned.csv` | After sentinel removal, scaling, quality filtering |
-| `LocationData_Hourly.csv` | After best-hour selection and completeness filtering |
+| `LocationData_Hourly.csv` | Hourly output from the chosen aggregation strategy (best/fixed hour keeps only that hour; other strategies keep hours belonging to complete days/months/years) |
 | `LocationData_Monthly.csv` | Aggregated to month level |
 | `LocationData_Yearly.csv` | Aggregated to year level |
 
@@ -210,7 +210,10 @@ the declarative `FIELD_RULES` registry in
   - `<column>__quality` — the quality flag character
 - **Multi-part fields** (e.g. WND, CIG, VIS, MA1, MD1) produce:
   - `<column>__partN` for each part — numeric if parseable, otherwise raw text
-  - `<column>__quality` if a 1-character quality flag exists
+  - `<column>__quality` only when the registry defines a single shared quality part
+  - When parts each carry their own quality, those quality parts stay as their own
+    `__partN` columns (and are renamed via the friendly map instead of being
+    duplicated as a shared `__quality` column)
 - The original raw column is preserved by default (`keep_raw=True`).
 
 #### 2b.1 Human-readable column names

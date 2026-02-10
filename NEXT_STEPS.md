@@ -59,15 +59,15 @@
 - [x] Add remaining marine groups from Part 30 (e.g., WA1 platform ice accretion, other marine sections listed in Part 30).
 - [x] Add Part 30 secondary swell group UG2 and remaining marine groups (WA1, WD1, WG1, WJ1).
 - [x] Add Part 30 element quality data section (EQD with Q01-P01-R01/C01/D01/N01 identifiers, parameter/units codes, and marine-specific QC definitions).
-- [ ] Add EQD element-units table plus parameter-code flag conventions (Flag-1/Flag-2 definitions and element-name codes).
-- [ ] Add Part 30 remarks data section (REM) and remark type identifiers (SYN/AWY/MET/SOD/SOM/HPD).
-- [ ] Add Original Observation Data Section identifiers QNN (original NCEI surface hourly source codes/flags).
-- [ ] Add QNN original observation element identifiers (A-Y mapping for DS3280 elements) and data value format.
+- [x] Add EQD element-units table plus parameter-code flag conventions (Flag-1/Flag-2 definitions and element-name codes).
+- [x] Add Part 30 remarks data section (REM) and remark type identifiers (SYN/AWY/MET/SOD/SOM/HPD).
+- [x] Add Original Observation Data Section identifiers QNN (original NCEI surface hourly source codes/flags).
+- [x] Add QNN original observation element identifiers (A-Y mapping for DS3280 elements) and data value format.
 
 ## P2: README alignment (implementation vs README)
 
-- [ ] Clarify README vs implementation for multi-part fields: code only emits a single `__quality` column when all parts share one `quality_part`; most multi-part ISD groups only expose per-part quality columns.
-- [ ] Align `LocationData_Hourly.csv` definition with behavior: either apply completeness filters to hourly output or update README to state it is best-hour only.
+- [x] Clarify README vs implementation for multi-part fields: code only emits a single `__quality` column when all parts share one `quality_part`; most multi-part ISD groups only expose per-part quality columns.
+- [x] Align `LocationData_Hourly.csv` definition with behavior: either apply completeness filters to hourly output or update README to state it is best-hour only.
 
 ## P3: Supporting docs, validation, and tests
 

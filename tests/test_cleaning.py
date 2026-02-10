@@ -764,6 +764,14 @@ class TestQualityNullsCorrectPart:
         assert result["N01__part1"] == "ABCDEF"
         assert result["N01__part2"] is None
 
+    def test_eqd_q01_param_code_rejects_unknown_element(self):
+        result = clean_value_quality("123456,1,ZZZZb0", "Q01")
+        assert result["Q01__part3"] is None
+
+    def test_eqd_q01_param_code_accepts_valid(self):
+        result = clean_value_quality("123456,1,ALTPb0", "Q01")
+        assert result["Q01__part3"] == "ALTPb0"
+
     def test_gp1_missing_parts(self):
         result = clean_value_quality("9999,9999,99,999,9999,99,999,9999,99,999", "GP1")
         assert result["GP1__part1"] is None
@@ -1057,6 +1065,48 @@ class TestCleanDataframeEdgeCases:
         )
         cleaned = clean_noaa_dataframe(df, keep_raw=True)
         assert "ADD" not in cleaned.columns
+
+    def test_remark_parsing(self):
+        df = pd.DataFrame(
+            {
+                "REM": [
+                    "SYN052AAXX 01004",
+                    "METfoo",
+                    "XYZbar",
+                    None,
+                ]
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=False)
+        assert cleaned.loc[0, "remarks_type_code"] == "SYN"
+        assert cleaned.loc[0, "remarks_text"] == "052AAXX 01004"
+        assert cleaned.loc[1, "remarks_type_code"] == "MET"
+        assert cleaned.loc[1, "remarks_text"] == "foo"
+        assert pd.isna(cleaned.loc[2, "remarks_type_code"])
+        assert cleaned.loc[2, "remarks_text"] == "XYZbar"
+        assert pd.isna(cleaned.loc[3, "remarks_type_code"])
+        assert pd.isna(cleaned.loc[3, "remarks_text"])
+
+    def test_qnn_parsing(self):
+        df = pd.DataFrame(
+            {
+                "QNN": [
+                    "QNN A1234B5678 001234002345",
+                    "QNNZ9999",
+                    None,
+                ]
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=False)
+        assert cleaned.loc[0, "qnn_element_ids"] == "A,B"
+        assert cleaned.loc[0, "qnn_source_flags"] == "1234,5678"
+        assert cleaned.loc[0, "qnn_data_values"] == "001234,002345"
+        assert pd.isna(cleaned.loc[1, "qnn_element_ids"])
+        assert pd.isna(cleaned.loc[1, "qnn_source_flags"])
+        assert pd.isna(cleaned.loc[1, "qnn_data_values"])
+        assert pd.isna(cleaned.loc[2, "qnn_element_ids"])
+        assert pd.isna(cleaned.loc[2, "qnn_source_flags"])
+        assert pd.isna(cleaned.loc[2, "qnn_data_values"])
 
 
 class TestControlAndMandatoryNormalization:
