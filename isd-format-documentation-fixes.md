@@ -50,7 +50,7 @@ Accuracy review of the 30 part files in `isd-format-document-parts/` compared ag
 
 **Source reference**: `isd-format-document.md` lines 628–727 (the source labels these under `## Part 8` due to document ordering, but they are POS 93–105 of the mandatory data section).
 
-- [ ] Fixed
+- [x] Fixed
 
 ---
 
@@ -68,7 +68,7 @@ Accuracy review of the 30 part files in `isd-format-document-parts/` compared ag
 
 **Source reference**: `isd-format-document.md` lines 3239–3274, or `isd-format-document.txt` lines 2970–3005.
 
-- [ ] Fixed
+- [x] Fixed
 
 ---
 
@@ -88,7 +88,7 @@ Accuracy review of the 30 part files in `isd-format-document-parts/` compared ag
 
 **Source reference**: `isd-format-document.md` lines 3493–3558, or `isd-format-document.txt` lines 3208–3268.
 
-- [ ] Fixed
+- [x] Fixed
 
 ---
 
@@ -112,7 +112,7 @@ Accuracy review of the 30 part files in `isd-format-document-parts/` compared ag
 
 **Source reference**: `isd-format-document.md` lines 3563–3697, or `isd-format-document.txt` lines 3274–3397.
 
-- [ ] Fixed
+- [x] Fixed
 
 ---
 
@@ -120,19 +120,11 @@ Accuracy review of the 30 part files in `isd-format-document-parts/` compared ag
 
 - **File**: `part-17-solar-irradiance-section.md`
 - **Severity**: Minor
-- **Issue**: The GN1 (Solar Radiation Section) identifier list shows only 5 of 11 items. The actual field definitions for the missing items *are* present later in the file — only the summary list at the top of the GN1 section is truncated.
+- **Issue**: The GN1 (Solar Radiation Section) identifier list was reported as showing only 5 of 11 items.
 
-**Missing from GN1 identifier list** (6 items):
-- Upwelling thermal infrared radiation
-- Upwelling thermal infrared radiation quality code
-- Photosynthetically active radiation
-- Photosynthetically active radiation quality code
-- Solar zenith angle
-- Solar zenith angle quality code
+**Resolution**: On re-inspection, the GN1 identifier list in Part 17 (lines 195–206) already contains all 11 items matching the source exactly. The original review was incorrect — no fix needed.
 
-**Source reference**: Compare Part 15's copy of the GN1 identifier list (which is complete) or `isd-format-document.md` around line 4800.
-
-- [ ] Fixed
+- [x] Fixed (no change needed — already correct)
 
 ---
 
@@ -187,11 +179,11 @@ These are scoping issues where part boundaries don't cleanly separate content, c
 | # | Part | Issue | Severity | Status |
 |---|---|---|---|---|
 | 1 | Part 1 | Truncated — ~75 lines missing | Major | ☑ |
-| 2 | Part 3 | Wrong field names, wrong MIN/MAX values, missing quality codes | Major | ☐ |
-| 3 | Part 9 | Contains wrong content entirely | Critical | ☐ |
-| 4 | Part 12 | Empty stub — all content missing | Major | ☐ |
-| 5 | Part 13 | Empty stub — all content missing | Major | ☐ |
-| 6 | Part 17 | GN1 identifier list truncated (6 of 11 items missing) | Minor | ☐ |
+| 2 | Part 3 | Wrong field names, wrong MIN/MAX values, missing quality codes | Major | ☑ |
+| 3 | Part 9 | Contains wrong content entirely | Critical | ☑ |
+| 4 | Part 12 | Empty stub — all content missing | Major | ☑ |
+| 5 | Part 13 | Empty stub — all content missing | Major | ☑ |
+| 6 | Part 17 | GN1 identifier list truncated (6 of 11 items missing) | Minor | ☑ (no change needed) |
 | 7 | Parts 15↔16/17/18/19 | Content duplication (subsections extracted as separate parts) | Overlap | ☐ |
 | 8 | Part 20↔21/22 | Content duplication | Overlap | ☐ |
 | 9 | Part 23↔24 | Content duplication (~480 lines) | Overlap | ☐ |
