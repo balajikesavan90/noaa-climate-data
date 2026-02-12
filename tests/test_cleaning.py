@@ -38,6 +38,10 @@ class TestIsMissingValue:
         assert not _is_missing_value("+0250", rule)
         assert not _is_missing_value("-0032", rule)
 
+    def test_tmp_negative_all_9_not_missing(self):
+        rule = get_field_rule("TMP").parts[1]
+        assert not _is_missing_value("-9999", rule)
+
     def test_wnd_direction_sentinel_999(self):
         rule = get_field_rule("WND").parts[1]
         assert _is_missing_value("999", rule)
@@ -64,6 +68,9 @@ class TestIsMissingValue:
         assert _is_missing_value("99999", None)
         assert not _is_missing_value("1234", None)
 
+    def test_fallback_negative_all_9_not_missing(self):
+        assert not _is_missing_value("-9999", None)
+
     def test_sentinel_does_not_match_real_value(self):
         """A 3-digit value of 999 is missing for WND direction but 123 is not."""
         rule = get_field_rule("WND").parts[1]
@@ -84,6 +91,10 @@ class TestSentinelsInCleanedOutput:
     def test_tmp_sentinel_becomes_none(self):
         result = clean_value_quality("+9999,1", "TMP")
         assert result["TMP__value"] is None
+
+    def test_tmp_negative_all_9_kept(self):
+        result = clean_value_quality("-9999,1", "TMP")
+        assert result["TMP__value"] == pytest.approx(-999.9)
 
     def test_slp_sentinel_becomes_none(self):
         result = clean_value_quality("99999,1", "SLP")
@@ -135,6 +146,16 @@ class TestSentinelsInCleanedOutput:
     def test_ge1_missing_parts(self):
         result = clean_value_quality("9,999999,99999,99999", "GE1")
         assert result["GE1__part1"] is None
+        assert result["GE1__part2"] is None
+
+    def test_ge1_invalid_convective_cloud_code(self):
+        result = clean_value_quality("8,AGL,99999,99999", "GE1")
+        assert result["GE1__part1"] is None
+        assert result["GE1__part2"] == "AGL"
+
+    def test_ge1_invalid_vertical_datum_code(self):
+        result = clean_value_quality("1,BADXXX,99999,99999", "GE1")
+        assert result["GE1__part1"] == pytest.approx(1.0)
         assert result["GE1__part2"] is None
 
     def test_hail_sentinel_becomes_none(self):
@@ -447,10 +468,23 @@ class TestQualityNullsCorrectPart:
         assert result["WND__part1"] == pytest.approx(180.0)  # direction preserved
         assert result["WND__part4"] is None          # speed nulled
 
+    def test_wnd_rejects_non_mandatory_quality(self):
+        result = clean_value_quality("180,M,N,0050,1", "WND")
+        assert result["WND__part1"] is None
+        assert result["WND__part4"] == pytest.approx(5.0)
+
     def test_wnd_both_bad_nulls_both(self):
         result = clean_value_quality("180,8,N,0050,8", "WND")
         assert result["WND__part1"] is None
         assert result["WND__part4"] is None
+
+    def test_cig_rejects_non_mandatory_quality(self):
+        result = clean_value_quality("01000,M,9,9", "CIG")
+        assert result["CIG__part1"] is None
+
+    def test_vis_rejects_non_mandatory_quality(self):
+        result = clean_value_quality("010000,M,N,1", "VIS")
+        assert result["VIS__part1"] is None
 
     def test_ma1_bad_station_pressure_preserves_altimeter(self):
         result = clean_value_quality("10132,1,09876,8", "MA1")
@@ -461,6 +495,16 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("10132,8,09876,1", "MA1")
         assert result["MA1__part1"] is None  # altimeter nulled
         assert result["MA1__part3"] == pytest.approx(987.6)  # station pressure preserved
+
+    def test_ma1_altimeter_rejects_non_mandatory_quality(self):
+        result = clean_value_quality("10132,A,09876,1", "MA1")
+        assert result["MA1__part1"] is None
+        assert result["MA1__part3"] == pytest.approx(987.6)
+
+    def test_ma1_station_pressure_rejects_non_mandatory_quality(self):
+        result = clean_value_quality("10132,1,09876,U", "MA1")
+        assert result["MA1__part1"] == pytest.approx(1013.2)
+        assert result["MA1__part3"] is None
 
     def test_tmp_bad_quality_nulls_value(self):
         result = clean_value_quality("+0250,8", "TMP")
@@ -488,6 +532,19 @@ class TestQualityNullsCorrectPart:
         assert result["MD1__part3"] == pytest.approx(4.5)
         assert result["MD1__part5"] == pytest.approx(12.3)
 
+    def test_md1_invalid_tendency_code(self):
+        result = clean_value_quality("A,1,045,1,0123,1", "MD1")
+        assert result["MD1__part1"] is None
+
+    def test_ay_invalid_condition_code(self):
+        result = clean_value_quality("10,1,01,1", "AY1")
+        assert result["AY1__part1"] is None
+        assert result["AY1__part3"] == pytest.approx(1.0)
+
+    def test_ay_invalid_period_quantity(self):
+        result = clean_value_quality("1,1,25,1", "AY1")
+        assert result["AY1__part3"] is None
+
     def test_ua1_bad_wave_quality_nulls_wave_parts(self):
         result = clean_value_quality("M,10,050,8,04,1", "UA1")
         assert result["UA1__part1"] is None
@@ -501,6 +558,26 @@ class TestQualityNullsCorrectPart:
         assert result["UA1__part2"] is None
         assert result["UA1__part3"] is None
         assert result["UA1__part5"] == pytest.approx(4.0)
+
+    def test_ua1_invalid_method_code(self):
+        result = clean_value_quality("X,05,120,1,03,1", "UA1")
+        assert result["UA1__part1"] is None
+        assert result["UA1__part2"] == pytest.approx(5.0)
+        assert result["UA1__part3"] == pytest.approx(12.0)
+
+    def test_ua1_invalid_sea_state_code(self):
+        result = clean_value_quality("I,05,120,1,10,1", "UA1")
+        assert result["UA1__part2"] == pytest.approx(5.0)
+        assert result["UA1__part3"] == pytest.approx(12.0)
+        assert result["UA1__part5"] is None
+
+    def test_ua1_invalid_wave_period(self):
+        result = clean_value_quality("I,31,120,1,03,1", "UA1")
+        assert result["UA1__part2"] is None
+
+    def test_ua1_invalid_wave_height(self):
+        result = clean_value_quality("I,05,501,1,03,1", "UA1")
+        assert result["UA1__part3"] is None
 
     def test_ug1_bad_swell_quality_nulls_swell_parts(self):
         result = clean_value_quality("10,050,180,8", "UG1")
@@ -525,6 +602,23 @@ class TestQualityNullsCorrectPart:
         assert result["UG2__part1"] is None
         assert result["UG2__part2"] is None
         assert result["UG2__part3"] is None
+
+    def test_ug1_invalid_swell_ranges(self):
+        result = clean_value_quality("15,501,000,1", "UG1")
+        assert result["UG1__part1"] is None
+        assert result["UG1__part2"] is None
+        assert result["UG1__part3"] is None
+
+    def test_ug2_invalid_swell_ranges(self):
+        result = clean_value_quality("15,501,000,1", "UG2")
+        assert result["UG2__part1"] is None
+        assert result["UG2__part2"] is None
+        assert result["UG2__part3"] is None
+
+    def test_wa1_invalid_source_and_tendency_codes(self):
+        result = clean_value_quality("6,010,5,1", "WA1")
+        assert result["WA1__part1"] is None
+        assert result["WA1__part3"] is None
 
     def test_quality_in_dataframe(self):
         df = pd.DataFrame(
@@ -1137,6 +1231,19 @@ class TestControlAndMandatoryNormalization:
         assert cleaned.loc[1, "SOURCE"] == "4"
         assert cleaned.loc[1, "REPORT_TYPE"] == "BOGUS"
         assert pd.isna(cleaned.loc[1, "QUALITY_CONTROL"])
+
+    def test_control_date_time_validation(self):
+        df = pd.DataFrame(
+            {
+                "DATE": ["20240131", "20240132"],
+                "TIME": ["2359", "2360"],
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=True)
+        assert cleaned.loc[0, "DATE"] == "20240131"
+        assert cleaned.loc[0, "TIME"] == "2359"
+        assert pd.isna(cleaned.loc[1, "DATE"])
+        assert pd.isna(cleaned.loc[1, "TIME"])
 
     def test_mandatory_clamps_and_calm_wind(self):
         df = pd.DataFrame(

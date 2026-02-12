@@ -37,13 +37,20 @@ def _strip_plus(value: str) -> str:
 
 
 def _is_missing_numeric(value: str) -> bool:
-    stripped = value.replace(".", "").replace("-", "").replace("+", "")
+    stripped = value.replace(".", "").replace("+", "")
+    if stripped.startswith("-"):
+        return False
     return stripped.isdigit() and len(stripped) >= 2 and set(stripped) == {"9"}
 
 
 def _normalize_missing(value: str) -> str:
-    stripped = value.replace(".", "").replace("-", "").replace("+", "")
-    return stripped.lstrip("0") or "0"
+    stripped = value.replace(".", "").replace("+", "")
+    sign = ""
+    if stripped.startswith("-"):
+        sign = "-"
+        stripped = stripped[1:]
+    stripped = stripped.lstrip("0") or "0"
+    return f"{sign}{stripped}"
 
 
 def _is_missing_value(value: str, rule: FieldPartRule | None) -> bool:
@@ -352,6 +359,25 @@ def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
     def _normalize_numeric(series: pd.Series) -> pd.Series:
         return pd.to_numeric(series, errors="coerce")
 
+    def _normalize_date(series: pd.Series) -> pd.Series:
+        text = series.astype(str).str.strip()
+        text = text.where(~text.isin({"", "nan", "None"}))
+        match = text.str.fullmatch(r"\d{8}")
+        year = pd.to_numeric(text.str.slice(0, 4), errors="coerce")
+        month = pd.to_numeric(text.str.slice(4, 6), errors="coerce")
+        day = pd.to_numeric(text.str.slice(6, 8), errors="coerce")
+        valid = match & year.between(1, 9999) & month.between(1, 12) & day.between(1, 31)
+        return text.where(valid)
+
+    def _normalize_time(series: pd.Series) -> pd.Series:
+        text = series.astype(str).str.strip()
+        text = text.where(~text.isin({"", "nan", "None"}))
+        match = text.str.fullmatch(r"\d{4}")
+        hour = pd.to_numeric(text.str.slice(0, 2), errors="coerce")
+        minute = pd.to_numeric(text.str.slice(2, 4), errors="coerce")
+        valid = match & hour.between(0, 23) & minute.between(0, 59)
+        return text.where(valid)
+
     if "LATITUDE" in work.columns:
         series = _normalize_numeric(work["LATITUDE"])
         series = series.where(series.between(-90.0, 90.0))
@@ -361,6 +387,12 @@ def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
         series = _normalize_numeric(work["LONGITUDE"])
         series = series.where(series.between(-180.0, 180.0))
         work["LONGITUDE"] = series
+
+    if "DATE" in work.columns:
+        work["DATE"] = _normalize_date(work["DATE"])
+
+    if "TIME" in work.columns:
+        work["TIME"] = _normalize_time(work["TIME"])
 
     if "ELEVATION" in work.columns:
         series = _normalize_numeric(work["ELEVATION"])

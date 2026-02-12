@@ -126,11 +126,60 @@ CLOUD_SUMMATION_QC_FLAGS = {
     "9",
 }
 
+MANDATORY_QUALITY_FLAGS = {"0", "1", "2", "3", "4", "5", "6", "7", "9"}
+
 SOLARAD_QC_FLAGS = {"1", "3", "9"}
 
 SOLAR_IRRADIANCE_QC_FLAGS = {"0", "1", "2", "3", "9"}
 
 SUNSHINE_PERCENT_QC_FLAGS = {"4", "5", "6", "7", "9", "M"}
+
+VERTICAL_DATUM_CODES = {
+    "AGL",
+    "ALAT",
+    "AP",
+    "CFB",
+    "CRD",
+    "ESLW",
+    "GCLWD",
+    "HAT",
+    "HHW",
+    "HTWW",
+    "HW",
+    "HWFC",
+    "IND",
+    "ISLW",
+    "LAT",
+    "LLW",
+    "LNLW",
+    "LRLW",
+    "LSD",
+    "LW",
+    "LWD",
+    "LWFC",
+    "MHHW",
+    "MHLW",
+    "MHW",
+    "MHWN",
+    "MHWS",
+    "MLHW",
+    "MLLW",
+    "MLLWS",
+    "MLWN",
+    "MLW",
+    "MLWS",
+    "MSL",
+    "MTL",
+    "NC",
+    "NT",
+    "ST",
+    "SWA",
+    "TLLW",
+    "UD",
+    "UK",
+    "WGS84E",
+    "WGS84G",
+}
 
 EQD_REASON_CODES = {"0", "1", "2", "3", "4", "5", "6", "7"}
 EQD_UNIT_CODES = {
@@ -315,7 +364,11 @@ FIELD_RULES: dict[str, FieldRule] = {
         code="WND",
         parts={
             1: FieldPartRule(missing_values={"999"}, quality_part=2, agg="circular_mean"),
-            2: FieldPartRule(kind="quality", agg="drop"),  # direction quality
+            2: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality=MANDATORY_QUALITY_FLAGS,
+            ),  # direction quality
             3: FieldPartRule(
                 kind="categorical",
                 agg="drop",
@@ -323,14 +376,22 @@ FIELD_RULES: dict[str, FieldRule] = {
                 allowed_values={"A", "B", "C", "H", "N", "R", "Q", "T", "V"},
             ),  # wind type code
             4: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=5),
-            5: FieldPartRule(kind="quality", agg="drop"),  # speed quality
+            5: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality=MANDATORY_QUALITY_FLAGS,
+            ),  # speed quality
         },
     ),
     "CIG": FieldRule(
         code="CIG",
         parts={
             1: FieldPartRule(missing_values={"99999"}, quality_part=2),
-            2: FieldPartRule(kind="quality", agg="drop"),  # height quality
+            2: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality=MANDATORY_QUALITY_FLAGS,
+            ),  # height quality
             3: FieldPartRule(
                 kind="categorical",
                 agg="drop",
@@ -349,7 +410,11 @@ FIELD_RULES: dict[str, FieldRule] = {
         code="VIS",
         parts={
             1: FieldPartRule(missing_values={"999999"}, quality_part=2, agg="min"),
-            2: FieldPartRule(kind="quality", agg="drop"),  # distance quality
+            2: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality=MANDATORY_QUALITY_FLAGS,
+            ),  # distance quality
             3: FieldPartRule(
                 quality_part=4,
                 kind="categorical",
@@ -357,7 +422,11 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"9"},
                 allowed_values={"N", "V"},
             ),
-            4: FieldPartRule(kind="quality", agg="drop"),  # variability quality
+            4: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality=MANDATORY_QUALITY_FLAGS,
+            ),  # variability quality
         },
     ),
     "TMP": FieldRule(
@@ -409,12 +478,16 @@ FIELD_RULES: dict[str, FieldRule] = {
         code="MA1",
         parts={
             1: FieldPartRule(scale=0.1, missing_values={"99999"}, quality_part=2),
-            2: FieldPartRule(kind="quality", agg="drop"),  # altimeter quality
+            2: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "9", "M"},
+            ),  # altimeter quality
             3: FieldPartRule(scale=0.1, missing_values={"99999"}, quality_part=4),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
-                allowed_quality=QUALITY_FLAGS - {"C"},
+                allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "9", "M"},
             ),  # station pressure quality
         },
     ),
@@ -426,6 +499,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 agg="drop",
                 quality_part=2,
                 missing_values={"9"},
+                allowed_values={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
             ),  # pressure tendency code
             2: FieldPartRule(
                 kind="quality",
@@ -465,9 +539,19 @@ FIELD_RULES: dict[str, FieldRule] = {
                 agg="drop",
                 missing_values={"9"},
                 quality_part=4,
+                allowed_values={"M", "I"},
             ),  # method code
-            2: FieldPartRule(missing_values={"99"}, quality_part=4),  # wave period (seconds)
-            3: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
+            2: FieldPartRule(
+                missing_values={"99"},
+                quality_part=4,
+                allowed_values={f"{value:02d}" for value in range(0, 31)},
+            ),  # wave period (seconds)
+            3: FieldPartRule(
+                scale=0.1,
+                missing_values={"999"},
+                quality_part=4,
+                allowed_values={f"{value:03d}" for value in range(0, 501)},
+            ),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -478,6 +562,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 agg="drop",
                 missing_values={"99"},
                 quality_part=6,
+                allowed_values={f"{value:02d}" for value in range(0, 10)},
             ),  # sea state code
             6: FieldPartRule(
                 kind="quality",
@@ -494,6 +579,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 agg="drop",
                 missing_values={"9"},
                 quality_part=4,
+                allowed_values={"1", "2", "3", "4", "5"},
             ),  # source code
             2: FieldPartRule(
                 scale=0.1,
@@ -505,6 +591,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 agg="drop",
                 missing_values={"9"},
                 quality_part=4,
+                allowed_values={"0", "1", "2", "3", "4"},
             ),  # tendency code
             4: FieldPartRule(
                 kind="quality",
@@ -639,9 +726,23 @@ FIELD_RULES: dict[str, FieldRule] = {
     "UG1": FieldRule(
         code="UG1",
         parts={
-            1: FieldPartRule(missing_values={"99"}, quality_part=4),  # primary swell period (seconds)
-            2: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
-            3: FieldPartRule(missing_values={"999"}, agg="circular_mean", quality_part=4),
+            1: FieldPartRule(
+                missing_values={"99"},
+                quality_part=4,
+                allowed_values={f"{value:02d}" for value in range(0, 15)},
+            ),  # primary swell period (seconds)
+            2: FieldPartRule(
+                scale=0.1,
+                missing_values={"999"},
+                quality_part=4,
+                allowed_values={f"{value:03d}" for value in range(0, 501)},
+            ),
+            3: FieldPartRule(
+                missing_values={"999"},
+                agg="circular_mean",
+                quality_part=4,
+                allowed_values={f"{value:03d}" for value in range(1, 361)},
+            ),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -652,9 +753,23 @@ FIELD_RULES: dict[str, FieldRule] = {
     "UG2": FieldRule(
         code="UG2",
         parts={
-            1: FieldPartRule(missing_values={"99"}, quality_part=4),  # secondary swell period (seconds)
-            2: FieldPartRule(scale=0.1, missing_values={"999"}, quality_part=4),
-            3: FieldPartRule(missing_values={"999"}, agg="circular_mean", quality_part=4),
+            1: FieldPartRule(
+                missing_values={"99"},
+                quality_part=4,
+                allowed_values={f"{value:02d}" for value in range(0, 15)},
+            ),  # secondary swell period (seconds)
+            2: FieldPartRule(
+                scale=0.1,
+                missing_values={"999"},
+                quality_part=4,
+                allowed_values={f"{value:03d}" for value in range(0, 501)},
+            ),
+            3: FieldPartRule(
+                missing_values={"999"},
+                agg="circular_mean",
+                quality_part=4,
+                allowed_values={f"{value:03d}" for value in range(1, 361)},
+            ),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -665,8 +780,18 @@ FIELD_RULES: dict[str, FieldRule] = {
     "GE1": FieldRule(
         code="GE1",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9"}),  # convective cloud code
-            2: FieldPartRule(kind="categorical", agg="drop", missing_values={"999999"}),  # vertical datum
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                allowed_values={"0", "1", "2", "3", "4", "5", "6", "7", "9"},
+            ),  # convective cloud code
+            2: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"999999"},
+                allowed_values=VERTICAL_DATUM_CODES,
+            ),  # vertical datum
             3: FieldPartRule(missing_values={"99999"}),  # base height upper range
             4: FieldPartRule(missing_values={"99999"}),  # base height lower range
         },
@@ -2220,6 +2345,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 kind="categorical",
                 agg="drop",
                 quality_part=2,
+                allowed_values={str(value) for value in range(0, 10)},
             ),  # past-weather condition code
             2: FieldPartRule(
                 kind="quality",
@@ -2231,6 +2357,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 missing_values={"99"},
                 quality_part=4,
+                allowed_values={f"{value:02d}" for value in range(1, 25)},
             ),  # past-weather period
             4: FieldPartRule(
                 kind="quality",

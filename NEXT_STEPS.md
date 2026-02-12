@@ -4,13 +4,13 @@
 
 - [x] Enforce per-field allowed-quality sets for 2-part value/quality fields (e.g., GJ/GK/GL/MV/MW) instead of the generic `QUALITY_FLAGS` gate.
 - [x] Apply field-specific sentinel detection (including leading-zero normalization) for 2-part value/quality fields to match ISD/README rules.
-- [ ] Respect signed missing sentinels where spec uses +9999/+99999 only; current normalization strips signs and can drop valid negative extremes (e.g., CRN temps).
-- [ ] Allow valid negative all-9 minima (e.g., -999, -9999, -99999) where spec defines negative ranges and missing uses +9999/+99999; current `_to_float` treats any all-9s as missing.
+- [x] Respect signed missing sentinels where spec uses +9999/+99999 only; current normalization strips signs and can drop valid negative extremes (e.g., CRN temps).
+- [x] Allow valid negative all-9 minima (e.g., -999, -9999, -99999) where spec defines negative ranges and missing uses +9999/+99999; current `_to_float` treats any all-9s as missing.
 - [x] Align 2-part field naming with ISD semantics and friendly maps: `clean_value_quality` always emits `__value`, which conflicts with `__part1` expectations for MV/GJ/GK/GL and bypasses their per-part metadata.
 - [x] Apply GE1 convective cloud missing sentinel (`9`) from Part 15 in `FIELD_RULES`/cleaning.
 - [x] Apply GE1 vertical datum missing sentinel (`999999`) from Part 15 in `FIELD_RULES`/cleaning.
-- [ ] Enforce GE1 convective cloud code domain (0-7, 9) per Part 15.
-- [ ] Enforce GE1 vertical datum code domain (AGL/ALAT/.../WGS84G; 999999 missing) per Part 15.
+- [x] Enforce GE1 convective cloud code domain (0-7, 9) per Part 15.
+- [x] Enforce GE1 vertical datum code domain (AGL/ALAT/.../WGS84G; 999999 missing) per Part 15.
 - [x] Restrict GF1 quality parts to Part 15 cloud quality codes (currently defaults to `QUALITY_FLAGS`).
 - [x] Apply GA cloud-layer type missing sentinel (`99`) from Part 15.
 - [x] Apply GF1 low/mid/high cloud genus missing sentinels (`99`) from Part 15.
@@ -20,7 +20,7 @@
 - [x] Restrict AY past-weather quality codes to Part 5 values (0-3, 9).
 - [x] Restrict OC1 wind-gust quality codes to Part 29 values (0-7, 9, M).
 - [x] Apply AU present-weather missing sentinels for descriptor/obscuration/other/combination codes (`9`) and precipitation code (`99`).
-- [ ] Enforce AY manual past-weather condition code domain (0-9) and period quantity range (01-24; 99 missing) per Part 5.
+- [x] Enforce AY manual past-weather condition code domain (0-9) and period quantity range (01-24; 99 missing) per Part 5.
 - [x] Restrict AA/AJ quality codes to Part 4 precipitation/snow sets (drop unsupported `C`).
 - [x] Apply Part 29 calm-condition rule for OD: direction `999` with speed `0000` indicates calm wind.
 - [ ] Add Part 5 past-weather groups AX1-AX6 (summary-of-day) and AZ1-AZ2 (automated past weather).
@@ -30,24 +30,24 @@
 - [ ] Enforce OB1/OB2 wind section ranges (period 001-998; max gust 0000-9998; direction 001-360; std 00000-99998; 999/9999/99999 missing) per Part 29.
 - [ ] Ensure OA/OD/OB/OE/RH identifiers with numeric suffixes (OA1-OA3, OD1-OD3, OB1-OB2, OE1-OE3, RH1-RH3) map to field rules.
 - [x] Restrict MA1 station pressure quality codes to Part 27 values (exclude unsupported `C`).
-- [ ] Tighten MA1 station pressure quality codes to {0-7, 9, M} (currently allows A/I/P/R/U via `QUALITY_FLAGS`).
-- [ ] Restrict MA1 altimeter quality codes to Part 27 values (0-7, 9, M) instead of default `QUALITY_FLAGS`.
+- [x] Tighten MA1 station pressure quality codes to {0-7, 9, M} (currently allows A/I/P/R/U via `QUALITY_FLAGS`).
+- [x] Restrict MA1 altimeter quality codes to Part 27 values (0-7, 9, M) instead of default `QUALITY_FLAGS`.
 - [x] Restrict MD1 quality codes to Part 27 values (0-3, 9 only).
-- [ ] Enforce MD1 pressure tendency code domain (0-8; 9 missing) per Part 27.
+- [x] Enforce MD1 pressure tendency code domain (0-8; 9 missing) per Part 27.
 - [x] Restrict SA1 sea-surface temperature quality codes to Part 29 values (0-3, 9 only).
-- [ ] Enforce UA1 method code domain (M/I) and sea-state code domain (00-09) from Part 30.
-- [ ] Enforce UA1 wave period range (00-30 sec; 99 missing) and wave height range (000-500; 999 missing) per Part 30.
-- [ ] Enforce UG1/UG2 swell period range (00-14 sec; 99 missing), height range (000-500; 999 missing), and direction range (001-360; 999 missing) per Part 30.
-- [ ] Enforce WA1 platform-ice source/tendency code domains (source 1-5; tendency 0-4) from Part 30.
+- [x] Enforce UA1 method code domain (M/I) and sea-state code domain (00-09) from Part 30.
+- [x] Enforce UA1 wave period range (00-30 sec; 99 missing) and wave height range (000-500; 999 missing) per Part 30.
+- [x] Enforce UG1/UG2 swell period range (00-14 sec; 99 missing), height range (000-500; 999 missing), and direction range (001-360; 999 missing) per Part 30.
+- [x] Enforce WA1 platform-ice source/tendency code domains (source 1-5; tendency 0-4) from Part 30.
 - [ ] Enforce WD1/WG1 water-surface ice domain codes (edge bearing, non-uniform code, ship position/penetrability, ice trend/development, growler presence, etc.) per Part 30.
 - [ ] Enforce WD1/WG1 numeric ranges (concentration 000-100; growler/iceberg quantity 000-998; WG1 edge distance 00-98) per Part 30.
 - [ ] Enforce WJ1 water-level ice domain codes (primary/secondary ice phenomena, slush condition, water level state) per Part 30.
 - [ ] Enforce WA1 platform-ice thickness range (000-998; 999 missing) per Part 30.
 - [ ] Enforce WJ1 numeric ranges (ice thickness 000-998; discharge 00000-99998; stage height -999 to +9998) per Part 30.
 - [x] Validate Control Data Section code domains (data source flag, report type code, QC process V01/V02/V03) and missing sentinels for lat/lon/elev/call letters.
-- [ ] Validate Control Data Section DATE/TIME domains (YYYYMMDD/HHMM ranges) per Part 2.
+- [x] Validate Control Data Section DATE/TIME domains (YYYYMMDD/HHMM ranges) per Part 2.
 - [x] Validate Mandatory Data Section domain codes and sentinels (wind type codes, CAVOK, ceiling determination, visibility variability, special missing rules like variable wind direction).
-- [ ] Restrict Mandatory Data Section quality codes for WND/CIG/VIS to {0-7, 9} (currently accepts extended `QUALITY_FLAGS`).
+- [x] Restrict Mandatory Data Section quality codes for WND/CIG/VIS to {0-7, 9} (currently accepts extended `QUALITY_FLAGS`).
 - [x] Encode Mandatory Data Section edge rules (ceiling unlimited=22000, visibility >160000 clamp, wind type 9 with speed 0000 indicates calm).
 - [x] Fill in remaining Mandatory Data Section fields from master spec (dew point + quality, sea level pressure + quality, and any trailing mandatory positions missing in part-03 file).
 - [ ] Enforce IA1 ground-surface observation code domain (00-31; 99 missing) from Part 23.
