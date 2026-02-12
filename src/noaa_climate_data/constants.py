@@ -1251,6 +1251,23 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
             ),  # quality code
         },
     ),
+    "AW": FieldRule(
+        code="AW*",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=2,
+                allowed_values={f"{value:02d}" for value in range(0, 99)},
+            ),  # automated atmospheric condition code
+            2: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "9", "M"},
+            ),  # automated condition quality
+        },
+    ),
     "CB": FieldRule(
         code="CB*",
         parts={
@@ -2165,9 +2182,24 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "OA": FieldRule(
         code="OA*",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9"}),
-            2: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
-            3: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=4),
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                allowed_values={"1", "2", "3", "4", "5", "6"},
+            ),
+            2: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values={f"{value:02d}" for value in range(1, 49)},
+            ),
+            3: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=4,
+                allowed_values={f"{value:04d}" for value in range(0, 2001)},
+            ),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -2178,10 +2210,29 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "OD": FieldRule(
         code="OD*",
         parts={
-            1: FieldPartRule(missing_values={"9"}, kind="categorical", agg="drop"),
-            2: FieldPartRule(missing_values={"99"}, kind="categorical", agg="drop"),
-            3: FieldPartRule(missing_values={"999"}, agg="circular_mean"),
-            4: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=5),
+            1: FieldPartRule(
+                missing_values={"9"},
+                kind="categorical",
+                agg="drop",
+                allowed_values={"1", "2", "3", "4", "5", "6"},
+            ),
+            2: FieldPartRule(
+                missing_values={"99"},
+                kind="categorical",
+                agg="drop",
+                allowed_values={f"{value:02d}" for value in range(1, 49)},
+            ),
+            3: FieldPartRule(
+                missing_values={"999"},
+                agg="circular_mean",
+                allowed_values={f"{value:03d}" for value in range(1, 361)},
+            ),
+            4: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=5,
+                allowed_values={f"{value:04d}" for value in range(0, 2001)},
+            ),
             5: FieldPartRule(
                 missing_values={"9"},
                 kind="quality",
@@ -2193,8 +2244,17 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "OB": FieldRule(
         code="OB*",
         parts={
-            1: FieldPartRule(missing_values={"999"}, agg="drop"),  # period minutes
-            2: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=3),
+            1: FieldPartRule(
+                missing_values={"999"},
+                agg="drop",
+                allowed_values={f"{value:03d}" for value in range(1, 999)},
+            ),  # period minutes
+            2: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=3,
+                allowed_values={f"{value:04d}" for value in range(0, 9999)},
+            ),
             3: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -2205,7 +2265,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
             ),
-            5: FieldPartRule(missing_values={"999"}, agg="circular_mean", quality_part=6),
+            5: FieldPartRule(
+                missing_values={"999"},
+                agg="circular_mean",
+                quality_part=6,
+                allowed_values={f"{value:03d}" for value in range(1, 361)},
+            ),
             6: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -2216,7 +2281,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
             ),
-            8: FieldPartRule(scale=0.01, missing_values={"99999"}, quality_part=9),
+            8: FieldPartRule(
+                scale=0.01,
+                missing_values={"99999"},
+                quality_part=9,
+                allowed_values={f"{value:05d}" for value in range(0, 99999)},
+            ),
             9: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -2227,7 +2297,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
             ),
-            11: FieldPartRule(scale=0.01, missing_values={"99999"}, quality_part=12),
+            11: FieldPartRule(
+                scale=0.01,
+                missing_values={"99999"},
+                quality_part=12,
+                allowed_values={f"{value:05d}" for value in range(0, 99999)},
+            ),
             12: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -2319,6 +2394,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 missing_values={"99"},
                 quality_part=2,
+                allowed_values={f"{value:02d}" for value in range(0, 10)},
             ),
             2: FieldPartRule(
                 kind="quality",
@@ -2330,7 +2406,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "MW": FieldRule(
         code="MW*",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", quality_part=2),  # present-weather code
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                quality_part=2,
+                allowed_values={f"{value:02d}" for value in range(0, 100)},
+            ),  # present-weather code
             2: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -2364,6 +2445,63 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "9"},
             ),  # past-weather period quality
+        },
+    ),
+    "AX": FieldRule(
+        code="AX*",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=2,
+                allowed_values={f"{value:02d}" for value in range(0, 12)},
+            ),  # summary-of-day condition code
+            2: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"4", "5", "6", "7", "9"},
+            ),  # summary-of-day condition quality
+            3: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=4,
+                allowed_values={"24"},
+            ),  # summary-of-day period
+            4: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"4", "5", "6", "7", "9"},
+            ),  # summary-of-day period quality
+        },
+    ),
+    "AZ": FieldRule(
+        code="AZ*",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                quality_part=2,
+                allowed_values={str(value) for value in range(0, 10)},
+            ),  # automated past-weather condition code
+            2: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),  # automated past-weather condition quality
+            3: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                quality_part=4,
+                allowed_values={f"{value:02d}" for value in range(1, 25)},
+            ),  # automated past-weather period
+            4: FieldPartRule(
+                kind="quality",
+                agg="drop",
+                allowed_quality={"0", "1", "2", "3", "9"},
+            ),  # automated past-weather period quality
         },
     ),
     "CR1": FieldRule(
@@ -2527,6 +2665,11 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
         },
     ),
 }
+
+for _prefix in ("OA", "OD", "OB", "OE", "RH", "MV", "MW", "AY"):
+    _rule = FIELD_RULES.get(_prefix)
+    if _rule is not None:
+        FIELD_RULE_PREFIXES[_prefix] = _rule
 
 _EQD_PREFIX_RULES: dict[str, FieldRule] = {}
 for _letter in ("Q", "P", "R", "C", "D"):
@@ -2752,6 +2895,14 @@ _FRIENDLY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^MV(?P<idx>\d+)__part2$"), "present_weather_vicinity_quality_code_{idx}"),
     (re.compile(r"^AY(?P<idx>\d+)__part1$"), "past_weather_condition_code_{idx}"),
     (re.compile(r"^AY(?P<idx>\d+)__part3$"), "past_weather_period_hours_{idx}"),
+    (re.compile(r"^AX(?P<idx>\d+)__part1$"), "past_weather_summary_condition_code_{idx}"),
+    (re.compile(r"^AX(?P<idx>\d+)__part2$"), "past_weather_summary_condition_quality_code_{idx}"),
+    (re.compile(r"^AX(?P<idx>\d+)__part3$"), "past_weather_summary_period_hours_{idx}"),
+    (re.compile(r"^AX(?P<idx>\d+)__part4$"), "past_weather_summary_period_quality_code_{idx}"),
+    (re.compile(r"^AZ(?P<idx>\d+)__part1$"), "past_weather_auto_condition_code_{idx}"),
+    (re.compile(r"^AZ(?P<idx>\d+)__part2$"), "past_weather_auto_condition_quality_code_{idx}"),
+    (re.compile(r"^AZ(?P<idx>\d+)__part3$"), "past_weather_auto_period_hours_{idx}"),
+    (re.compile(r"^AZ(?P<idx>\d+)__part4$"), "past_weather_auto_period_quality_code_{idx}"),
     (re.compile(r"^AA(?P<idx>\d+)__part1$"), "precip_period_hours_{idx}"),
     (re.compile(r"^AA(?P<idx>\d+)__part2$"), "precip_amount_{idx}"),
     (re.compile(r"^AA(?P<idx>\d+)__part3$"), "precip_condition_code_{idx}"),
@@ -2830,6 +2981,8 @@ _FRIENDLY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^AU(?P<idx>\d+)__part5$"), "weather_other_code_{idx}"),
     (re.compile(r"^AU(?P<idx>\d+)__part6$"), "weather_combo_indicator_{idx}"),
     (re.compile(r"^AU(?P<idx>\d+)__part7$"), "weather_quality_code_{idx}"),
+    (re.compile(r"^AW(?P<idx>\d+)__part1$"), "automated_present_weather_code_{idx}"),
+    (re.compile(r"^AW(?P<idx>\d+)__part2$"), "automated_present_weather_quality_code_{idx}"),
     (re.compile(r"^CB(?P<idx>\d+)__part1$"), "secondary_precip_period_minutes_{idx}"),
     (re.compile(r"^CB(?P<idx>\d+)__part2$"), "secondary_precip_depth_mm_{idx}"),
     (re.compile(r"^CB(?P<idx>\d+)__part3$"), "secondary_precip_qc_{idx}"),
@@ -3094,8 +3247,24 @@ _INTERNAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^present_weather_code_(?P<idx>\d+)$"), "MW{idx}__part1"),
     (re.compile(r"^present_weather_vicinity_code_(?P<idx>\d+)$"), "MV{idx}__part1"),
     (re.compile(r"^present_weather_vicinity_quality_code_(?P<idx>\d+)$"), "MV{idx}__part2"),
+    (re.compile(r"^automated_present_weather_code_(?P<idx>\d+)$"), "AW{idx}__part1"),
+    (re.compile(r"^automated_present_weather_quality_code_(?P<idx>\d+)$"), "AW{idx}__part2"),
     (re.compile(r"^past_weather_condition_code_(?P<idx>\d+)$"), "AY{idx}__part1"),
     (re.compile(r"^past_weather_period_hours_(?P<idx>\d+)$"), "AY{idx}__part3"),
+    (re.compile(r"^past_weather_summary_condition_code_(?P<idx>\d+)$"), "AX{idx}__part1"),
+    (
+        re.compile(r"^past_weather_summary_condition_quality_code_(?P<idx>\d+)$"),
+        "AX{idx}__part2",
+    ),
+    (re.compile(r"^past_weather_summary_period_hours_(?P<idx>\d+)$"), "AX{idx}__part3"),
+    (re.compile(r"^past_weather_summary_period_quality_code_(?P<idx>\d+)$"), "AX{idx}__part4"),
+    (re.compile(r"^past_weather_auto_condition_code_(?P<idx>\d+)$"), "AZ{idx}__part1"),
+    (
+        re.compile(r"^past_weather_auto_condition_quality_code_(?P<idx>\d+)$"),
+        "AZ{idx}__part2",
+    ),
+    (re.compile(r"^past_weather_auto_period_hours_(?P<idx>\d+)$"), "AZ{idx}__part3"),
+    (re.compile(r"^past_weather_auto_period_quality_code_(?P<idx>\d+)$"), "AZ{idx}__part4"),
     (re.compile(r"^precip_period_hours_(?P<idx>\d+)$"), "AA{idx}__part1"),
     (re.compile(r"^precip_amount_(?P<idx>\d+)$"), "AA{idx}__part2"),
     (re.compile(r"^precip_condition_code_(?P<idx>\d+)$"), "AA{idx}__part3"),

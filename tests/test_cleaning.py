@@ -85,6 +85,28 @@ class TestIsMissingValue:
         assert _is_missing_value("999999", rule)
 
 
+class TestPrefixRuleMapping:
+    """Numeric suffixes should resolve to prefix-based field rules."""
+
+    @pytest.mark.parametrize(
+        ("prefix", "expected_code"),
+        [
+            ("OA1", "OA*"),
+            ("OD2", "OD*"),
+            ("OB1", "OB*"),
+            ("OE3", "OE*"),
+            ("RH2", "RH*"),
+            ("MV1", "MV*"),
+            ("MW2", "MW*"),
+            ("AY1", "AY*"),
+        ],
+    )
+    def test_numeric_suffixes_use_prefix_rules(self, prefix: str, expected_code: str):
+        rule = get_field_rule(prefix)
+        assert rule is not None
+        assert rule.code == expected_code
+
+
 class TestSentinelsInCleanedOutput:
     """Sentinels must become None/NaN, never appear as numeric values."""
 
@@ -545,6 +567,19 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("1,1,25,1", "AY1")
         assert result["AY1__part3"] is None
 
+    def test_ax_invalid_condition_code(self):
+        result = clean_value_quality("12,4,24,4", "AX1")
+        assert result["AX1__part1"] is None
+        assert result["AX1__part3"] == pytest.approx(24.0)
+
+    def test_ax_invalid_period_quantity(self):
+        result = clean_value_quality("01,4,01,4", "AX1")
+        assert result["AX1__part3"] is None
+
+    def test_az_invalid_period_quantity(self):
+        result = clean_value_quality("1,1,25,1", "AZ1")
+        assert result["AZ1__part3"] is None
+
     def test_ua1_bad_wave_quality_nulls_wave_parts(self):
         result = clean_value_quality("M,10,050,8,04,1", "UA1")
         assert result["UA1__part1"] is None
@@ -710,6 +745,14 @@ class TestQualityNullsCorrectPart:
     def test_at_invalid_weather_type(self):
         result = clean_value_quality("AU,99,FG,1", "AT1")
         assert result["AT1__part2"] is None
+
+    def test_aw_missing_sentinel(self):
+        result = clean_value_quality("99,1", "AW1")
+        assert result["AW1__part1"] is None
+
+    def test_aw_quality_rejects_8(self):
+        result = clean_value_quality("01,8", "AW1")
+        assert result["AW1__part1"] is None
 
     def test_cb_quality_rejects_2(self):
         result = clean_value_quality("05,+000123,2,0", "CB1")
@@ -971,6 +1014,54 @@ class TestQualityNullsCorrectPart:
     def test_od_calm_direction(self):
         result = clean_value_quality("9,99,999,0000,1", "OD1")
         assert result["OD1__part3"] == pytest.approx(0.0)
+
+    def test_oa_invalid_type_code(self):
+        result = clean_value_quality("7,01,0005,1", "OA1")
+        assert result["OA1__part1"] is None
+
+    def test_oa_invalid_period_quantity(self):
+        result = clean_value_quality("1,00,0005,1", "OA1")
+        assert result["OA1__part2"] is None
+
+    def test_oa_invalid_speed_rate(self):
+        result = clean_value_quality("1,01,2001,1", "OA1")
+        assert result["OA1__part3"] is None
+
+    def test_od_invalid_direction_range(self):
+        result = clean_value_quality("1,01,361,0005,1", "OD1")
+        assert result["OD1__part3"] is None
+
+    def test_od_invalid_speed_rate(self):
+        result = clean_value_quality("1,01,090,2001,1", "OD1")
+        assert result["OD1__part4"] is None
+
+    def test_mv_invalid_code(self):
+        result = clean_value_quality("10,4", "MV1")
+        assert result["MV1__part1"] is None
+
+    def test_mw_invalid_code(self):
+        result = clean_value_quality("100,1", "MW1")
+        assert result["MW1__part1"] is None
+
+    def test_ob_invalid_period_minutes(self):
+        result = clean_value_quality("000,0050,1,0,090,1,0,00010,1,0,00020,1,0", "OB1")
+        assert result["OB1__part1"] is None
+
+    def test_ob_invalid_max_gust(self):
+        result = clean_value_quality("060,10000,1,0,090,1,0,00010,1,0,00020,1,0", "OB1")
+        assert result["OB1__part2"] is None
+
+    def test_ob_invalid_direction(self):
+        result = clean_value_quality("060,0050,1,0,361,1,0,00010,1,0,00020,1,0", "OB1")
+        assert result["OB1__part5"] is None
+
+    def test_ob_invalid_speed_std(self):
+        result = clean_value_quality("060,0050,1,0,090,1,0,100000,1,0,00020,1,0", "OB1")
+        assert result["OB1__part8"] is None
+
+    def test_ob_invalid_direction_std(self):
+        result = clean_value_quality("060,0050,1,0,090,1,0,00010,1,0,100000,1,0", "OB1")
+        assert result["OB1__part11"] is None
 
     def test_aj_condition_missing(self):
         result = clean_value_quality("0010,9,1,000100,9,1", "AJ1")
@@ -1244,6 +1335,16 @@ class TestControlAndMandatoryNormalization:
         assert cleaned.loc[0, "TIME"] == "2359"
         assert pd.isna(cleaned.loc[1, "DATE"])
         assert pd.isna(cleaned.loc[1, "TIME"])
+
+    def test_control_date_accepts_iso_timestamps(self):
+        df = pd.DataFrame(
+            {
+                "DATE": ["2024-01-31T23:59:00Z", "2024-13-01T00:00:00Z"],
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=True)
+        assert cleaned.loc[0, "DATE"] == "2024-01-31T23:59:00Z"
+        assert pd.isna(cleaned.loc[1, "DATE"])
 
     def test_mandatory_clamps_and_calm_wind(self):
         df = pd.DataFrame(

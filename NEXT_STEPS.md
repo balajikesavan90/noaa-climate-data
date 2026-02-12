@@ -23,12 +23,12 @@
 - [x] Enforce AY manual past-weather condition code domain (0-9) and period quantity range (01-24; 99 missing) per Part 5.
 - [x] Restrict AA/AJ quality codes to Part 4 precipitation/snow sets (drop unsupported `C`).
 - [x] Apply Part 29 calm-condition rule for OD: direction `999` with speed `0000` indicates calm wind.
-- [ ] Add Part 5 past-weather groups AX1-AX6 (summary-of-day) and AZ1-AZ2 (automated past weather).
-- [ ] Restrict OA/OD supplementary wind type codes to Part 29 values (1-6; `9` missing).
-- [ ] Enforce OA/OD period quantity ranges (01-48 hours; 99 missing) and OD direction range (001-360; 999 missing) per Part 29.
-- [ ] Enforce OA supplementary wind speed range (0000-2000; 9999 missing) per Part 29.
-- [ ] Enforce OB1/OB2 wind section ranges (period 001-998; max gust 0000-9998; direction 001-360; std 00000-99998; 999/9999/99999 missing) per Part 29.
-- [ ] Ensure OA/OD/OB/OE/RH identifiers with numeric suffixes (OA1-OA3, OD1-OD3, OB1-OB2, OE1-OE3, RH1-RH3) map to field rules.
+- [x] Add Part 5 past-weather groups AX1-AX6 (summary-of-day) and AZ1-AZ2 (automated past weather).lets
+- [x] Restrict OA/OD supplementary wind type codes to Part 29 values (1-6; `9` missing).
+- [x] Enforce OA/OD period quantity ranges (01-48 hours; 99 missing) and OD direction range (001-360; 999 missing) per Part 29.
+- [x] Enforce OA supplementary wind speed range (0000-2000; 9999 missing) per Part 29.
+- [x] Enforce OB1/OB2 wind section ranges (period 001-998; max gust 0000-9998; direction 001-360; std 00000-99998; 999/9999/99999 missing) per Part 29.
+- [x] Ensure OA/OD/OB/OE/RH identifiers with numeric suffixes (OA1-OA3, OD1-OD3, OB1-OB2, OE1-OE3, RH1-RH3) map to field rules.
 - [x] Restrict MA1 station pressure quality codes to Part 27 values (exclude unsupported `C`).
 - [x] Tighten MA1 station pressure quality codes to {0-7, 9, M} (currently allows A/I/P/R/U via `QUALITY_FLAGS`).
 - [x] Restrict MA1 altimeter quality codes to Part 27 values (0-7, 9, M) instead of default `QUALITY_FLAGS`.
@@ -52,10 +52,10 @@
 - [x] Fill in remaining Mandatory Data Section fields from master spec (dew point + quality, sea level pressure + quality, and any trailing mandatory positions missing in part-03 file).
 - [ ] Enforce IA1 ground-surface observation code domain (00-31; 99 missing) from Part 23.
 - [ ] Enforce KA extreme-air-temperature code domain (N/M/O/P) and tighten KA temperature quality codes to {0-7, 9, M} per Part 24.
-- [ ] Enforce MV present-weather-in-vicinity codes (00-09; 99 missing) and MW manual present-weather codes per Part 28.
-- [ ] Ensure MV/MW/AY identifiers with numeric suffixes (MV1-MV7, MW1-MW7, AY1-AY2) map to field rules.
+- [x] Enforce MV present-weather-in-vicinity codes (00-09; 99 missing) and MW manual present-weather codes per Part 28.
+- [x] Ensure MV/MW/AY identifiers with numeric suffixes (MV1-MV7, MW1-MW7, AY1-AY2) map to field rules.
 - [ ] Enforce AU present-weather component code domains (intensity/descriptor/precip/obscuration/other/combination) per Part 5.
-- [ ] Enforce AW automated present-weather code domain (00-99; 99 missing) and quality code set (0-7, 9, M) per Part 5.
+- [x] Enforce AW automated present-weather code domain (00-99; 99 missing) and quality code set (0-7, 9, M) per Part 5.
 - [ ] Enforce CO1 climate division number domain (00-09; 99 missing) per Part 7.
 - [ ] Enforce CO1 UTC-LST offset range (-12 to +12; +99 missing) per Part 7.
 - [ ] Enforce CO2-CO9 element time-offset ranges (-9999 to +9998; +9999 missing) and element-id domain per Part 7.
@@ -87,7 +87,7 @@
 - [x] Add Part 4 snow-accumulation groups AL1-AL4 (accumulation period/depth), AM1 (greatest 24-hour amount), AN1 (day/month totals).
 - [x] Add Part 4 additional liquid-precip groups AO1-AO4 (minutes-based), AP1-AP4 (HPD 15-min gauges with quality codes).
 - [x] Add Part 5 weather occurrence groups AT1-AT8 (daily present weather) and AU1-AU9 (present weather observation components).
-- [ ] Add Part 5 automated present-weather groups AW1-AW4 (automated atmospheric condition codes).
+- [x] Add Part 5 automated present-weather groups AW1-AW4 (automated atmospheric condition codes).
 - [x] Add Part 6 CRN unique groups CB1-CB2 (secondary precip), CF1-CF3 (fan speed), CG1-CG3 (primary precip), CH1-CH2 (RH/Temp), CI1 (hourly RH/Temp stats), and CN1-CN4 (battery + diagnostics).
 - [x] Add Part 7 network metadata groups CO1 (climate division + UTC offset), CO2-CO9 (element time offsets), CR1 (CRN control), CT1-CT3 (subhourly temp), CU1-CU3 (hourly temp + std dev).
 - [x] Add Part 7 network metadata groups CV1-CV3 (hourly temp extremes + times), CW1 (subhourly wetness), CX1-CX3 (hourly Geonor vibrating wire summary).

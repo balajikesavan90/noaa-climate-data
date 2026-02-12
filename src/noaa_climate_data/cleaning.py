@@ -362,12 +362,8 @@ def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
     def _normalize_date(series: pd.Series) -> pd.Series:
         text = series.astype(str).str.strip()
         text = text.where(~text.isin({"", "nan", "None"}))
-        match = text.str.fullmatch(r"\d{8}")
-        year = pd.to_numeric(text.str.slice(0, 4), errors="coerce")
-        month = pd.to_numeric(text.str.slice(4, 6), errors="coerce")
-        day = pd.to_numeric(text.str.slice(6, 8), errors="coerce")
-        valid = match & year.between(1, 9999) & month.between(1, 12) & day.between(1, 31)
-        return text.where(valid)
+        parsed = pd.to_datetime(text, errors="coerce", utc=True)
+        return text.where(parsed.notna())
 
     def _normalize_time(series: pd.Series) -> pd.Series:
         text = series.astype(str).str.strip()
