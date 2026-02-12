@@ -4,9 +4,13 @@
 
 - [x] Enforce per-field allowed-quality sets for 2-part value/quality fields (e.g., GJ/GK/GL/MV/MW) instead of the generic `QUALITY_FLAGS` gate.
 - [x] Apply field-specific sentinel detection (including leading-zero normalization) for 2-part value/quality fields to match ISD/README rules.
+- [ ] Respect signed missing sentinels where spec uses +9999/+99999 only; current normalization strips signs and can drop valid negative extremes (e.g., CRN temps).
+- [ ] Allow valid negative all-9 minima (e.g., -999, -9999, -99999) where spec defines negative ranges and missing uses +9999/+99999; current `_to_float` treats any all-9s as missing.
 - [x] Align 2-part field naming with ISD semantics and friendly maps: `clean_value_quality` always emits `__value`, which conflicts with `__part1` expectations for MV/GJ/GK/GL and bypasses their per-part metadata.
 - [x] Apply GE1 convective cloud missing sentinel (`9`) from Part 15 in `FIELD_RULES`/cleaning.
 - [x] Apply GE1 vertical datum missing sentinel (`999999`) from Part 15 in `FIELD_RULES`/cleaning.
+- [ ] Enforce GE1 convective cloud code domain (0-7, 9) per Part 15.
+- [ ] Enforce GE1 vertical datum code domain (AGL/ALAT/.../WGS84G; 999999 missing) per Part 15.
 - [x] Restrict GF1 quality parts to Part 15 cloud quality codes (currently defaults to `QUALITY_FLAGS`).
 - [x] Apply GA cloud-layer type missing sentinel (`99`) from Part 15.
 - [x] Apply GF1 low/mid/high cloud genus missing sentinels (`99`) from Part 15.
@@ -16,15 +20,63 @@
 - [x] Restrict AY past-weather quality codes to Part 5 values (0-3, 9).
 - [x] Restrict OC1 wind-gust quality codes to Part 29 values (0-7, 9, M).
 - [x] Apply AU present-weather missing sentinels for descriptor/obscuration/other/combination codes (`9`) and precipitation code (`99`).
+- [ ] Enforce AY manual past-weather condition code domain (0-9) and period quantity range (01-24; 99 missing) per Part 5.
 - [x] Restrict AA/AJ quality codes to Part 4 precipitation/snow sets (drop unsupported `C`).
 - [x] Apply Part 29 calm-condition rule for OD: direction `999` with speed `0000` indicates calm wind.
+- [ ] Add Part 5 past-weather groups AX1-AX6 (summary-of-day) and AZ1-AZ2 (automated past weather).
+- [ ] Restrict OA/OD supplementary wind type codes to Part 29 values (1-6; `9` missing).
+- [ ] Enforce OA/OD period quantity ranges (01-48 hours; 99 missing) and OD direction range (001-360; 999 missing) per Part 29.
+- [ ] Enforce OA supplementary wind speed range (0000-2000; 9999 missing) per Part 29.
+- [ ] Enforce OB1/OB2 wind section ranges (period 001-998; max gust 0000-9998; direction 001-360; std 00000-99998; 999/9999/99999 missing) per Part 29.
+- [ ] Ensure OA/OD/OB/OE/RH identifiers with numeric suffixes (OA1-OA3, OD1-OD3, OB1-OB2, OE1-OE3, RH1-RH3) map to field rules.
 - [x] Restrict MA1 station pressure quality codes to Part 27 values (exclude unsupported `C`).
+- [ ] Tighten MA1 station pressure quality codes to {0-7, 9, M} (currently allows A/I/P/R/U via `QUALITY_FLAGS`).
+- [ ] Restrict MA1 altimeter quality codes to Part 27 values (0-7, 9, M) instead of default `QUALITY_FLAGS`.
 - [x] Restrict MD1 quality codes to Part 27 values (0-3, 9 only).
+- [ ] Enforce MD1 pressure tendency code domain (0-8; 9 missing) per Part 27.
 - [x] Restrict SA1 sea-surface temperature quality codes to Part 29 values (0-3, 9 only).
+- [ ] Enforce UA1 method code domain (M/I) and sea-state code domain (00-09) from Part 30.
+- [ ] Enforce UA1 wave period range (00-30 sec; 99 missing) and wave height range (000-500; 999 missing) per Part 30.
+- [ ] Enforce UG1/UG2 swell period range (00-14 sec; 99 missing), height range (000-500; 999 missing), and direction range (001-360; 999 missing) per Part 30.
+- [ ] Enforce WA1 platform-ice source/tendency code domains (source 1-5; tendency 0-4) from Part 30.
+- [ ] Enforce WD1/WG1 water-surface ice domain codes (edge bearing, non-uniform code, ship position/penetrability, ice trend/development, growler presence, etc.) per Part 30.
+- [ ] Enforce WD1/WG1 numeric ranges (concentration 000-100; growler/iceberg quantity 000-998; WG1 edge distance 00-98) per Part 30.
+- [ ] Enforce WJ1 water-level ice domain codes (primary/secondary ice phenomena, slush condition, water level state) per Part 30.
+- [ ] Enforce WA1 platform-ice thickness range (000-998; 999 missing) per Part 30.
+- [ ] Enforce WJ1 numeric ranges (ice thickness 000-998; discharge 00000-99998; stage height -999 to +9998) per Part 30.
 - [x] Validate Control Data Section code domains (data source flag, report type code, QC process V01/V02/V03) and missing sentinels for lat/lon/elev/call letters.
+- [ ] Validate Control Data Section DATE/TIME domains (YYYYMMDD/HHMM ranges) per Part 2.
 - [x] Validate Mandatory Data Section domain codes and sentinels (wind type codes, CAVOK, ceiling determination, visibility variability, special missing rules like variable wind direction).
+- [ ] Restrict Mandatory Data Section quality codes for WND/CIG/VIS to {0-7, 9} (currently accepts extended `QUALITY_FLAGS`).
 - [x] Encode Mandatory Data Section edge rules (ceiling unlimited=22000, visibility >160000 clamp, wind type 9 with speed 0000 indicates calm).
 - [x] Fill in remaining Mandatory Data Section fields from master spec (dew point + quality, sea level pressure + quality, and any trailing mandatory positions missing in part-03 file).
+- [ ] Enforce IA1 ground-surface observation code domain (00-31; 99 missing) from Part 23.
+- [ ] Enforce KA extreme-air-temperature code domain (N/M/O/P) and tighten KA temperature quality codes to {0-7, 9, M} per Part 24.
+- [ ] Enforce MV present-weather-in-vicinity codes (00-09; 99 missing) and MW manual present-weather codes per Part 28.
+- [ ] Ensure MV/MW/AY identifiers with numeric suffixes (MV1-MV7, MW1-MW7, AY1-AY2) map to field rules.
+- [ ] Enforce AU present-weather component code domains (intensity/descriptor/precip/obscuration/other/combination) per Part 5.
+- [ ] Enforce AW automated present-weather code domain (00-99; 99 missing) and quality code set (0-7, 9, M) per Part 5.
+- [ ] Enforce CO1 climate division number domain (00-09; 99 missing) per Part 7.
+- [ ] Enforce CO1 UTC-LST offset range (-12 to +12; +99 missing) per Part 7.
+- [ ] Enforce CO2-CO9 element time-offset ranges (-9999 to +9998; +9999 missing) and element-id domain per Part 7.
+- [ ] Ensure network metadata identifiers with numeric suffixes are matched (CO2-CO9, CT1-CT3, CU1-CU3, CV1-CV3, CW1, CX1-CX3).
+- [ ] Enforce CV1-CV3 hourly temperature extreme time fields (HHMM 0000-2359; 9999 missing) per Part 11.
+- [ ] Enforce ED1 runway direction range (01-36 tens of degrees; 99 missing) and visibility range (0000-5000; 9999 missing) per Part 14.
+- [ ] Enforce ME1 geopotential level codes (1-5; 9 missing) per Part 27.
+- [ ] Enforce CRN period quantity ranges (e.g., CB/CH/CF/CG) and sensor value ranges per Part 6.
+- [ ] Enforce CRN QC/FLAG domains for CB/CF/CG/CH/CI/CN/CR/CT/CU/CV/CW/CX (QC in {1,3,9}; FLAG in 0-9) per Parts 6-8.
+- [ ] Enforce GM solar irradiance data flag domains (00-99, with 99 missing) for global/direct/diffuse/UVB flags per Part 17.
+- [ ] Align GM1 field layout with Part 17: UVB global irradiance has no data flag (only value + quality), so parsing should not expect a UVB data-flag part.
+- [ ] Enforce GH1 solar radiation flag domains (0-9, with 9 missing) per Part 15.
+- [ ] Ensure solar/sunshine identifiers with numeric suffixes are matched by parsing rules (GH1, GJ1, GK1, GL1, GM1, GN1, GO1) so scaling/quality/sentinels apply.
+- [ ] Enforce GP1 modeled solar irradiance source flag domains (01-03, 99 missing) per Part 19.
+- [ ] Enforce GP1 modeled solar irradiance time-period min/max (0001-9998) and uncertainty ranges (000-100; 999 missing) per Part 19.
+- [ ] Enforce GJ/GK/GL sunshine value ranges (duration/percent/month totals) per Part 16.
+- [ ] Enforce HAIL size range (000-200; 999 missing) per Part 22.
+- [ ] Enforce SA1 sea-surface temperature range (-050 to +450; +999 missing) per Part 25.
+- [ ] Enforce GM/GN/GO solar time-period min/max ranges (0001-9998) per Parts 17–18.
+- [ ] Enforce GQ1/GR1 quality codes and time-period min/max ranges (0001-9998; quality 0-3, 9) per Parts 20–21.
+- [ ] Enforce Part 15 cloud code domains for GA/GD/GG/GF1 coverage, summation, and cloud-type characteristics.
 
 ## P1: Missing ISD groups and sections (implementation gaps)
 
@@ -35,6 +87,7 @@
 - [x] Add Part 4 snow-accumulation groups AL1-AL4 (accumulation period/depth), AM1 (greatest 24-hour amount), AN1 (day/month totals).
 - [x] Add Part 4 additional liquid-precip groups AO1-AO4 (minutes-based), AP1-AP4 (HPD 15-min gauges with quality codes).
 - [x] Add Part 5 weather occurrence groups AT1-AT8 (daily present weather) and AU1-AU9 (present weather observation components).
+- [ ] Add Part 5 automated present-weather groups AW1-AW4 (automated atmospheric condition codes).
 - [x] Add Part 6 CRN unique groups CB1-CB2 (secondary precip), CF1-CF3 (fan speed), CG1-CG3 (primary precip), CH1-CH2 (RH/Temp), CI1 (hourly RH/Temp stats), and CN1-CN4 (battery + diagnostics).
 - [x] Add Part 7 network metadata groups CO1 (climate division + UTC offset), CO2-CO9 (element time offsets), CR1 (CRN control), CT1-CT3 (subhourly temp), CU1-CU3 (hourly temp + std dev).
 - [x] Add Part 7 network metadata groups CV1-CV3 (hourly temp extremes + times), CW1 (subhourly wetness), CX1-CX3 (hourly Geonor vibrating wire summary).
@@ -68,10 +121,18 @@
 
 - [x] Clarify README vs implementation for multi-part fields: code only emits a single `__quality` column when all parts share one `quality_part`; most multi-part ISD groups only expose per-part quality columns.
 - [x] Align `LocationData_Hourly.csv` definition with behavior: either apply completeness filters to hourly output or update README to state it is best-hour only.
+- [ ] Update README aggregation section to reflect `sum`, `mode`, and `circular_mean` where used (precip totals, wind direction).
+- [ ] Update README field reference for OD* wind direction to reflect `circular_mean` aggregation (not plain mean).
+- [ ] Document `REM`/`QNN` parsing outputs (e.g., `REM__type`, `REM__text`, `QNN__elements`, `QNN__source_flags`, `QNN__data_values`).
+- [ ] Document the `WND__direction_variable` flag for variable wind direction rows.
+- [ ] Update README sentinel list to include GE1 vertical datum missing sentinel (`999999`) and convective cloud missing sentinel (`9`).
+- [ ] Expand README field reference / parsed group list to cover newly supported sections (CRN/network metadata, marine, solar/sunshine, runway visual range, soil/ground/pressure extensions).
 
 ## P3: Supporting docs, validation, and tests
 
 - [x] Populate missing ISD docs in-repo (Parts 10/11/16/17/18/19/21/22/24/25) to verify KA*/SA1 scaling/sentinels and solar/sunshine/hail sections.
 - [ ] Add tests for new groups to ensure sentinel removal and quality filtering are applied consistently.
 - [ ] Capture Domain Value ID tables for code validation (e.g., pressure tendency, geopotential levels, weather codes) if used in parsing.
+- [ ] Enforce numeric MIN/MAX ranges from the ISD spec (beyond current CIG/VIS clamping), or document why range checks are intentionally skipped.
 - [ ] Consider enforcing record/section length constraints (control=60, mandatory=45, max record 2844, max block 8192) if parser validates structure.
+- [ ] Parse and validate REM remark length quantity (Part 30) instead of only splitting type/text.
