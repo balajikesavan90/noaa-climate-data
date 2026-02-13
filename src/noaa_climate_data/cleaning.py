@@ -273,6 +273,10 @@ def _expand_parsed(
             if part.strip().upper() not in part_rule.allowed_values:
                 payload[key] = None
                 continue
+        if part_rule and part_rule.allowed_pattern:
+            if not part_rule.allowed_pattern.fullmatch(part.strip()):
+                payload[key] = None
+                continue
         if is_eqd and idx == 3:
             param_code = part if len(part) == 6 else part.strip()
             if param_code != "" and not _is_valid_eqd_parameter_code(param_code):

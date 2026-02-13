@@ -50,19 +50,19 @@
 - [x] Restrict Mandatory Data Section quality codes for WND/CIG/VIS to {0-7, 9} (currently accepts extended `QUALITY_FLAGS`).
 - [x] Encode Mandatory Data Section edge rules (ceiling unlimited=22000, visibility >160000 clamp, wind type 9 with speed 0000 indicates calm).
 - [x] Fill in remaining Mandatory Data Section fields from master spec (dew point + quality, sea level pressure + quality, and any trailing mandatory positions missing in part-03 file).
-- [ ] Enforce IA1 ground-surface observation code domain (00-31; 99 missing) from Part 23.
-- [ ] Enforce KA extreme-air-temperature code domain (N/M/O/P) and tighten KA temperature quality codes to {0-7, 9, M} per Part 24.
+- [x] Enforce IA1 ground-surface observation code domain (00-31; 99 missing) from Part 23.
+- [x] Enforce KA extreme-air-temperature code domain (N/M/O/P) and tighten KA temperature quality codes to {0-7, 9, M} per Part 24.
 - [x] Enforce MV present-weather-in-vicinity codes (00-09; 99 missing) and MW manual present-weather codes per Part 28.
 - [x] Ensure MV/MW/AY identifiers with numeric suffixes (MV1-MV7, MW1-MW7, AY1-AY2) map to field rules.
 - [ ] Enforce AU present-weather component code domains (intensity/descriptor/precip/obscuration/other/combination) per Part 5.
 - [x] Enforce AW automated present-weather code domain (00-99; 99 missing) and quality code set (0-7, 9, M) per Part 5.
-- [ ] Enforce CO1 climate division number domain (00-09; 99 missing) per Part 7.
-- [ ] Enforce CO1 UTC-LST offset range (-12 to +12; +99 missing) per Part 7.
-- [ ] Enforce CO2-CO9 element time-offset ranges (-9999 to +9998; +9999 missing) and element-id domain per Part 7.
+- [x] Enforce CO1 climate division number domain (00-09; 99 missing) per Part 7.
+- [x] Enforce CO1 UTC-LST offset range (-12 to +12; +99 missing) per Part 7.
+- [x] Enforce CO2-CO9 element time-offset ranges (-9999 to +9998; +9999 missing) and element-id domain per Part 7.
 - [ ] Ensure network metadata identifiers with numeric suffixes are matched (CO2-CO9, CT1-CT3, CU1-CU3, CV1-CV3, CW1, CX1-CX3).
-- [ ] Enforce CV1-CV3 hourly temperature extreme time fields (HHMM 0000-2359; 9999 missing) per Part 11.
-- [ ] Enforce ED1 runway direction range (01-36 tens of degrees; 99 missing) and visibility range (0000-5000; 9999 missing) per Part 14.
-- [ ] Enforce ME1 geopotential level codes (1-5; 9 missing) per Part 27.
+- [x] Enforce CV1-CV3 hourly temperature extreme time fields (HHMM 0000-2359; 9999 missing) per Part 11.
+- [x] Enforce ED1 runway direction range (01-36 tens of degrees; 99 missing) and visibility range (0000-5000; 9999 missing) per Part 14.
+- [x] Enforce ME1 geopotential level codes (1-5; 9 missing) per Part 27.
 - [ ] Enforce CRN period quantity ranges (e.g., CB/CH/CF/CG) and sensor value ranges per Part 6.
 - [ ] Enforce CRN QC/FLAG domains for CB/CF/CG/CH/CI/CN/CR/CT/CU/CV/CW/CX (QC in {1,3,9}; FLAG in 0-9) per Parts 6-8.
 - [ ] Enforce GM solar irradiance data flag domains (00-99, with 99 missing) for global/direct/diffuse/UVB flags per Part 17.
@@ -121,12 +121,12 @@
 
 - [x] Clarify README vs implementation for multi-part fields: code only emits a single `__quality` column when all parts share one `quality_part`; most multi-part ISD groups only expose per-part quality columns.
 - [x] Align `LocationData_Hourly.csv` definition with behavior: either apply completeness filters to hourly output or update README to state it is best-hour only.
-- [ ] Update README aggregation section to reflect `sum`, `mode`, and `circular_mean` where used (precip totals, wind direction).
-- [ ] Update README field reference for OD* wind direction to reflect `circular_mean` aggregation (not plain mean).
-- [ ] Document `REM`/`QNN` parsing outputs (e.g., `REM__type`, `REM__text`, `QNN__elements`, `QNN__source_flags`, `QNN__data_values`).
-- [ ] Document the `WND__direction_variable` flag for variable wind direction rows.
-- [ ] Update README sentinel list to include GE1 vertical datum missing sentinel (`999999`) and convective cloud missing sentinel (`9`).
-- [ ] Expand README field reference / parsed group list to cover newly supported sections (CRN/network metadata, marine, solar/sunshine, runway visual range, soil/ground/pressure extensions).
+- [x] Update README aggregation section to reflect `sum`, `mode`, and `circular_mean` where used (precip totals, wind direction).
+- [x] Update README field reference for OD* wind direction to reflect `circular_mean` aggregation (not plain mean).
+- [x] Document `REM`/`QNN` parsing outputs (e.g., `REM__type`, `REM__text`, `QNN__elements`, `QNN__source_flags`, `QNN__data_values`).
+- [x] Document the `WND__direction_variable` flag for variable wind direction rows.
+- [x] Update README sentinel list to include GE1 vertical datum missing sentinel (`999999`) and convective cloud missing sentinel (`9`).
+- [x] Expand README field reference / parsed group list to cover newly supported sections (CRN/network metadata, marine, solar/sunshine, runway visual range, soil/ground/pressure extensions).
 
 ## P3: Supporting docs, validation, and tests
 

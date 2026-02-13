@@ -188,10 +188,31 @@ class TestSentinelsInCleanedOutput:
         result = clean_value_quality("99,1", "IA1")
         assert result["IA1__part1"] is None
 
+    def test_ia1_valid_observation_code(self):
+        result = clean_value_quality("00,1", "IA1")
+        assert result["IA1__part1"] == pytest.approx(0.0)
+        result = clean_value_quality("31,1", "IA1")
+        assert result["IA1__part1"] == pytest.approx(31.0)
+
+    def test_ia1_invalid_observation_code(self):
+        result = clean_value_quality("32,1", "IA1")
+        assert result["IA1__part1"] is None
+
     def test_ia2_missing_min_temp_parts(self):
         result = clean_value_quality("999,+9999,1", "IA2")
         assert result["IA2__part1"] is None
         assert result["IA2__part2"] is None
+
+    def test_ka_invalid_extreme_code(self):
+        result = clean_value_quality("005,X,0123,1", "KA1")
+        assert result["KA1__part2"] is None
+        assert result["KA1__part3"] == pytest.approx(12.3)
+
+    def test_ka_quality_allows_m(self):
+        result = clean_value_quality("005,N,0123,M", "KA1")
+        assert result["KA1__part1"] == pytest.approx(0.5)
+        assert result["KA1__part2"] == "N"
+        assert result["KA1__part3"] == pytest.approx(12.3)
 
     def test_kb_missing_parts(self):
         result = clean_value_quality("999,9,+9999,1", "KB1")
@@ -242,6 +263,11 @@ class TestSentinelsInCleanedOutput:
         result = clean_value_quality("9,9999,1", "ME1")
         assert result["ME1__part1"] is None
         assert result["ME1__part2"] is None
+
+    def test_me1_invalid_code(self):
+        result = clean_value_quality("6,0123,1", "ME1")
+        assert result["ME1__part1"] is None
+        assert result["ME1__part2"] == pytest.approx(123.0)
 
     def test_mf1_missing_parts(self):
         result = clean_value_quality("99999,1,99999,1", "MF1")
@@ -798,10 +824,39 @@ class TestQualityNullsCorrectPart:
         assert result["CO1__part1"] is None
         assert result["CO1__part2"] is None
 
+    def test_co1_invalid_climate_division(self):
+        result = clean_value_quality("10,+00", "CO1")
+        assert result["CO1__part1"] is None
+        assert result["CO1__part2"] == pytest.approx(0.0)
+
+    def test_co1_invalid_utc_offset(self):
+        result = clean_value_quality("05,+13", "CO1")
+        assert result["CO1__part1"] == pytest.approx(5.0)
+        assert result["CO1__part2"] is None
+
+    def test_co1_valid_utc_offsets(self):
+        result = clean_value_quality("05,+12", "CO1")
+        assert result["CO1__part2"] == pytest.approx(12.0)
+        result = clean_value_quality("05,-12", "CO1")
+        assert result["CO1__part2"] == pytest.approx(-12.0)
+
     def test_co2_missing_element(self):
         result = clean_value_quality("999,+0010", "CO2")
         assert result["CO2__part1"] is None
         assert result["CO2__part2"] == pytest.approx(1.0)
+
+    def test_co2_invalid_element_id(self):
+        result = clean_value_quality("AB,+0010", "CO2")
+        assert result["CO2__part1"] is None
+        assert result["CO2__part2"] == pytest.approx(1.0)
+
+    def test_co2_offset_range(self):
+        result = clean_value_quality("TMP,+9998", "CO2")
+        assert result["CO2__part2"] == pytest.approx(999.8)
+        result = clean_value_quality("TMP,+9999", "CO2")
+        assert result["CO2__part2"] is None
+        result = clean_value_quality("TMP,-9999", "CO2")
+        assert result["CO2__part2"] == pytest.approx(-999.9)
 
     def test_cr1_quality_rejects_2(self):
         result = clean_value_quality("00123,2,0", "CR1")
@@ -824,6 +879,15 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("+00123,1,0,1200,1,0,+00234,1,0,9999,1,0", "CV1")
         assert result["CV1__part10"] is None
 
+    def test_cv_min_time_invalid(self):
+        result = clean_value_quality("+00123,1,0,2460,1,0,+00234,1,0,1300,1,0", "CV1")
+        assert result["CV1__part4"] is None
+        assert result["CV1__part7"] == pytest.approx(23.4)
+
+    def test_cv_max_time_invalid(self):
+        result = clean_value_quality("+00123,1,0,1200,1,0,+00234,1,0,2400,1,0", "CV1")
+        assert result["CV1__part10"] is None
+
     def test_cw_wet2_missing(self):
         result = clean_value_quality("00010,1,0,99999,1,0", "CW1")
         assert result["CW1__part4"] is None
@@ -843,6 +907,18 @@ class TestQualityNullsCorrectPart:
         assert result["ED1__part1"] is None
         assert result["ED1__part2"] is None
         assert result["ED1__part3"] is None
+
+    def test_ed1_invalid_direction(self):
+        result = clean_value_quality("00,L,0800,1", "ED1")
+        assert result["ED1__part1"] is None
+        result = clean_value_quality("37,L,0800,1", "ED1")
+        assert result["ED1__part1"] is None
+
+    def test_ed1_invalid_visibility(self):
+        result = clean_value_quality("18,L,5001,1", "ED1")
+        assert result["ED1__part3"] is None
+        result = clean_value_quality("18,L,0000,1", "ED1")
+        assert result["ED1__part3"] == pytest.approx(0.0)
 
     def test_gg_missing_parts(self):
         result = clean_value_quality("99,9,99999,9,99,9,99,9", "GG1")

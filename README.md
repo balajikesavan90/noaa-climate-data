@@ -241,6 +241,12 @@ Expanded columns are renamed using the friendly map in
 | `MV1__part1` | `present_weather_vicinity_code_1` |
 | `MV1__part2` | `present_weather_vicinity_quality_code_1` |
 
+#### 2b.2 Derived parsing flags and remark fields
+
+- `WND__direction_variable` is `True` when WND direction is `999` and the wind type code is `V` (variable).
+- `REM` (remarks) is split into `REM__type` and `REM__text` when the value begins with a known remark prefix.
+- `QNN` (original observation data) is parsed into `QNN__elements`, `QNN__source_flags`, and `QNN__data_values`.
+
 #### 2c. Missing-value sentinel detection
 
 Each field declares its own sentinel values in `FIELD_RULES`. The pipeline:
@@ -263,6 +269,8 @@ Each field declares its own sentinel values in `FIELD_RULES`. The pipeline:
 | KA\* period/temperature | `999`, `9999` | Missing extreme temp |
 | MD1 Δp | `999`, `+999` | Missing pressure change |
 | SA1 SST | `999` | Missing sea-surface temperature |
+| GE1 convective cloud code | `9` | Missing convective cloud code |
+| GE1 vertical datum | `999999` | Missing vertical datum |
 | UA1 wave period | `99` | Missing wave period (seconds) |
 | UA1 wave height | `999` | Missing wave height |
 | UG1 swell period | `99` | Missing swell period (seconds) |
@@ -327,6 +335,8 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 | **circular_mean** | WND direction | Wrap-aware mean for angular degrees |
 | **max** | OC1 (wind gust) | Peak gust is the meaningful aggregate |
 | **min** | VIS (visibility) | Worst visibility is climatologically significant |
+| **sum** | Precipitation/snow totals (AA\*, AL\*, AO\*, AP\*) | Accumulate totals over the period |
+| **mode** | Columns explicitly tagged with `agg="mode"` | Most-common categorical value when configured |
 | **drop** | WND type code, CIG determination/CAVOK, VIS variability, MW\* weather codes/quality, AY\* condition/period codes/quality, MD1 tendency code, GE1 categorical codes, all `*__quality` columns | Categorical codes and quality flags are observation-level metadata |
 
 #### 3c. Aggregation strategies
@@ -363,7 +373,7 @@ builds a per-column `agg_spec` for `groupby().agg()`:
 | KA\* | 4 | 1=period, 2=code, 3=temperature | 0.1, 1, 0.1 | 999, 9, 9999 | 4 | mean/drop | mixed |
 | MD1 | 6 | 1=tendency, 3=3hr Δp, 5=24hr Δp | —, 0.1, 0.1 | 9, 999, +999 | 2, 4, 6 | drop/mean | mixed |
 | OA\* | 4 | 1=type, 2=period, 3=speed | —, 1, 0.1 | 9, 99, 9999 | 4 | drop/mean | mixed |
-| OD\* | 5 | 3=direction, 4=speed | 1, 0.1 | 999, 9999 | 5 | mean | numeric |
+| OD\* | 5 | 3=direction, 4=speed | 1, 0.1 | 999, 9999 | 5 | circular_mean/mean | numeric |
 | GA\* | 6 | 1=coverage, 3=base height | 1, 1 | 99, 99999 | 2, 4, 6 | mean | mixed |
 | GF1 | 13 | 1=total cov, 8=base ht | 1, 1 | 99, 99999 | 3, 5, 7, 9, 11, 13 | mean | mixed |
 | MW\* | 2 | 1=weather code | — | — | 2 | drop | categorical |
@@ -397,7 +407,8 @@ Notes:
 - UA1 method code and sea state are categorical and are excluded from aggregation; wave measurement quality (part4) gates parts 1-3; sea state quality is part6 and gates part5.
 - UG1 swell direction uses a circular mean during aggregation when present; primary swell quality (part4) gates parts 1-3.
 - UA1/UG1 quality codes are restricted to {0, 1, 2, 3, 9} per ISD marine specs.
-- Additional cloud/solar groups parsed: GD*, GH1, GJ1, GK1, GL1, GM1, GN1, GO1 (see [src/noaa_climate_data/constants.py](src/noaa_climate_data/constants.py)).
+- Additional cloud/solar groups parsed: GD*, GH1, GJ1, GK1, GL1, GM1, GN1, GO1, GP1, GQ1, GR1.
+- Additional sections parsed: CRN/network metadata (CB*, CF*, CG*, CH*, CI1, CN*, CO*, CR1, CT*, CU*, CV*, CW1, CX*), marine (UA1, UG1/UG2, WA1, WD1, WG1, WJ1), runway visual range (ED1), soil/ground/pressure extensions (IA*, IB*, IC1, ST1, ME1/MF1/MG1/MH1/MK1).
 
 ---
 
