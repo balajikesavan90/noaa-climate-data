@@ -24,7 +24,7 @@ This folder contains the NOAA Global Hourly file index and year-counts used by t
 - Output folder naming uses UTC date (`YYYYMMDD`).
 - This index does not download station data; it only lists available files.
 
-## Station metadata (Stations.csv)
+### Station metadata (Stations.csv)
 
 - `Stations.csv`: station metadata with year coverage and derived flags.
 
