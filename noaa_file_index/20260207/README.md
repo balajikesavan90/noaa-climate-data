@@ -39,7 +39,6 @@ This folder contains the NOAA Global Hourly file index and year-counts used by t
 - Marks completeness via `METADATA_COMPLETE` and writes `Stations.csv`.
 
 #### Notes
-Timeline:
 - Creation started on 2026-02-07.
 - Metadata collection for all 27k stations completed on 2026-02-12.
 
