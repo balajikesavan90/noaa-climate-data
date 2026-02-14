@@ -131,3 +131,74 @@ Compared `isd-format-document-parts/part-01-*.md` through `part-30-*.md` against
 ## Added to Next Steps
 
 These eighteen items were recorded under `P0` in `NEXT_STEPS.md`.
+
+## Follow-Up Pass: Additional Net-New Misalignments (All 30 Parts Re-Read)
+
+Date: 2026-02-14 (follow-up pass)
+
+### Part-by-Part Delta (New Findings Only)
+
+| Part | Delta |
+| --- | --- |
+| 01 Preface | No additional misalignment beyond existing length/structure backlog. |
+| 02 Control | No additional misalignment beyond existing backlog. |
+| 03 Mandatory | No additional misalignment beyond existing backlog. |
+| 04 Additional | **New**: remaining `AB/AD/AE/AJ/AK/AL/AM/AN` numeric/date bounds are still not enforced; **new** `AH`/`AI` friendly-column collisions. |
+| 05 Weather Occurrence | No additional misalignment beyond existing backlog. |
+| 06 CRN Unique | No additional misalignment beyond existing backlog. |
+| 07 Network Metadata | No additional misalignment beyond existing backlog. |
+| 08 CRN Control | No additional misalignment beyond existing backlog. |
+| 09 Subhourly Temperature | No additional misalignment beyond existing backlog. |
+| 10 Hourly Temperature | No additional misalignment beyond existing backlog. |
+| 11 Hourly Temperature Extreme | No additional misalignment beyond existing backlog. |
+| 12 Subhourly Wetness | No additional misalignment beyond existing backlog. |
+| 13 Geonor Summary | No additional misalignment beyond existing backlog. |
+| 14 Runway Visual Range | No additional misalignment beyond existing backlog. |
+| 15 Cloud and Solar | No additional misalignment beyond existing backlog. |
+| 16 Sunshine | No additional misalignment beyond existing backlog. |
+| 17 Solar Irradiance | No additional misalignment beyond existing backlog. |
+| 18 Net Solar Radiation | No additional misalignment beyond existing backlog. |
+| 19 Modeled Solar Irradiance | No additional misalignment beyond existing backlog. |
+| 20 Hourly Solar Angle | No additional misalignment beyond existing backlog. |
+| 21 Hourly Extraterrestrial Radiation | No additional misalignment beyond existing backlog. |
+| 22 Hail | No additional misalignment beyond existing backlog. |
+| 23 Ground Surface | No additional misalignment beyond existing backlog. |
+| 24 Temperature | No additional misalignment beyond existing backlog. |
+| 25 Sea Surface Temperature | No additional misalignment beyond existing backlog. |
+| 26 Soil Temperature | No additional misalignment beyond existing backlog. |
+| 27 Pressure | No additional misalignment beyond existing backlog. |
+| 28 Weather Extended | No additional misalignment beyond existing backlog. |
+| 29 Wind | No additional misalignment beyond existing backlog. |
+| 30 Marine | **New**: `QNN` parser applies non-spec normalization/constraints and ambiguous tokenization; **new** global all-9 nulling can erase valid `REM`/`QNN` text payloads. |
+
+### Additional Misalignments Identified In This Follow-Up Pass
+
+1. Part 4 still has multiple unencoded numeric/date bounds outside `AH/AI`.
+   - Spec ranges include: `AB1` max `50000`, `AD1` max `20000` and date tokens `0101..3131`, `AE1` counts `00..31`, `AJ1` max depth/equivalent water (`1200`/`120000`), `AK1` max depth `1500` and day tokens `01..31`, `AL*` period/depth `00..72` and `000..500`, `AM1` max `2000` with date tokens `0101..3131`, `AN1` period `001..744` (`isd-format-document-parts/part-04-additional-data-section.md:120`, `isd-format-document-parts/part-04-additional-data-section.md:222`, `isd-format-document-parts/part-04-additional-data-section.md:249`, `isd-format-document-parts/part-04-additional-data-section.md:316`, `isd-format-document-parts/part-04-additional-data-section.md:636`, `isd-format-document-parts/part-04-additional-data-section.md:687`, `isd-format-document-parts/part-04-additional-data-section.md:736`, `isd-format-document-parts/part-04-additional-data-section.md:796`, `isd-format-document-parts/part-04-additional-data-section.md:804`, `isd-format-document-parts/part-04-additional-data-section.md:860`, `isd-format-document-parts/part-04-additional-data-section.md:879`, `isd-format-document-parts/part-04-additional-data-section.md:936`).
+   - Current rules remain sentinel/quality-centric without those bounds (`src/noaa_climate_data/constants.py:1074`, `src/noaa_climate_data/constants.py:1110`, `src/noaa_climate_data/constants.py:1112`, `src/noaa_climate_data/constants.py:1125`, `src/noaa_climate_data/constants.py:1212`, `src/noaa_climate_data/constants.py:1234`, `src/noaa_climate_data/constants.py:1256`, `src/noaa_climate_data/constants.py:1276`, `src/noaa_climate_data/constants.py:1329`, `src/noaa_climate_data/constants.py:1340`).
+   - Existing tests validate missing/quality behavior but not these min/max/date constraints (`tests/test_cleaning.py:1562`, `tests/test_cleaning.py:1575`, `tests/test_cleaning.py:1580`, `tests/test_cleaning.py:1612`, `tests/test_cleaning.py:1622`, `tests/test_cleaning.py:1632`, `tests/test_cleaning.py:1644`).
+
+2. Part 4 `AH*` and `AI*` friendly-column mappings collide.
+   - NOAA defines `AH1-AH6` and `AI1-AI6` as distinct repeating groups (5-45 minute vs 60-180 minute periods) (`isd-format-document-parts/part-04-additional-data-section.md:474`, `isd-format-document-parts/part-04-additional-data-section.md:485`, `isd-format-document-parts/part-04-additional-data-section.md:550`, `isd-format-document-parts/part-04-additional-data-section.md:561`).
+   - Friendly mapping assigns both families to identical output names (`src/noaa_climate_data/constants.py:3441`, `src/noaa_climate_data/constants.py:3446`), and reverse mapping resolves those names back to `AH*` only (`src/noaa_climate_data/constants.py:3802`).
+   - Practical effect: duplicate column names when both `AH*` and `AI*` are present, and loss of unambiguous round-trip semantics.
+
+3. Part 30 `QNN` parser currently mutates/constrains data beyond spec text.
+   - Spec keeps source/flag and data value domains at ASCII (`isd-format-document-parts/part-30-marine-data.md:1149`, `isd-format-document-parts/part-30-marine-data.md:1152`, `isd-format-document-parts/part-30-marine-data.md:1156`, `isd-format-document-parts/part-30-marine-data.md:1193`, `isd-format-document-parts/part-30-marine-data.md:1194`, `isd-format-document-parts/part-30-marine-data.md:1197`).
+   - Current parser strips all whitespace and uppercases payload (`src/noaa_climate_data/cleaning.py:176`), and rejects source/flag tokens unless strictly alphanumeric (`src/noaa_climate_data/cleaning.py:187`).
+   - Greedy 5-char block parsing can also consume leading `A`-`Y` data-value text as extra element blocks before validating 6-char data groups (`src/noaa_climate_data/cleaning.py:182`, `src/noaa_climate_data/cleaning.py:197`, `src/noaa_climate_data/cleaning.py:200`).
+
+4. Blanket all-9 post-clean nulling can erase valid Part 30 text payloads.
+   - Part 30 `REM` text and `QNN` data value fields are ASCII payloads, not global all-9 sentinels (`isd-format-document-parts/part-30-marine-data.md:768`, `isd-format-document-parts/part-30-marine-data.md:1194`).
+   - Current dataframe-wide object-column pass nulls any all-9 string regardless of field semantics (`src/noaa_climate_data/cleaning.py:553`, `src/noaa_climate_data/cleaning.py:559`).
+   - Reproduced locally: `REM__text='999'` and `QNN__data_values='999999'` are converted to null after parsing.
+
+### Added to Next Steps (Follow-Up Pass)
+
+Added these new items to `NEXT_STEPS.md`:
+
+- Remaining Part 4 range/date enforcement outside `AH/AI`.
+- `AH/AI` friendly-column collision disambiguation.
+- `QNN` ASCII-preserving/non-greedy parsing hardening.
+- Restricting blanket all-9 nulling to spec-governed fields.
+- New regression tests for these scenarios.

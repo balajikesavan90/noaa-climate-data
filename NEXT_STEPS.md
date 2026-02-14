@@ -102,10 +102,14 @@
 - [ ] Enforce Part 29 `OC1` wind-gust numeric range (`0050..1100`, `9999` missing) in addition to existing quality gating.
 - [ ] Enforce Part 29 `RH1-RH3` period/humidity numeric ranges (period `001..744`, humidity `000..100`, with `999` missing sentinels).
 - [ ] Enforce Part 4 `AH1-AH6` and `AI1-AI6` numeric/date-time ranges (period, depth, and ending DDHHMM occurrence in `010000..312359`).
+- [ ] Enforce remaining Part 4 precipitation/snow bounds outside `AH/AI`: `AB1` monthly total max (`50000`), `AD1` amount/date ranges (`00000..20000`, `0101..3131` tokens), `AE1` day-count ranges (`00..31`), `AJ1` depth/equivalent-water maxima (`1200`/`120000`), `AK1` depth/date ranges (`0000..1500`, day tokens `01..31`), `AL1-AL4` period/depth ranges (`00..72`, `000..500`), `AM1` amount/date ranges (`0000..2000`, `0101..3131`), and `AN1` period range (`001..744`).
 - [ ] Enforce remaining Part 6 CRN numeric ranges for `CI1` and `CN1-CN4` diagnostics (temperature, humidity/std-dev, voltages, resistor/signature, minutes-open, and wattage bounds).
 - [ ] Enforce Parts 9/10/11/13 numeric bounds for `CT*`/`CU*`/`CV*`/`CX*` value components (temperature/standard deviation/precipitation/frequency limits), not only quality and sentinel checks.
 - [ ] Extend exact repeated-identifier bound enforcement beyond Parts 7/29/30 to other fixed-cardinality families (e.g., `AH/AI/AL/AO`, `AT/AU/AW/AX/AZ`, `GA/GD/GG`, `MV/MW`).
+- [ ] Disambiguate Part 4 `AH*` vs `AI*` friendly-column naming: both currently map to identical `precip_short_duration_*` names, producing duplicate columns and obscuring NOAA’s distinct 5-45 minute (`AH`) vs 60-180 minute (`AI`) semantics.
 - [ ] Fix `REM` parsing order so comma-bearing remark text does not get consumed by generic comma expansion before typed REM parsing (especially when `keep_raw=False`).
+- [ ] Rework Part 30 `QNN` parsing to preserve raw ASCII payload semantics (no blanket uppercasing/whitespace stripping), allow spec-compliant 4-char source/flag tokens beyond alphanumeric-only checks, and avoid greedy tokenization that can misread data values beginning with `A`-`Y` as extra element blocks.
+- [ ] Limit generic all-9 post-clean nulling to fields where NOAA defines all-9 sentinels; current blanket object-column pass can erase valid Part 30 text payloads (e.g., `REM__text='999'`, `QNN__data_values='999999'`).
 
 ## P1: Missing ISD groups and sections (implementation gaps)
 
@@ -168,3 +172,4 @@
 - [ ] Parse and validate REM remark length quantity (Part 30) instead of only splitting type/text.
 - [ ] Parse repeated REM remark entries in a single REM section (typed remark + length + text blocks), not just a single prefix/text split.
 - [ ] Add targeted tests for newly identified gaps: OE period/time range enforcement, AP condition code fixed-to-9 behavior, AW sparse domain validation, and Q/P/R/C/D EQD parameter-code acceptance rules.
+- [ ] Add regression tests for new parser edge cases: remaining Part 4 range/date validation (`AB/AD/AE/AJ/AK/AL/AM/AN`), `AH`/`AI` friendly-column collision detection, `QNN` ASCII-preservation/token-boundary handling, and protection against blanket all-9 nulling of valid REM/QNN text payloads.
