@@ -24,6 +24,8 @@ from .constants import (
     FieldPartRule,
     get_field_registry_entry,
     get_field_rule,
+    is_valid_eqd_identifier,
+    is_valid_repeated_identifier,
     to_friendly_column,
 )
 
@@ -57,7 +59,7 @@ def _normalize_missing(value: str) -> str:
 
 
 def _is_missing_value(value: str, rule: FieldPartRule | None) -> bool:
-    if rule and rule.missing_values:
+    if rule and rule.missing_values is not None:
         stripped = _normalize_missing(value)
         return stripped in rule.missing_values
     return _is_missing_numeric(value)
@@ -171,26 +173,33 @@ def _parse_qnn(value: object) -> tuple[str | None, str | None, str | None]:
         return None, None, None
     if not text.upper().startswith("QNN"):
         return None, None, None
-    payload = text[3:]
-    payload_upper = payload.upper()
+    payload = re.sub(r"\s+", "", text[3:].upper())
+    if payload == "":
+        return None, None, None
     element_ids: list[str] = []
     source_flags: list[str] = []
-    pattern = re.compile(r"([A-Y])(\d{4})")
-    for match in pattern.finditer(payload_upper):
-        element = match.group(1)
-        flags = match.group(2)
+    idx = 0
+    while idx + 5 <= len(payload):
+        element = payload[idx]
         if element not in QNN_ELEMENT_IDENTIFIERS:
-            continue
+            break
+        flags = payload[idx + 1 : idx + 5]
+        if len(flags) != 4 or not flags.isalnum():
+            return None, None, None
         element_ids.append(element)
         source_flags.append(flags)
+        idx += 5
     if not element_ids:
         return None, None, None
-    remainder = pattern.sub("", payload_upper)
-    remainder = re.sub(r"[^A-Z0-9]", "", remainder)
-    data_values: list[str] = []
-    if remainder and len(remainder) % 6 == 0:
-        data_values = [remainder[i : i + 6] for i in range(0, len(remainder), 6)]
-    return ",".join(element_ids), ",".join(source_flags), ",".join(data_values) or None
+    remainder = payload[idx:]
+    if remainder == "":
+        return ",".join(element_ids), ",".join(source_flags), None
+    if len(remainder) % 6 != 0:
+        return None, None, None
+    data_values = [remainder[i : i + 6] for i in range(0, len(remainder), 6)]
+    if len(data_values) != len(element_ids):
+        return None, None, None
+    return ",".join(element_ids), ",".join(source_flags), ",".join(data_values)
 
 
 def _to_float(value: str) -> float | None:
@@ -198,8 +207,6 @@ def _to_float(value: str) -> float | None:
     if value == "":
         return None
     value = _strip_plus(value)
-    if _is_missing_numeric(value):
-        return None
     try:
         return float(value)
     except ValueError:
@@ -353,6 +360,12 @@ def _is_value_quality_field(prefix: str, part_count: int) -> bool:
 
 
 def clean_value_quality(raw: str, prefix: str) -> dict[str, object]:
+    eqd_valid = is_valid_eqd_identifier(prefix)
+    if eqd_valid is False:
+        return {}
+    repeated_valid = is_valid_repeated_identifier(prefix)
+    if repeated_valid is False:
+        return {}
     parsed = parse_field(raw)
     if len(parsed.parts) != 2:
         return _expand_parsed(parsed, prefix, allow_quality=True)

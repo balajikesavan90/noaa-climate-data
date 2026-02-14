@@ -84,9 +84,28 @@
 - [x] Enforce GQ1/GR1 quality codes and time-period min/max ranges (0001-9998; quality 0-3, 9) per Parts 20–21.
 - [x] Enforce Part 15 cloud code domains for GA/GD/GG/GF1 coverage, summation, and cloud-type characteristics.
 - [x] Align EQD parameter-code validation by identifier family: Q/P/R/C/D should accept Part 30 legacy parameter-code domains (e.g., `APC3`, `PRSWA1`, `A01xxx` patterns), while N-codes use the element+Flag1+Flag2 schema.
-- [ ] Treat AW automated-weather code `99` as a valid tornado code (Part 5) instead of a missing sentinel.
-- [ ] Fix GM1 UVB friendly-column mapping drift: parser emits UVB value + quality (no UVB data-flag part), but friendly maps still label part12 as `uvb_global_irradiance_flag_*` and expect a non-existent part13 quality column.
-- [ ] Parse QNN original-observation blocks to the Part 30 tokenized format (`QNN@1234...` plus 6-char data values), including repeated element blocks and strict token-width validation.
+- [x] Treat AW automated-weather code `99` as a valid tornado code (Part 5) instead of a missing sentinel.
+- [x] Fix GM1 UVB friendly-column mapping drift: parser emits UVB value + quality (no UVB data-flag part), but friendly maps still label part12 as `uvb_global_irradiance_flag_*` and expect a non-existent part13 quality column.
+- [x] Parse QNN original-observation blocks to the Part 30 tokenized format (`QNN@1234...` plus 6-char data values), including repeated element blocks and strict token-width validation.
+- [x] Enforce exact repeated-identifier bounds from spec (Parts 7/29/30) instead of broad prefix matching: reject out-of-domain IDs such as `CO10`, `OA4`/`OD4`/`OE4`/`RH4`, and `Q00`/`P00`/`R00`/`C00`/`D00`/`N00`.
+- [x] Enforce Part 15 cloud-height numeric ranges for GA/GD/GG/GE1/GF1 (currently sentinel handling exists, but documented MIN/MAX bounds are not applied).
+- [ ] Enforce Part 15 `GH1` solar-radiation value ranges (`0000/00000-99998`, `99999` missing) for average/min/max/std components.
+- [ ] Enforce Part 17-18 `GM/GN/GO` numeric component ranges beyond time-period checks (irradiance values, GN zenith angle, GO net-radiation min/max).
+- [ ] Enforce Part 27 pressure numeric MIN/MAX ranges for MA1/MD1/MF1/MG1/MH1/MK1 values (currently mostly sentinel + quality gating only).
+- [ ] Validate Part 27 `MK1` max/min sea-level-pressure occurrence timestamps as DDHHMM in `010000-312359` (with `999999` missing) instead of accepting arbitrary 6-char tokens.
+- [ ] Enforce Part 24 numeric/day ranges for KA/KB/KC/KD/KF/KG, including KC date-token validation (`01-31` per token) and documented period/value min/max bounds.
+- [ ] Enforce Part 23 numeric MIN/MAX ranges for IA2/IB1/IB2/IC1 fields (period/temperature/std-dev/wind-movement/evaporation/pan-water temperatures), not just sentinel and quality gating.
+- [ ] Enforce Part 26 `ST1` numeric MIN/MAX ranges for soil temperature (`-1100..+0630`) and temperature depth (`0000..9998`) in addition to sentinel/quality checks.
+- [ ] Enforce Part 20/21 value bounds for `GQ1`/`GR1`: mean zenith/azimuth angles `0000..3600` and extraterrestrial radiation fields `0000..9998` (beyond existing time-period checks).
+- [ ] Enforce Part 24 `KE1` day-count field ranges (`00..31`, `99` missing) for all four threshold-count parts.
+- [ ] Tighten Part 29 `OE1-OE3` occurrence-time validation to true HHMM semantics (reject invalid minute values like `0060`/`1261`, not just values above `2359`).
+- [ ] Enforce Part 29 `OC1` wind-gust numeric range (`0050..1100`, `9999` missing) in addition to existing quality gating.
+- [ ] Enforce Part 29 `RH1-RH3` period/humidity numeric ranges (period `001..744`, humidity `000..100`, with `999` missing sentinels).
+- [ ] Enforce Part 4 `AH1-AH6` and `AI1-AI6` numeric/date-time ranges (period, depth, and ending DDHHMM occurrence in `010000..312359`).
+- [ ] Enforce remaining Part 6 CRN numeric ranges for `CI1` and `CN1-CN4` diagnostics (temperature, humidity/std-dev, voltages, resistor/signature, minutes-open, and wattage bounds).
+- [ ] Enforce Parts 9/10/11/13 numeric bounds for `CT*`/`CU*`/`CV*`/`CX*` value components (temperature/standard deviation/precipitation/frequency limits), not only quality and sentinel checks.
+- [ ] Extend exact repeated-identifier bound enforcement beyond Parts 7/29/30 to other fixed-cardinality families (e.g., `AH/AI/AL/AO`, `AT/AU/AW/AX/AZ`, `GA/GD/GG`, `MV/MW`).
+- [ ] Fix `REM` parsing order so comma-bearing remark text does not get consumed by generic comma expansion before typed REM parsing (especially when `keep_raw=False`).
 
 ## P1: Missing ISD groups and sections (implementation gaps)
 
@@ -141,8 +160,8 @@
 ## P3: Supporting docs, validation, and tests
 
 - [x] Populate missing ISD docs in-repo (Parts 10/11/16/17/18/19/21/22/24/25) to verify KA*/SA1 scaling/sentinels and solar/sunshine/hail sections.
-- [ ] Add tests for new groups to ensure sentinel removal and quality filtering are applied consistently.
-- [ ] Add exact-ID tests for under-covered sections (GM1/GN1/GO1, GH1, GD*, CO3-CO9, Q01-Q99/P01-P99/R01-R99/C01-C99/D01-D99/N01-N99).
+- [x] Add tests for new groups to ensure sentinel removal and quality filtering are applied consistently.
+- [x] Add exact-ID tests for under-covered sections (GM1/GN1/GO1, GH1, GD*, CO3-CO9, Q01-Q99/P01-P99/R01-R99/C01-C99/D01-D99/N01-N99).
 - [ ] Capture Domain Value ID tables for code validation (e.g., pressure tendency, geopotential levels, weather codes) if used in parsing.
 - [ ] Enforce numeric MIN/MAX ranges from the ISD spec (beyond current CIG/VIS clamping), or document why range checks are intentionally skipped.
 - [ ] Consider enforcing record/section length constraints (control=60, mandatory=45, max record 2844, max block 8192) if parser validates structure.

@@ -943,8 +943,16 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"999999"},
                 allowed_values=VERTICAL_DATUM_CODES,
             ),  # vertical datum
-            3: FieldPartRule(missing_values={"99999"}),  # base height upper range
-            4: FieldPartRule(missing_values={"99999"}),  # base height lower range
+            3: FieldPartRule(
+                missing_values={"99999"},
+                min_value=-400,
+                max_value=15000,
+            ),  # base height upper range
+            4: FieldPartRule(
+                missing_values={"99999"},
+                min_value=-400,
+                max_value=15000,
+            ),  # base height lower range
         },
     ),
     "GF1": FieldRule(
@@ -988,7 +996,12 @@ FIELD_RULES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality=CLOUD_QUALITY_FLAGS,
             ),  # low cloud genus quality
-            8: FieldPartRule(missing_values={"99999"}, quality_part=9),
+            8: FieldPartRule(
+                missing_values={"99999"},
+                quality_part=9,
+                min_value=-400,
+                max_value=15000,
+            ),
             9: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -1467,7 +1480,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
             1: FieldPartRule(
                 kind="categorical",
                 agg="drop",
-                missing_values={"99"},
+                missing_values=set(),
                 quality_part=2,
                 allowed_values={
                     f"{value:02d}"
@@ -1483,6 +1496,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                         + list(range(80, 88))
                         + [89]
                         + list(range(90, 97))
+                        + [99]
                     )
                 },
             ),  # automated atmospheric condition code
@@ -1750,7 +1764,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality=CLOUD_QUALITY_FLAGS,
             ),  # coverage quality
-            3: FieldPartRule(missing_values={"99999"}, quality_part=4),
+            3: FieldPartRule(
+                missing_values={"99999"},
+                quality_part=4,
+                min_value=-400,
+                max_value=35000,
+            ),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -1792,7 +1811,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality=CLOUD_SUMMATION_QC_FLAGS,
             ),
-            4: FieldPartRule(missing_values={"99999"}, quality_part=5),
+            4: FieldPartRule(
+                missing_values={"99999"},
+                quality_part=5,
+                min_value=-400,
+                max_value=35000,
+            ),
             5: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -1820,7 +1844,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "9"},
             ),
-            3: FieldPartRule(missing_values={"99999"}, quality_part=4),
+            3: FieldPartRule(
+                missing_values={"99999"},
+                quality_part=4,
+                min_value=0,
+                max_value=35000,
+            ),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -3115,10 +3144,52 @@ for _letter in ("Q", "P", "R", "C", "D"):
 _EQD_PREFIX_RULES.update({f"N{digit}": EQD_UNIT_RULE for digit in "0123456789"})
 FIELD_RULE_PREFIXES.update(_EQD_PREFIX_RULES)
 
+_REPEATED_IDENTIFIER_RANGES: dict[str, range] = {
+    "CO": range(1, 10),
+    "CT": range(1, 4),
+    "CU": range(1, 4),
+    "CV": range(1, 4),
+    "CW": range(1, 2),
+    "CX": range(1, 4),
+    "OA": range(1, 4),
+    "OD": range(1, 4),
+    "OB": range(1, 3),
+    "OE": range(1, 4),
+    "RH": range(1, 4),
+}
+
+
+def is_valid_repeated_identifier(prefix: str) -> bool | None:
+    for key, allowed in _REPEATED_IDENTIFIER_RANGES.items():
+        if prefix.startswith(key):
+            suffix = prefix[len(key):]
+            if not suffix.isdigit():
+                return False
+            return int(suffix) in allowed
+    return None
+
+
+def is_valid_eqd_identifier(prefix: str) -> bool | None:
+    if re.fullmatch(r"[QPRCDN]\d", prefix):
+        return False
+    match = re.fullmatch(r"([QPRCDN])(\d{2})", prefix)
+    if not match:
+        return None
+    idx = int(match.group(2))
+    return idx != 0
+
 
 def get_field_rule(prefix: str) -> FieldRule | None:
     if prefix in FIELD_RULES:
         return FIELD_RULES[prefix]
+    eqd_valid = is_valid_eqd_identifier(prefix)
+    if eqd_valid is False:
+        return None
+    if eqd_valid is True:
+        return EQD_UNIT_RULE if prefix.startswith("N") else EQD_REASON_RULE
+    repeated_valid = is_valid_repeated_identifier(prefix)
+    if repeated_valid is False:
+        return None
     for key, rule in FIELD_RULE_PREFIXES.items():
         if prefix.startswith(key):
             return rule
@@ -3598,8 +3669,7 @@ _FRIENDLY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^GM(?P<idx>\d+)__part9$"), "diffuse_irradiance_flag_{idx}"),
     (re.compile(r"^GM(?P<idx>\d+)__part10$"), "diffuse_irradiance_quality_code_{idx}"),
     (re.compile(r"^GM(?P<idx>\d+)__part11$"), "uvb_global_irradiance_mw_m2_{idx}"),
-    (re.compile(r"^GM(?P<idx>\d+)__part12$"), "uvb_global_irradiance_flag_{idx}"),
-    (re.compile(r"^GM(?P<idx>\d+)__part13$"), "uvb_global_irradiance_quality_code_{idx}"),
+    (re.compile(r"^GM(?P<idx>\d+)__part12$"), "uvb_global_irradiance_quality_code_{idx}"),
     (re.compile(r"^GN(?P<idx>\d+)__part1$"), "solar_radiation_period_minutes_{idx}"),
     (re.compile(r"^GN(?P<idx>\d+)__part2$"), "upwelling_global_solar_radiation_mw_m2_{idx}"),
     (re.compile(r"^GN(?P<idx>\d+)__part3$"), "upwelling_global_solar_radiation_quality_code_{idx}"),
@@ -3988,8 +4058,7 @@ _INTERNAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^diffuse_irradiance_flag_(?P<idx>\d+)$"), "GM{idx}__part9"),
     (re.compile(r"^diffuse_irradiance_quality_code_(?P<idx>\d+)$"), "GM{idx}__part10"),
     (re.compile(r"^uvb_global_irradiance_mw_m2_(?P<idx>\d+)$"), "GM{idx}__part11"),
-    (re.compile(r"^uvb_global_irradiance_flag_(?P<idx>\d+)$"), "GM{idx}__part12"),
-    (re.compile(r"^uvb_global_irradiance_quality_code_(?P<idx>\d+)$"), "GM{idx}__part13"),
+    (re.compile(r"^uvb_global_irradiance_quality_code_(?P<idx>\d+)$"), "GM{idx}__part12"),
     (re.compile(r"^solar_radiation_period_minutes_(?P<idx>\d+)$"), "GN{idx}__part1"),
     (re.compile(r"^upwelling_global_solar_radiation_mw_m2_(?P<idx>\d+)$"), "GN{idx}__part2"),
     (re.compile(r"^upwelling_global_solar_radiation_quality_code_(?P<idx>\d+)$"), "GN{idx}__part3"),

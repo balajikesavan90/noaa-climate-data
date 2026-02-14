@@ -19,7 +19,12 @@ from noaa_climate_data.cleaning import (
     clean_value_quality,
     parse_field,
 )
-from noaa_climate_data.constants import FieldPartRule, get_field_rule
+from noaa_climate_data.constants import (
+    FieldPartRule,
+    get_field_rule,
+    to_friendly_column,
+    to_internal_column,
+)
 
 
 # ── 1. Missing-value sentinels ───────────────────────────────────────────
@@ -105,6 +110,7 @@ class TestPrefixRuleMapping:
             ("CV1", "CV*"),
             ("CW1", "CW*"),
             ("CX3", "CX*"),
+            ("GD1", "GD*"),
             ("GH1", "GH*"),
             ("GJ1", "GJ*"),
             ("GK1", "GK*"),
@@ -118,6 +124,51 @@ class TestPrefixRuleMapping:
         rule = get_field_rule(prefix)
         assert rule is not None
         assert rule.code == expected_code
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["CO10", "OA4", "OD4", "OB3", "OE4", "RH4", "CT4", "CU4", "CV4", "CW2", "CX4"],
+    )
+    def test_invalid_repeated_identifiers_rejected(self, prefix: str):
+        assert get_field_rule(prefix) is None
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["Q00", "P00", "R00", "C00", "D00", "N00", "Q0", "N0"],
+    )
+    def test_invalid_eqd_identifiers_rejected(self, prefix: str):
+        assert get_field_rule(prefix) is None
+
+    def test_invalid_identifier_not_parsed(self):
+        assert clean_value_quality("1,2,3", "OA4") == {}
+
+    @pytest.mark.parametrize("prefix", ["CO3", "CO4", "CO5", "CO6", "CO7", "CO8", "CO9"])
+    def test_co_prefix_rule_mapping(self, prefix: str):
+        rule = get_field_rule(prefix)
+        assert rule is not None
+        assert rule.code == "CO*"
+
+    @pytest.mark.parametrize(
+        "prefix",
+        [
+            "Q01",
+            "Q99",
+            "P01",
+            "P99",
+            "R01",
+            "R99",
+            "C01",
+            "C99",
+            "D01",
+            "D99",
+            "N01",
+            "N99",
+        ],
+    )
+    def test_eqd_prefix_rule_mapping(self, prefix: str):
+        rule = get_field_rule(prefix)
+        assert rule is not None
+        assert rule.code == "EQD"
 
 
 class TestSentinelsInCleanedOutput:
@@ -192,6 +243,18 @@ class TestSentinelsInCleanedOutput:
         result = clean_value_quality("1,BADXXX,99999,99999", "GE1")
         assert result["GE1__part1"] == pytest.approx(1.0)
         assert result["GE1__part2"] is None
+
+    def test_ge1_base_height_range_enforced(self):
+        result = clean_value_quality("1,MSL,15001,01000", "GE1")
+        assert result["GE1__part3"] is None
+        result = clean_value_quality("1,MSL,-0401,01000", "GE1")
+        assert result["GE1__part3"] is None
+
+    def test_gf1_lowest_base_height_range_enforced(self):
+        result = clean_value_quality("01,01,1,01,1,01,1,15001,1,01,1,01,1", "GF1")
+        assert result["GF1__part8"] is None
+        result = clean_value_quality("01,01,1,01,1,01,1,-0401,1,01,1,01,1", "GF1")
+        assert result["GF1__part8"] is None
 
     def test_hail_sentinel_becomes_none(self):
         result = clean_value_quality("999,1", "HAIL")
@@ -801,6 +864,26 @@ class TestQualityNullsCorrectPart:
         assert result["UA1__part3"] is None
         assert result["UA1__part5"] == pytest.approx(4.0)
 
+    def test_ug1_missing_parts(self):
+        result = clean_value_quality("99,999,999,9", "UG1")
+        assert result["UG1__part1"] is None
+        assert result["UG1__part2"] is None
+        assert result["UG1__part3"] is None
+
+    def test_ug1_invalid_direction_range(self):
+        result = clean_value_quality("05,050,361,1", "UG1")
+        assert result["UG1__part3"] is None
+
+    def test_ug1_quality_rejects_8(self):
+        result = clean_value_quality("05,050,180,8", "UG1")
+        assert result["UG1__part1"] is None
+        assert result["UG1__part2"] is None
+        assert result["UG1__part3"] is None
+
+    def test_ug2_invalid_period_range(self):
+        result = clean_value_quality("15,050,180,1", "UG2")
+        assert result["UG2__part1"] is None
+
     def test_ua1_quality_code_outside_marine_domain(self):
         result = clean_value_quality("M,10,050,4,04,1", "UA1")
         assert result["UA1__part1"] is None
@@ -920,6 +1003,12 @@ class TestQualityNullsCorrectPart:
         assert result["GA1__part1"] is None
         assert result["GA1__part5"] is None
 
+    def test_ga_base_height_range_enforced(self):
+        result = clean_value_quality("05,1,36000,1,01,1", "GA1")
+        assert result["GA1__part3"] is None
+        result = clean_value_quality("05,1,-00401,1,01,1", "GA1")
+        assert result["GA1__part3"] is None
+
     def test_oc1_quality_rejects_c(self):
         result = clean_value_quality("0085,C", "OC1")
         assert result["OC1__value"] is None
@@ -984,9 +1073,9 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("AU,99,FG,1", "AT1")
         assert result["AT1__part2"] is None
 
-    def test_aw_missing_sentinel(self):
+    def test_aw_tornado_code_99(self):
         result = clean_value_quality("99,1", "AW1")
-        assert result["AW1__part1"] is None
+        assert result["AW1__part1"] == pytest.approx(99.0)
 
     def test_aw_quality_rejects_8(self):
         result = clean_value_quality("01,8", "AW1")
@@ -1167,11 +1256,21 @@ class TestQualityNullsCorrectPart:
         assert result["GD1__part2"] is None
         assert result["GD1__part6"] is None
 
+    def test_gd_height_range_enforced(self):
+        result = clean_value_quality("1,01,1,36000,1,1", "GD1")
+        assert result["GD1__part4"] is None
+        result = clean_value_quality("1,01,1,-00401,1,1", "GD1")
+        assert result["GD1__part4"] is None
+
     def test_gg_invalid_cloud_codes(self):
         result = clean_value_quality("11,1,01000,1,11,1,10,1", "GG1")
         assert result["GG1__part1"] is None
         assert result["GG1__part5"] is None
         assert result["GG1__part7"] is None
+
+    def test_gg_top_height_range_enforced(self):
+        result = clean_value_quality("01,1,35001,1,01,1,01,1", "GG1")
+        assert result["GG1__part3"] is None
 
     def test_ob1_quality_rejects_8(self):
         result = clean_value_quality(
@@ -1307,6 +1406,16 @@ class TestQualityNullsCorrectPart:
     def test_gm1_uvb_quality_rejects_8(self):
         result = clean_value_quality("0060,0123,00,1,0456,00,1,0789,00,1,0123,8", "GM1")
         assert result["GM1__part11"] is None
+
+    def test_gm1_uvb_friendly_mapping(self):
+        assert (
+            to_friendly_column("GM1__part12")
+            == "uvb_global_irradiance_quality_code_1"
+        )
+        assert (
+            to_internal_column("uvb_global_irradiance_quality_code_1")
+            == "GM1__part12"
+        )
 
     def test_gm1_time_period_range(self):
         result = clean_value_quality("0000,0123,00,1,0456,00,1,0789,00,1,0123,1", "GM1")
@@ -1665,6 +1774,8 @@ class TestCleanDataframeEdgeCases:
             {
                 "QNN": [
                     "QNN A1234B5678 001234002345",
+                    "QNN A1234 001234",
+                    "QNN A1234B5678 001234",
                     "QNNZ9999",
                     None,
                 ]
@@ -1674,12 +1785,18 @@ class TestCleanDataframeEdgeCases:
         assert cleaned.loc[0, "qnn_element_ids"] == "A,B"
         assert cleaned.loc[0, "qnn_source_flags"] == "1234,5678"
         assert cleaned.loc[0, "qnn_data_values"] == "001234,002345"
-        assert pd.isna(cleaned.loc[1, "qnn_element_ids"])
-        assert pd.isna(cleaned.loc[1, "qnn_source_flags"])
-        assert pd.isna(cleaned.loc[1, "qnn_data_values"])
+        assert cleaned.loc[1, "qnn_element_ids"] == "A"
+        assert cleaned.loc[1, "qnn_source_flags"] == "1234"
+        assert cleaned.loc[1, "qnn_data_values"] == "001234"
         assert pd.isna(cleaned.loc[2, "qnn_element_ids"])
         assert pd.isna(cleaned.loc[2, "qnn_source_flags"])
         assert pd.isna(cleaned.loc[2, "qnn_data_values"])
+        assert pd.isna(cleaned.loc[3, "qnn_element_ids"])
+        assert pd.isna(cleaned.loc[3, "qnn_source_flags"])
+        assert pd.isna(cleaned.loc[3, "qnn_data_values"])
+        assert pd.isna(cleaned.loc[4, "qnn_element_ids"])
+        assert pd.isna(cleaned.loc[4, "qnn_source_flags"])
+        assert pd.isna(cleaned.loc[4, "qnn_data_values"])
 
 
 class TestControlAndMandatoryNormalization:
