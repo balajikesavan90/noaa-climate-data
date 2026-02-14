@@ -42,3 +42,63 @@ This folder contains the NOAA Global Hourly file index and year-counts used by t
 - Creation started on 2026-02-07.
 - Metadata collection for all 27k stations completed on 2026-02-12.
 
+### Raw data pulls (cron)
+
+#### Outputs:
+
+- `output/<station_id>/LocationData_Raw.parquet`: raw NOAA data per station.
+- `Stations.csv`: `raw_data_pulled` is updated to `True` after a successful write.
+
+#### Command:
+
+- `poetry run python -m noaa_climate_data.cli pick-location --start-year 1975 --end-year 2025 --sleep-seconds 0.5 --output-dir /media/balaji-kesavan/LaCie/NOAA_Data`
+
+#### Behavior:
+- Picks a random station with `raw_data_pulled=False`.
+- Downloads yearly NOAA CSVs with 0.5s delay between requests.
+- Writes `LocationData_Raw.parquet` to the external output directory.
+- Marks the station as `raw_data_pulled=True` on success.
+
+#### Notes
+- Cron schedule runs every 5 minutes.
+- Schedule started on 2026-02-13.
+
+### Data cleaning (placeholder)
+
+#### Outputs:
+
+- `output/<station_id>/LocationData_Cleaned.parquet`: cleaned station data.
+- `Stations.csv`: `data_cleaned` is updated to `True` after a successful write.
+
+#### Command:
+
+- Placeholder (cleaning CLI entrypoint not yet implemented).
+
+#### Behavior:
+- Picks a random station with `raw_data_pulled=True` and `data_cleaned=False`.
+- Cleans the raw parquet and writes `LocationData_Cleaned.parquet`.
+- Marks the station as `data_cleaned=True` on success.
+
+#### Notes
+- Placeholder only; cleaning pipeline is not yet wired for cron.
+
+### Data aggregation (placeholder)
+
+#### Outputs:
+
+- Aggregated parquet outputs (to be defined).
+- `Stations.csv`: `data_aggregated` is updated to `True` after a successful write.
+
+#### Command:
+
+- Placeholder (aggregation CLI entrypoint not yet implemented).
+
+#### Behavior:
+- Picks a random station with `raw_data_pulled=True`, `data_cleaned=True`, and
+	`data_aggregated=False`.
+- Aggregates the cleaned parquet into summary outputs.
+- Marks the station as `data_aggregated=True` on success.
+
+#### Notes
+- Placeholder only; aggregation pipeline is not yet wired for cron.
+
