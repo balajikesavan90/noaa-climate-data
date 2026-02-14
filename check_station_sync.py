@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -82,6 +81,7 @@ def main() -> None:
 
     missing_files: list[dict[str, object]] = []
     unexpected_files: list[dict[str, object]] = []
+    present_sizes: list[int] = []
 
     for _, row in expected_true.iterrows():
         file_name = str(row["FileName"])
@@ -94,6 +94,8 @@ def main() -> None:
                     "ParquetPath": str(parquet_path),
                 }
             )
+        else:
+            present_sizes.append(parquet_path.stat().st_size)
 
     for _, row in expected_false.iterrows():
         file_name = str(row["FileName"])
@@ -115,6 +117,37 @@ def main() -> None:
     print(f"raw_data_pulled=False: {len(expected_false)}")
     print(f"Missing parquet (should exist): {len(missing_files)}")
     print(f"Unexpected parquet (should not exist): {len(unexpected_files)}")
+    if present_sizes:
+        size_series = pd.Series(present_sizes, dtype="float") / (1024 * 1024)
+        avg_mb = size_series.mean()
+        median_mb = size_series.median()
+        min_mb = size_series.min()
+        max_mb = size_series.max()
+        percentiles = size_series.quantile([0.25, 0.75])
+        mode_values = size_series.mode()
+        mode_mb = mode_values.iloc[0] if not mode_values.empty else float("nan")
+        print(f"Average raw parquet size: {avg_mb:.2f} MB")
+        print(f"Median raw parquet size: {median_mb:.2f} MB")
+        print(f"Mode raw parquet size: {mode_mb:.2f} MB")
+        print(f"Min raw parquet size: {min_mb:.2f} MB")
+        print(f"Max raw parquet size: {max_mb:.2f} MB")
+        print(f"25th percentile size: {percentiles.loc[0.25]:.2f} MB")
+        print(f"75th percentile size: {percentiles.loc[0.75]:.2f} MB")
+        est_total_mb = avg_mb * total
+        est_total_gb = est_total_mb / 1024
+        est_total_tb = est_total_gb / 1024
+        print(f"Estimated total storage: {est_total_gb:.2f} GB")
+        # print(f"Estimated total storage: {est_total_tb:.3f} TB")
+    else:
+        print("Average raw parquet size: n/a")
+        print("Median raw parquet size: n/a")
+        print("Mode raw parquet size: n/a")
+        print("Min raw parquet size: n/a")
+        print("Max raw parquet size: n/a")
+        print("25th percentile size: n/a")
+        print("75th percentile size: n/a")
+        print("Estimated total storage: n/a")
+        print("Estimated total storage: n/a")
 
     def _print_rows(title: str, rows: list[dict[str, object]]) -> None:
         if not rows:
