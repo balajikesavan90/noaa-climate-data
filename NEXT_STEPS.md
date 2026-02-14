@@ -84,6 +84,9 @@
 - [x] Enforce GQ1/GR1 quality codes and time-period min/max ranges (0001-9998; quality 0-3, 9) per Parts 20–21.
 - [x] Enforce Part 15 cloud code domains for GA/GD/GG/GF1 coverage, summation, and cloud-type characteristics.
 - [x] Align EQD parameter-code validation by identifier family: Q/P/R/C/D should accept Part 30 legacy parameter-code domains (e.g., `APC3`, `PRSWA1`, `A01xxx` patterns), while N-codes use the element+Flag1+Flag2 schema.
+- [ ] Treat AW automated-weather code `99` as a valid tornado code (Part 5) instead of a missing sentinel.
+- [ ] Fix GM1 UVB friendly-column mapping drift: parser emits UVB value + quality (no UVB data-flag part), but friendly maps still label part12 as `uvb_global_irradiance_flag_*` and expect a non-existent part13 quality column.
+- [ ] Parse QNN original-observation blocks to the Part 30 tokenized format (`QNN@1234...` plus 6-char data values), including repeated element blocks and strict token-width validation.
 
 ## P1: Missing ISD groups and sections (implementation gaps)
 
