@@ -23,7 +23,7 @@
 - [x] Enforce AY manual past-weather condition code domain (0-9) and period quantity range (01-24; 99 missing) per Part 5.
 - [x] Restrict AA/AJ quality codes to Part 4 precipitation/snow sets (drop unsupported `C`).
 - [x] Apply Part 29 calm-condition rule for OD: direction `999` with speed `0000` indicates calm wind.
-- [x] Add Part 5 past-weather groups AX1-AX6 (summary-of-day) and AZ1-AZ2 (automated past weather).lets
+- [x] Add Part 5 past-weather groups AX1-AX6 (summary-of-day) and AZ1-AZ2 (automated past weather).
 - [x] Restrict OA/OD supplementary wind type codes to Part 29 values (1-6; `9` missing).
 - [x] Enforce OA/OD period quantity ranges (01-48 hours; 99 missing) and OD direction range (001-360; 999 missing) per Part 29.
 - [x] Enforce OA supplementary wind speed range (0000-2000; 9999 missing) per Part 29.
@@ -45,7 +45,9 @@
 - [ ] Enforce WA1 platform-ice thickness range (000-998; 999 missing) per Part 30.
 - [ ] Enforce WJ1 numeric ranges (ice thickness 000-998; discharge 00000-99998; stage height -999 to +9998) per Part 30.
 - [x] Validate Control Data Section code domains (data source flag, report type code, QC process V01/V02/V03) and missing sentinels for lat/lon/elev/call letters.
+- [ ] Remove or explicitly document QC-process truncation behavior (e.g., `V020` -> `V02`) so non-spec lengths do not silently coerce.
 - [x] Validate Control Data Section DATE/TIME domains (YYYYMMDD/HHMM ranges) per Part 2.
+- [ ] Restrict control DATE parsing to `YYYYMMDD` only (reject ISO timestamps and other formats).
 - [x] Validate Mandatory Data Section domain codes and sentinels (wind type codes, CAVOK, ceiling determination, visibility variability, special missing rules like variable wind direction).
 - [x] Restrict Mandatory Data Section quality codes for WND/CIG/VIS to {0-7, 9} (currently accepts extended `QUALITY_FLAGS`).
 - [x] Encode Mandatory Data Section edge rules (ceiling unlimited=22000, visibility >160000 clamp, wind type 9 with speed 0000 indicates calm).
@@ -63,6 +65,7 @@
 - [x] Enforce CV1-CV3 hourly temperature extreme time fields (HHMM 0000-2359; 9999 missing) per Part 11.
 - [x] Enforce ED1 runway direction range (01-36 tens of degrees; 99 missing) and visibility range (0000-5000; 9999 missing) per Part 14.
 - [x] Enforce ME1 geopotential level codes (1-5; 9 missing) per Part 27.
+- [ ] Enforce fixed-width/format constraints for additional-data numerics (e.g., AA* width and max `9998`) where NOAA specifies explicit field widths.
 - [ ] Enforce CRN period quantity ranges (e.g., CB/CH/CF/CG) and sensor value ranges per Part 6.
 - [ ] Enforce CRN QC/FLAG domains for CB/CF/CG/CH/CI/CN/CR/CT/CU/CV/CW/CX (QC in {1,3,9}; FLAG in 0-9) per Parts 6-8.
 - [ ] Enforce GM solar irradiance data flag domains (00-99, with 99 missing) for global/direct/diffuse/UVB flags per Part 17.
@@ -132,6 +135,7 @@
 
 - [x] Populate missing ISD docs in-repo (Parts 10/11/16/17/18/19/21/22/24/25) to verify KA*/SA1 scaling/sentinels and solar/sunshine/hail sections.
 - [ ] Add tests for new groups to ensure sentinel removal and quality filtering are applied consistently.
+- [ ] Add exact-ID tests for under-covered sections (GM1/GN1/GO1, GH1, GD*, CO3-CO9, Q01-Q99/P01-P99/R01-R99/C01-C99/D01-D99/N01-N99).
 - [ ] Capture Domain Value ID tables for code validation (e.g., pressure tendency, geopotential levels, weather codes) if used in parsing.
 - [ ] Enforce numeric MIN/MAX ranges from the ISD spec (beyond current CIG/VIS clamping), or document why range checks are intentionally skipped.
 - [ ] Consider enforcing record/section length constraints (control=60, mandatory=45, max record 2844, max block 8192) if parser validates structure.
