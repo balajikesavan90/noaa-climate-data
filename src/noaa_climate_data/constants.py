@@ -134,6 +134,35 @@ SOLAR_IRRADIANCE_QC_FLAGS = {"0", "1", "2", "3", "9"}
 
 SUNSHINE_PERCENT_QC_FLAGS = {"4", "5", "6", "7", "9", "M"}
 
+SKY_COVER_LAYER_CODES = {f"{value:02d}" for value in range(0, 11)} | {"99"}
+SKY_COVER_EXTENDED_CODES = {f"{value:02d}" for value in range(0, 20)} | {"99"}
+SKY_COVER_OPAQUE_CODES = {
+    "00",
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "08",
+    "09",
+    "10",
+    "12",
+    "13",
+    "15",
+    "16",
+    "18",
+    "19",
+    "99",
+}
+SKY_COVER_SUMMATION_CODES = {str(value) for value in range(0, 7)} | {"9"}
+SKY_COVER_SUMMATION_CHARACTERISTICS = {"1", "2", "3", "4", "9"}
+SKY_COVER_LAYER_TYPE_CODES = {f"{value:02d}" for value in range(0, 24)} | {"99"}
+BELOW_STATION_LAYER_TYPE_CODES = {f"{value:02d}" for value in range(0, 11)} | {"99"}
+BELOW_STATION_LAYER_TOP_CODES = {f"{value:02d}" for value in range(0, 10)} | {"99"}
+CLOUD_GENUS_CODES = {f"{value:02d}" for value in range(0, 10)} | {"99"}
+
 VERTICAL_DATUM_CODES = {
     "AGL",
     "ALAT",
@@ -269,6 +298,46 @@ EQD_FLAG1_CODES = {
     " ",
 }
 EQD_FLAG2_CODES = {"0", "1", "2", "3", "4", "5", "6", "E", "M", "S"}
+LEGACY_EQD_PARAMETER_CODES = {
+    "APC3",
+    "ATOLD",
+    "WOSPD",
+    "WOLSPD",
+    "WOLDIR",
+    "WODIR",
+    "ATOLDS",
+    "ATOLT",
+    "ATOD",
+    "ATOT",
+    "APOSP",
+    "APOSLP",
+    "APOLP",
+    "APOLH",
+    "APOA",
+    "WGOSPD",
+    "APCQ24",
+    "APCTEN",
+    "PRSWOA",
+    "PSTWOP",
+    "SCOCIG",
+    "SCOHCG",
+    "SCOLCB",
+    "SCOLCG",
+    "SCOMCG",
+    "SCOTCV",
+    "SCOTLC",
+    "VODIS",
+    "VOVAR",
+    "PRCP",
+    "ATMM",
+    "ATMN",
+    "ATMX",
+    "SNDP",
+    "SNWF",
+} | {f"PRSWM{value}" for value in range(1, 8)} | {f"PRSWA{value}" for value in range(1, 5)} | {
+    f"PSTWA{value}" for value in range(1, 3)
+} | {f"PSTWM{value}" for value in range(1, 3)}
+LEGACY_EQD_MSD_PATTERN = re.compile(r"^(?:A|D|T)(?:0[1-9]|1[0-2])(?:00[1-9]|0[1-7][0-9])$")
 REM_TYPE_CODES = {"SYN", "AWY", "MET", "SOD", "SOM", "HPD"}
 QNN_ELEMENT_IDENTIFIERS = {
     "A": "ALC",
@@ -298,6 +367,24 @@ QNN_ELEMENT_IDENTIFIERS = {
     "Y": "WND2",
 }
 
+ADDITIONAL_DATA_PREFIXES = {
+    "AA",
+    "AB",
+    "AC",
+    "AD",
+    "AE",
+    "AG",
+    "AH",
+    "AI",
+    "AJ",
+    "AK",
+    "AL",
+    "AM",
+    "AN",
+    "AO",
+    "AP",
+}
+
 DEFAULT_START_YEAR = 2000
 DEFAULT_END_YEAR = 2019
 
@@ -310,6 +397,8 @@ class FieldPartRule:
     allowed_quality: set[str] | None = None
     allowed_values: set[str] | None = None
     allowed_pattern: re.Pattern[str] | None = None
+    min_value: float | None = None
+    max_value: float | None = None
     kind: str = "numeric"
     agg: str = "mean"  # mean | max | min | mode | sum | drop | circular_mean
 
@@ -529,6 +618,8 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"999"},
                 quality_part=2,
                 allowed_quality={"0", "1", "2", "3", "9"},
+                min_value=-50,
+                max_value=450,
             )
         },
     ),
@@ -859,20 +950,39 @@ FIELD_RULES: dict[str, FieldRule] = {
     "GF1": FieldRule(
         code="GF1",
         parts={
-            1: FieldPartRule(missing_values={"99"}, quality_part=3, agg="mean"),
-            2: FieldPartRule(missing_values={"99"}, agg="mean"),
+            1: FieldPartRule(
+                missing_values={"99"},
+                quality_part=3,
+                agg="mean",
+                allowed_values=SKY_COVER_EXTENDED_CODES,
+            ),
+            2: FieldPartRule(
+                missing_values={"99"},
+                agg="mean",
+                allowed_values=SKY_COVER_OPAQUE_CODES,
+            ),
             3: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=CLOUD_QUALITY_FLAGS,
             ),  # total coverage quality
-            4: FieldPartRule(missing_values={"99"}, quality_part=5, agg="mean"),
+            4: FieldPartRule(
+                missing_values={"99"},
+                quality_part=5,
+                agg="mean",
+                allowed_values=SKY_COVER_EXTENDED_CODES,
+            ),
             5: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=CLOUD_QUALITY_FLAGS,
             ),  # lowest cloud cover quality
-            6: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),  # low cloud genus
+            6: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values=CLOUD_GENUS_CODES,
+            ),  # low cloud genus
             7: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -884,13 +994,23 @@ FIELD_RULES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality=CLOUD_QUALITY_FLAGS,
             ),  # lowest base height quality
-            10: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),  # mid cloud genus
+            10: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values=CLOUD_GENUS_CODES,
+            ),  # mid cloud genus
             11: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=CLOUD_QUALITY_FLAGS,
             ),  # mid cloud genus quality
-            12: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),  # high cloud genus
+            12: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values=CLOUD_GENUS_CODES,
+            ),  # high cloud genus
             13: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -1177,7 +1297,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
         code="AP*",
         parts={
             1: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=3),
-            2: FieldPartRule(kind="categorical", agg="drop", missing_values={"9"}),
+            2: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                allowed_values={"9"},
+            ),
             3: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -1371,8 +1496,19 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "CB": FieldRule(
         code="CB*",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
-            2: FieldPartRule(scale=0.1, missing_values={"99999"}, quality_part=3),
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values={f"{value:02d}" for value in range(5, 61)},
+            ),
+            2: FieldPartRule(
+                scale=0.1,
+                missing_values={"99999"},
+                quality_part=3,
+                min_value=-99999,
+                max_value=99998,
+            ),
             3: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             4: FieldPartRule(
                 kind="quality",
@@ -1384,7 +1520,13 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "CF": FieldRule(
         code="CF*",
         parts={
-            1: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=2),
+            1: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=2,
+                min_value=0,
+                max_value=9998,
+            ),
             2: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             3: FieldPartRule(
                 kind="quality",
@@ -1396,7 +1538,13 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "CG": FieldRule(
         code="CG*",
         parts={
-            1: FieldPartRule(scale=0.1, missing_values={"99999"}, quality_part=2),
+            1: FieldPartRule(
+                scale=0.1,
+                missing_values={"99999"},
+                quality_part=2,
+                min_value=-99999,
+                max_value=99998,
+            ),
             2: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             3: FieldPartRule(
                 kind="quality",
@@ -1408,15 +1556,32 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "CH": FieldRule(
         code="CH*",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
-            2: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=3),
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values={f"{value:02d}" for value in range(0, 61)},
+            ),
+            2: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=3,
+                min_value=-9999,
+                max_value=9998,
+            ),
             3: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
             ),
-            5: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=6),
+            5: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=6,
+                min_value=0,
+                max_value=1000,
+            ),
             6: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             7: FieldPartRule(
                 kind="quality",
@@ -1574,7 +1739,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "GA": FieldRule(
         code="GA*",
         parts={
-            1: FieldPartRule(missing_values={"99"}, quality_part=2, agg="mean"),
+            1: FieldPartRule(
+                missing_values={"99"},
+                quality_part=2,
+                agg="mean",
+                allowed_values=SKY_COVER_LAYER_CODES,
+            ),
             2: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -1591,6 +1761,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 missing_values={"99"},
                 quality_part=6,
+                allowed_values=SKY_COVER_LAYER_TYPE_CODES,
             ),  # cloud type
             6: FieldPartRule(
                 kind="quality",
@@ -1607,12 +1778,14 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 missing_values={"9"},
                 quality_part=3,
+                allowed_values=SKY_COVER_SUMMATION_CODES,
             ),
             2: FieldPartRule(
                 kind="categorical",
                 agg="drop",
                 missing_values={"99"},
                 quality_part=3,
+                allowed_values=SKY_COVER_EXTENDED_CODES,
             ),
             3: FieldPartRule(
                 kind="quality",
@@ -1629,13 +1802,19 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 kind="categorical",
                 agg="drop",
                 missing_values={"9"},
+                allowed_values=SKY_COVER_SUMMATION_CHARACTERISTICS,
             ),
         },
     ),
     "GG": FieldRule(
         code="GG*",
         parts={
-            1: FieldPartRule(missing_values={"99"}, quality_part=2, agg="mean"),
+            1: FieldPartRule(
+                missing_values={"99"},
+                quality_part=2,
+                agg="mean",
+                allowed_values=SKY_COVER_LAYER_CODES,
+            ),
             2: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -1652,6 +1831,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 missing_values={"99"},
                 quality_part=6,
+                allowed_values=BELOW_STATION_LAYER_TYPE_CODES,
             ),
             6: FieldPartRule(
                 kind="quality",
@@ -1663,6 +1843,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 missing_values={"99"},
                 quality_part=8,
+                allowed_values=BELOW_STATION_LAYER_TOP_CODES,
             ),
             8: FieldPartRule(
                 kind="quality",
@@ -1950,34 +2131,55 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality=SOLARAD_QC_FLAGS,
             ),
-            3: FieldPartRule(kind="categorical", agg="drop"),
+            3: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                allowed_values={str(value) for value in range(0, 10)},
+            ),
             4: FieldPartRule(scale=0.1, missing_values={"99999"}, quality_part=5),
             5: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=SOLARAD_QC_FLAGS,
             ),
-            6: FieldPartRule(kind="categorical", agg="drop"),
+            6: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                allowed_values={str(value) for value in range(0, 10)},
+            ),
             7: FieldPartRule(scale=0.1, missing_values={"99999"}, quality_part=8),
             8: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=SOLARAD_QC_FLAGS,
             ),
-            9: FieldPartRule(kind="categorical", agg="drop"),
+            9: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                allowed_values={str(value) for value in range(0, 10)},
+            ),
             10: FieldPartRule(scale=0.1, missing_values={"99999"}, quality_part=11),
             11: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=SOLARAD_QC_FLAGS,
             ),
-            12: FieldPartRule(kind="categorical", agg="drop"),
+            12: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                allowed_values={str(value) for value in range(0, 10)},
+            ),
         },
     ),
     "GJ": FieldRule(
         code="GJ*",
         parts={
-            1: FieldPartRule(missing_values={"9999"}, quality_part=2),
+            1: FieldPartRule(
+                missing_values={"9999"},
+                quality_part=2,
+                min_value=0,
+                max_value=6000,
+            ),
             2: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -1988,7 +2190,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "GK": FieldRule(
         code="GK*",
         parts={
-            1: FieldPartRule(missing_values={"999"}, quality_part=2),
+            1: FieldPartRule(
+                missing_values={"999"},
+                quality_part=2,
+                min_value=0,
+                max_value=100,
+            ),
             2: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -1999,7 +2206,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "GL": FieldRule(
         code="GL*",
         parts={
-            1: FieldPartRule(missing_values={"99999"}, quality_part=2),
+            1: FieldPartRule(
+                missing_values={"99999"},
+                quality_part=2,
+                min_value=0,
+                max_value=30000,
+            ),
             2: FieldPartRule(
                 kind="quality",
                 agg="drop",
@@ -2010,31 +2222,50 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "GM": FieldRule(
         code="GM*",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9999"}),
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9999"},
+                allowed_values={f"{value:04d}" for value in range(1, 9999)},
+            ),
             2: FieldPartRule(missing_values={"9999"}, quality_part=4),
-            3: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
+            3: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values={f"{value:02d}" for value in range(0, 100)},
+            ),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=SOLAR_IRRADIANCE_QC_FLAGS,
             ),
             5: FieldPartRule(missing_values={"9999"}, quality_part=7),
-            6: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
+            6: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values={f"{value:02d}" for value in range(0, 100)},
+            ),
             7: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=SOLAR_IRRADIANCE_QC_FLAGS,
             ),
             8: FieldPartRule(missing_values={"9999"}, quality_part=10),
-            9: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
+            9: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values={f"{value:02d}" for value in range(0, 100)},
+            ),
             10: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=SOLAR_IRRADIANCE_QC_FLAGS,
             ),
-            11: FieldPartRule(missing_values={"9999"}, quality_part=13),
-            12: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
-            13: FieldPartRule(
+            11: FieldPartRule(missing_values={"9999"}, quality_part=12),
+            12: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=SOLAR_IRRADIANCE_QC_FLAGS,
@@ -2044,7 +2275,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "GN": FieldRule(
         code="GN*",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9999"}),
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9999"},
+                allowed_values={f"{value:04d}" for value in range(1, 9999)},
+            ),
             2: FieldPartRule(missing_values={"9999"}, quality_part=3),
             3: FieldPartRule(
                 kind="quality",
@@ -2080,7 +2316,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "GO": FieldRule(
         code="GO*",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9999"}),
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9999"},
+                allowed_values={f"{value:04d}" for value in range(1, 9999)},
+            ),
             2: FieldPartRule(missing_values={"9999"}, quality_part=3),
             3: FieldPartRule(
                 kind="quality",
@@ -2104,22 +2345,47 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "GP1": FieldRule(
         code="GP1",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9999"}),
-            2: FieldPartRule(missing_values={"9999"}),
-            3: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
-            4: FieldPartRule(missing_values={"999"}),
-            5: FieldPartRule(missing_values={"9999"}),
-            6: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
-            7: FieldPartRule(missing_values={"999"}),
-            8: FieldPartRule(missing_values={"9999"}),
-            9: FieldPartRule(kind="categorical", agg="drop", missing_values={"99"}),
-            10: FieldPartRule(missing_values={"999"}),
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9999"},
+                allowed_values={f"{value:04d}" for value in range(1, 9999)},
+            ),
+            2: FieldPartRule(missing_values={"9999"}, min_value=0, max_value=9998),
+            3: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values={"01", "02", "03"},
+            ),
+            4: FieldPartRule(missing_values={"999"}, min_value=0, max_value=100),
+            5: FieldPartRule(missing_values={"9999"}, min_value=0, max_value=9998),
+            6: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values={"01", "02", "03"},
+            ),
+            7: FieldPartRule(missing_values={"999"}, min_value=0, max_value=100),
+            8: FieldPartRule(missing_values={"9999"}, min_value=0, max_value=9998),
+            9: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99"},
+                allowed_values={"01", "02", "03"},
+            ),
+            10: FieldPartRule(missing_values={"999"}, min_value=0, max_value=100),
         },
     ),
     "GQ1": FieldRule(
         code="GQ1",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9999"}),
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9999"},
+                allowed_values={f"{value:04d}" for value in range(1, 9999)},
+            ),
             2: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=3),
             3: FieldPartRule(
                 kind="quality",
@@ -2137,7 +2403,12 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "GR1": FieldRule(
         code="GR1",
         parts={
-            1: FieldPartRule(kind="categorical", agg="drop", missing_values={"9999"}),
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9999"},
+                allowed_values={f"{value:04d}" for value in range(1, 9999)},
+            ),
             2: FieldPartRule(missing_values={"9999"}, quality_part=3),
             3: FieldPartRule(
                 kind="quality",
@@ -2160,6 +2431,8 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 missing_values={"999"},
                 quality_part=2,
                 allowed_quality={"0", "1", "2", "3", "9"},
+                min_value=0,
+                max_value=200,
             )
         },
     ),
@@ -2809,7 +3082,29 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     ),
 }
 
-for _prefix in ("OA", "OD", "OB", "OE", "RH", "MV", "MW", "AY", "CO", "CT", "CU", "CV", "CW", "CX"):
+for _prefix in (
+    "OA",
+    "OD",
+    "OB",
+    "OE",
+    "RH",
+    "MV",
+    "MW",
+    "AY",
+    "CO",
+    "CT",
+    "CU",
+    "CV",
+    "CW",
+    "CX",
+    "GH",
+    "GJ",
+    "GK",
+    "GL",
+    "GM",
+    "GN",
+    "GO",
+):
     _rule = FIELD_RULES.get(_prefix)
     if _rule is not None:
         FIELD_RULE_PREFIXES[_prefix] = _rule

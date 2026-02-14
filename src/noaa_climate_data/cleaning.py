@@ -9,10 +9,13 @@ from typing import Iterable
 import pandas as pd
 
 from .constants import (
+    ADDITIONAL_DATA_PREFIXES,
     DATA_SOURCE_FLAGS,
     EQD_ELEMENT_NAMES,
     EQD_FLAG1_CODES,
     EQD_FLAG2_CODES,
+    LEGACY_EQD_MSD_PATTERN,
+    LEGACY_EQD_PARAMETER_CODES,
     QNN_ELEMENT_IDENTIFIERS,
     REM_TYPE_CODES,
     QUALITY_FLAGS,
@@ -93,6 +96,24 @@ def _allowed_quality_for_value(prefix: str, part_index: int) -> set[str]:
     return _allowed_quality_set(prefix, part_rule.quality_part)
 
 
+def _additional_data_fixed_width(
+    prefix: str, part_rule: FieldPartRule | None
+) -> int | None:
+    if part_rule is None or part_rule.kind != "numeric":
+        return None
+    prefix_key = prefix[:2]
+    if prefix_key not in ADDITIONAL_DATA_PREFIXES:
+        return None
+    if not part_rule.missing_values:
+        return None
+    lengths = {
+        len(value)
+        for value in part_rule.missing_values
+        if value.isdigit()
+    }
+    return next(iter(lengths)) if len(lengths) == 1 else None
+
+
 def _single_quality_part(prefix: str) -> int | None:
     rule = get_field_rule(prefix)
     if not rule:
@@ -111,17 +132,22 @@ def _is_eqd_prefix(prefix: str) -> bool:
     return len(prefix) == 3 and prefix[0] in {"Q", "P", "R", "C", "D", "N"} and prefix[1:].isdigit()
 
 
-def _is_valid_eqd_parameter_code(value: str) -> bool:
-    if len(value) != 6:
-        return False
-    element = value[:4]
-    flag1 = value[4]
-    flag2 = value[5]
-    return (
-        element in EQD_ELEMENT_NAMES
-        and flag1 in EQD_FLAG1_CODES
-        and flag2 in EQD_FLAG2_CODES
-    )
+def _is_valid_eqd_parameter_code(prefix: str, value: str) -> bool:
+    if prefix.startswith("N"):
+        if len(value) != 6:
+            return False
+        element = value[:4]
+        flag1 = value[4]
+        flag2 = value[5]
+        return (
+            element in EQD_ELEMENT_NAMES
+            and flag1 in EQD_FLAG1_CODES
+            and flag2 in EQD_FLAG2_CODES
+        )
+    normalized = value.strip().upper()
+    if normalized in LEGACY_EQD_PARAMETER_CODES:
+        return True
+    return prefix.startswith("R") and bool(LEGACY_EQD_MSD_PATTERN.fullmatch(normalized))
 
 
 def _parse_remark(value: object) -> tuple[str | None, str | None]:
@@ -269,6 +295,16 @@ def _expand_parsed(
         if _is_missing_value(part, part_rule):
             payload[key] = None
             continue
+        if part_rule and part_rule.kind == "quality" and part_rule.allowed_quality:
+            if part.strip().upper() not in part_rule.allowed_quality:
+                payload[key] = None
+                continue
+        fixed_width = _additional_data_fixed_width(prefix, part_rule)
+        if fixed_width is not None:
+            normalized = part.strip()
+            if not normalized.isdigit() or len(normalized) != fixed_width:
+                payload[key] = None
+                continue
         if part_rule and part_rule.allowed_values:
             if part.strip().upper() not in part_rule.allowed_values:
                 payload[key] = None
@@ -278,13 +314,20 @@ def _expand_parsed(
                 payload[key] = None
                 continue
         if is_eqd and idx == 3:
-            param_code = part if len(part) == 6 else part.strip()
-            if param_code != "" and not _is_valid_eqd_parameter_code(param_code):
+            param_code = part.strip()
+            if param_code != "" and not _is_valid_eqd_parameter_code(prefix, param_code):
                 payload[key] = None
                 continue
         if value is None:
             payload[key] = part
             continue
+        if part_rule and part_rule.kind == "numeric":
+            if part_rule.min_value is not None and value < part_rule.min_value:
+                payload[key] = None
+                continue
+            if part_rule.max_value is not None and value > part_rule.max_value:
+                payload[key] = None
+                continue
         scale = part_rule.scale if part_rule else None
         scaled = value * scale if scale is not None else value
         if prefix == "CIG" and idx == 1 and scaled is not None and scaled > 22000:
@@ -342,6 +385,11 @@ def clean_value_quality(raw: str, prefix: str) -> dict[str, object]:
         value = parsed.values[0]
     if quality is not None and quality not in allowed_quality:
         value = None
+    if value is not None and part_rule and part_rule.kind == "numeric":
+        if part_rule.min_value is not None and value < part_rule.min_value:
+            value = None
+        elif part_rule.max_value is not None and value > part_rule.max_value:
+            value = None
     if value is not None and part_rule and part_rule.scale is not None:
         value = value * part_rule.scale
     return {

@@ -105,6 +105,13 @@ class TestPrefixRuleMapping:
             ("CV1", "CV*"),
             ("CW1", "CW*"),
             ("CX3", "CX*"),
+            ("GH1", "GH*"),
+            ("GJ1", "GJ*"),
+            ("GK1", "GK*"),
+            ("GL1", "GL*"),
+            ("GM1", "GM*"),
+            ("GN1", "GN*"),
+            ("GO1", "GO*"),
         ],
     )
     def test_numeric_suffixes_use_prefix_rules(self, prefix: str, expected_code: str):
@@ -190,6 +197,10 @@ class TestSentinelsInCleanedOutput:
         result = clean_value_quality("999,1", "HAIL")
         assert result["HAIL__value"] is None
 
+    def test_hail_range_enforced(self):
+        result = clean_value_quality("2001,1", "HAIL")
+        assert result["HAIL__value"] is None
+
     def test_ia1_missing_observation_code(self):
         result = clean_value_quality("99,1", "IA1")
         assert result["IA1__part1"] is None
@@ -256,6 +267,68 @@ class TestSentinelsInCleanedOutput:
         assert result["KG1__part2"] is None
         assert result["KG1__part3"] is None
         assert result["KG1__part4"] is None
+
+
+class TestAdditionalDataFixedWidth:
+    """Additional data numerics must respect fixed-width formats."""
+
+    def test_aa_period_requires_two_digits(self):
+        result = clean_value_quality("1,0100,1,1", "AA1")
+        assert result["AA1__part1"] is None
+        result = clean_value_quality("01,0100,1,1", "AA1")
+        assert result["AA1__part1"] == pytest.approx(1.0)
+
+    def test_aa_amount_rejects_five_digits(self):
+        result = clean_value_quality("01,10000,1,1", "AA1")
+        assert result["AA1__part2"] is None
+        result = clean_value_quality("01,9998,1,1", "AA1")
+        assert result["AA1__part2"] == pytest.approx(999.8)
+
+
+class TestApConditionCodeFixedMissing:
+    """AP condition code is fixed to missing value 9."""
+
+    def test_ap_condition_code_fixed_missing(self):
+        result = clean_value_quality("0010,9,1", "AP1")
+        assert result["AP1__part2"] is None
+        result = clean_value_quality("0010,1,1", "AP1")
+        assert result["AP1__part2"] is None
+
+
+class TestCrnRanges:
+    """CRN period and sensor ranges must be enforced."""
+
+    def test_cb_period_range(self):
+        result = clean_value_quality("04,000001,1,0", "CB1")
+        assert result["CB1__part1"] is None
+        result = clean_value_quality("05,000001,1,0", "CB1")
+        assert result["CB1__part1"] == pytest.approx(5.0)
+
+    def test_cb_precip_range(self):
+        result = clean_value_quality("05,100000,1,0", "CB1")
+        assert result["CB1__part2"] is None
+        result = clean_value_quality("05,-99999,1,0", "CB1")
+        assert result["CB1__part2"] == pytest.approx(-9999.9)
+
+    def test_cf_fan_speed_range(self):
+        result = clean_value_quality("10000,1,0", "CF1")
+        assert result["CF1__part1"] is None
+        result = clean_value_quality("9998,1,0", "CF1")
+        assert result["CF1__part1"] == pytest.approx(999.8)
+
+    def test_cg_depth_range(self):
+        result = clean_value_quality("100000,1,0", "CG1")
+        assert result["CG1__part1"] is None
+        result = clean_value_quality("-99999,1,0", "CG1")
+        assert result["CG1__part1"] == pytest.approx(-9999.9)
+
+    def test_ch_period_and_sensor_ranges(self):
+        result = clean_value_quality("61,00000,1,0,0000,1,0", "CH1")
+        assert result["CH1__part1"] is None
+        result = clean_value_quality("00,10000,1,0,0000,1,0", "CH1")
+        assert result["CH1__part2"] is None
+        result = clean_value_quality("00,00000,1,0,1001,1,0", "CH1")
+        assert result["CH1__part5"] is None
 
     def test_st1_missing_parts(self):
         result = clean_value_quality("9,+9999,4,9999,4,99,4,9,4", "ST1")
@@ -502,6 +575,10 @@ class TestScaleFactors:
     def test_sa1_sst_scaled(self):
         result = clean_value_quality("0215,1", "SA1")
         assert result["SA1__value"] == pytest.approx(21.5)
+
+    def test_sa1_range_enforced(self):
+        result = clean_value_quality("+0451,1", "SA1")
+        assert result["SA1__value"] is None
 
     def test_md1_pressure_change_scaled(self):
         result = clean_value_quality("5,1,045,1,0123,1", "MD1")
@@ -822,8 +899,25 @@ class TestQualityNullsCorrectPart:
         assert result["GF1__part10"] is None
         assert result["GF1__part12"] is None
 
+    def test_gf1_invalid_cloud_codes(self):
+        result = clean_value_quality(
+            "20,11,1,20,1,10,1,00000,1,10,1,10,1",
+            "GF1",
+        )
+        assert result["GF1__part1"] is None
+        assert result["GF1__part2"] is None
+        assert result["GF1__part4"] is None
+        assert result["GF1__part6"] is None
+        assert result["GF1__part10"] is None
+        assert result["GF1__part12"] is None
+
     def test_ga_cloud_type_missing(self):
         result = clean_value_quality("05,1,01000,1,99,1", "GA1")
+        assert result["GA1__part5"] is None
+
+    def test_ga_invalid_cloud_codes(self):
+        result = clean_value_quality("11,1,01000,1,24,1", "GA1")
+        assert result["GA1__part1"] is None
         assert result["GA1__part5"] is None
 
     def test_oc1_quality_rejects_c(self):
@@ -909,6 +1003,11 @@ class TestQualityNullsCorrectPart:
     def test_cb_quality_rejects_2(self):
         result = clean_value_quality("05,+000123,2,0", "CB1")
         assert result["CB1__part2"] is None
+        assert result["CB1__part3"] is None
+
+    def test_cb_flag_rejects_alpha(self):
+        result = clean_value_quality("05,+000123,1,M", "CB1")
+        assert result["CB1__part4"] is None
 
     def test_cf_quality_rejects_2(self):
         result = clean_value_quality("0123,2,0", "CF1")
@@ -926,6 +1025,7 @@ class TestQualityNullsCorrectPart:
     def test_ci_std_rh_quality_rejects_2(self):
         result = clean_value_quality("00010,1,0,00020,1,0,00030,1,0,00040,2,0", "CI1")
         assert result["CI1__part10"] is None
+        assert result["CI1__part11"] is None
 
     def test_cn1_datalogger_quality_rejects_2(self):
         result = clean_value_quality("0123,1,0,0456,1,0,0789,2,0", "CN1")
@@ -987,6 +1087,7 @@ class TestQualityNullsCorrectPart:
     def test_cr1_quality_rejects_2(self):
         result = clean_value_quality("00123,2,0", "CR1")
         assert result["CR1__part1"] is None
+        assert result["CR1__part2"] is None
 
     def test_ct_quality_rejects_2(self):
         result = clean_value_quality("+00123,2,0", "CT1")
@@ -1060,6 +1161,18 @@ class TestQualityNullsCorrectPart:
         assert result["GG1__part5"] is None
         assert result["GG1__part7"] is None
 
+    def test_gd_invalid_cloud_codes(self):
+        result = clean_value_quality("7,20,1,01000,1,8", "GD1")
+        assert result["GD1__part1"] is None
+        assert result["GD1__part2"] is None
+        assert result["GD1__part6"] is None
+
+    def test_gg_invalid_cloud_codes(self):
+        result = clean_value_quality("11,1,01000,1,11,1,10,1", "GG1")
+        assert result["GG1__part1"] is None
+        assert result["GG1__part5"] is None
+        assert result["GG1__part7"] is None
+
     def test_ob1_quality_rejects_8(self):
         result = clean_value_quality(
             "060,0100,8,0,090,1,0,00010,1,0,00020,1,0",
@@ -1107,9 +1220,25 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("123456,1,ZZZZb0", "Q01")
         assert result["Q01__part3"] is None
 
-    def test_eqd_q01_param_code_accepts_valid(self):
+    def test_eqd_q01_param_code_accepts_legacy(self):
+        result = clean_value_quality("123456,1,APC3", "Q01")
+        assert result["Q01__part3"] == "APC3"
+
+    def test_eqd_q01_param_code_rejects_element_schema(self):
         result = clean_value_quality("123456,1,ALTPb0", "Q01")
-        assert result["Q01__part3"] == "ALTPb0"
+        assert result["Q01__part3"] is None
+
+    def test_eqd_r01_param_code_accepts_msd_pattern(self):
+        result = clean_value_quality("123456,1,A01001", "R01")
+        assert result["R01__part3"] == "A01001"
+
+    def test_eqd_n01_param_code_accepts_element_schema(self):
+        result = clean_value_quality("ABCDEF,A,ALTPb0", "N01")
+        assert result["N01__part3"] == "ALTPb0"
+
+    def test_eqd_n01_param_code_rejects_legacy(self):
+        result = clean_value_quality("ABCDEF,A,APC3", "N01")
+        assert result["N01__part3"] is None
 
     def test_gp1_missing_parts(self):
         result = clean_value_quality("9999,9999,99,999,9999,99,999,9999,99,999", "GP1")
@@ -1124,6 +1253,18 @@ class TestQualityNullsCorrectPart:
         assert result["GP1__part9"] is None
         assert result["GP1__part10"] is None
 
+    def test_gp1_invalid_source_flag(self):
+        result = clean_value_quality("0060,0100,04,010,0100,01,010,0100,01,010", "GP1")
+        assert result["GP1__part3"] is None
+
+    def test_gp1_invalid_time_period(self):
+        result = clean_value_quality("0000,0100,01,010,0100,01,010,0100,01,010", "GP1")
+        assert result["GP1__part1"] is None
+
+    def test_gp1_invalid_uncertainty(self):
+        result = clean_value_quality("0060,0100,01,101,0100,01,010,0100,01,010", "GP1")
+        assert result["GP1__part4"] is None
+
     def test_gq1_missing_parts(self):
         result = clean_value_quality("9999,9999,9,9999,9", "GQ1")
         assert result["GQ1__part1"] is None
@@ -1135,6 +1276,10 @@ class TestQualityNullsCorrectPart:
         assert result["GQ1__part2"] is None
         assert result["GQ1__part4"] == pytest.approx(45.6)
 
+    def test_gq1_time_period_range(self):
+        result = clean_value_quality("0000,0123,1,0456,1", "GQ1")
+        assert result["GQ1__part1"] is None
+
     def test_gr1_missing_parts(self):
         result = clean_value_quality("9999,9999,9,9999,9", "GR1")
         assert result["GR1__part1"] is None
@@ -1145,6 +1290,35 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("0060,0800,8,0900,1", "GR1")
         assert result["GR1__part2"] is None
         assert result["GR1__part4"] == pytest.approx(900.0)
+
+    def test_gr1_time_period_range(self):
+        result = clean_value_quality("0000,0800,1,0900,1", "GR1")
+        assert result["GR1__part1"] is None
+
+    def test_gh1_flag_domain(self):
+        result = clean_value_quality("00010,1,A,00000,1,0,00000,1,0,00000,1,0", "GH1")
+        assert result["GH1__part3"] is None
+
+    def test_gm1_data_flag_domain(self):
+        result = clean_value_quality("0060,0123,AA,1,0456,00,1,0789,00,1,0123,1", "GM1")
+        assert result["GM1__part3"] is None
+        assert result["GM1__part2"] == pytest.approx(123.0)
+
+    def test_gm1_uvb_quality_rejects_8(self):
+        result = clean_value_quality("0060,0123,00,1,0456,00,1,0789,00,1,0123,8", "GM1")
+        assert result["GM1__part11"] is None
+
+    def test_gm1_time_period_range(self):
+        result = clean_value_quality("0000,0123,00,1,0456,00,1,0789,00,1,0123,1", "GM1")
+        assert result["GM1__part1"] is None
+
+    def test_gn1_time_period_range(self):
+        result = clean_value_quality("0000,0123,1,0456,1,0789,1,0123,1,090,1", "GN1")
+        assert result["GN1__part1"] is None
+
+    def test_go1_time_period_range(self):
+        result = clean_value_quality("0000,0123,1,0456,1,0789,1", "GO1")
+        assert result["GO1__part1"] is None
 
     def test_ia1_quality_rejects_8(self):
         result = clean_value_quality("01,8", "IA1")
@@ -1404,6 +1578,18 @@ class TestTwoPartFieldNamingAndQuality:
     def test_gj_quality_gates_value(self):
         result = clean_value_quality("0100,8", "GJ1")
         assert result["GJ1__part1"] is None
+
+    def test_gj_range_enforced(self):
+        result = clean_value_quality("6001,1", "GJ1")
+        assert result["GJ1__part1"] is None
+
+    def test_gk_range_enforced(self):
+        result = clean_value_quality("101,4", "GK1")
+        assert result["GK1__part1"] is None
+
+    def test_gl_range_enforced(self):
+        result = clean_value_quality("30001,1", "GL1")
+        assert result["GL1__part1"] is None
 
 
 class TestCleanDataframeEdgeCases:

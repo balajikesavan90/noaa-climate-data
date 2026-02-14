@@ -67,23 +67,23 @@
 - [x] Enforce CV1-CV3 hourly temperature extreme time fields (HHMM 0000-2359; 9999 missing) per Part 11.
 - [x] Enforce ED1 runway direction range (01-36 tens of degrees; 99 missing) and visibility range (0000-5000; 9999 missing) per Part 14.
 - [x] Enforce ME1 geopotential level codes (1-5; 9 missing) per Part 27.
-- [ ] Enforce fixed-width/format constraints for additional-data numerics (e.g., AA* width and max `9998`) where NOAA specifies explicit field widths.
-- [ ] Enforce AP1-AP4 HPD gauge condition code as fixed missing (`9` only) per Part 4 ("not used at this time").
-- [ ] Enforce CRN period quantity ranges (e.g., CB/CH/CF/CG) and sensor value ranges per Part 6.
-- [ ] Enforce CRN QC/FLAG domains for CB/CF/CG/CH/CI/CN/CR/CT/CU/CV/CW/CX (QC in {1,3,9}; FLAG in 0-9) per Parts 6-8.
-- [ ] Enforce GM solar irradiance data flag domains (00-99, with 99 missing) for global/direct/diffuse/UVB flags per Part 17.
-- [ ] Align GM1 field layout with Part 17: UVB global irradiance has no data flag (only value + quality), so parsing should not expect a UVB data-flag part.
-- [ ] Enforce GH1 solar radiation flag domains (0-9, with 9 missing) per Part 15.
-- [ ] Ensure solar/sunshine identifiers with numeric suffixes are matched by parsing rules (GH1, GJ1, GK1, GL1, GM1, GN1, GO1) so scaling/quality/sentinels apply.
-- [ ] Enforce GP1 modeled solar irradiance source flag domains (01-03, 99 missing) per Part 19.
-- [ ] Enforce GP1 modeled solar irradiance time-period min/max (0001-9998) and uncertainty ranges (000-100; 999 missing) per Part 19.
-- [ ] Enforce GJ/GK/GL sunshine value ranges (duration/percent/month totals) per Part 16.
-- [ ] Enforce HAIL size range (000-200; 999 missing) per Part 22.
-- [ ] Enforce SA1 sea-surface temperature range (-050 to +450; +999 missing) per Part 25.
-- [ ] Enforce GM/GN/GO solar time-period min/max ranges (0001-9998) per Parts 17–18.
-- [ ] Enforce GQ1/GR1 quality codes and time-period min/max ranges (0001-9998; quality 0-3, 9) per Parts 20–21.
-- [ ] Enforce Part 15 cloud code domains for GA/GD/GG/GF1 coverage, summation, and cloud-type characteristics.
-- [ ] Align EQD parameter-code validation by identifier family: Q/P/R/C/D should accept Part 30 legacy parameter-code domains (e.g., `APC3`, `PRSWA1`, `A01xxx` patterns), while N-codes use the element+Flag1+Flag2 schema.
+- [x] Enforce fixed-width/format constraints for additional-data numerics (e.g., AA* width and max `9998`) where NOAA specifies explicit field widths.
+- [x] Enforce AP1-AP4 HPD gauge condition code as fixed missing (`9` only) per Part 4 ("not used at this time").
+- [x] Enforce CRN period quantity ranges (e.g., CB/CH/CF/CG) and sensor value ranges per Part 6.
+- [x] Enforce CRN QC/FLAG domains for CB/CF/CG/CH/CI/CN/CR/CT/CU/CV/CW/CX (QC in {1,3,9}; FLAG in 0-9) per Parts 6-8.
+- [x] Enforce GM solar irradiance data flag domains (00-99, with 99 missing) for global/direct/diffuse/UVB flags per Part 17.
+- [x] Align GM1 field layout with Part 17: UVB global irradiance has no data flag (only value + quality), so parsing should not expect a UVB data-flag part.
+- [x] Enforce GH1 solar radiation flag domains (0-9, with 9 missing) per Part 15.
+- [x] Ensure solar/sunshine identifiers with numeric suffixes are matched by parsing rules (GH1, GJ1, GK1, GL1, GM1, GN1, GO1) so scaling/quality/sentinels apply.
+- [x] Enforce GP1 modeled solar irradiance source flag domains (01-03, 99 missing) per Part 19.
+- [x] Enforce GP1 modeled solar irradiance time-period min/max (0001-9998) and uncertainty ranges (000-100; 999 missing) per Part 19.
+- [x] Enforce GJ/GK/GL sunshine value ranges (duration/percent/month totals) per Part 16.
+- [x] Enforce HAIL size range (000-200; 999 missing) per Part 22.
+- [x] Enforce SA1 sea-surface temperature range (-050 to +450; +999 missing) per Part 25.
+- [x] Enforce GM/GN/GO solar time-period min/max ranges (0001-9998) per Parts 17–18.
+- [x] Enforce GQ1/GR1 quality codes and time-period min/max ranges (0001-9998; quality 0-3, 9) per Parts 20–21.
+- [x] Enforce Part 15 cloud code domains for GA/GD/GG/GF1 coverage, summation, and cloud-type characteristics.
+- [x] Align EQD parameter-code validation by identifier family: Q/P/R/C/D should accept Part 30 legacy parameter-code domains (e.g., `APC3`, `PRSWA1`, `A01xxx` patterns), while N-codes use the element+Flag1+Flag2 schema.
 
 ## P1: Missing ISD groups and sections (implementation gaps)
 
