@@ -29,6 +29,7 @@
 - [x] Enforce OA supplementary wind speed range (0000-2000; 9999 missing) per Part 29.
 - [x] Enforce OB1/OB2 wind section ranges (period 001-998; max gust 0000-9998; direction 001-360; std 00000-99998; 999/9999/99999 missing) per Part 29.
 - [x] Ensure OA/OD/OB/OE/RH identifiers with numeric suffixes (OA1-OA3, OD1-OD3, OB1-OB2, OE1-OE3, RH1-RH3) map to field rules.
+- [ ] Enforce OE1-OE3 summary-of-day constraints from Part 29 (period fixed at `24`; speed range `00000-20000`; occurrence time `0000-2359`; calm rule remains `direction=999` with `speed=00000`).
 - [x] Restrict MA1 station pressure quality codes to Part 27 values (exclude unsupported `C`).
 - [x] Tighten MA1 station pressure quality codes to {0-7, 9, M} (currently allows A/I/P/R/U via `QUALITY_FLAGS`).
 - [x] Restrict MA1 altimeter quality codes to Part 27 values (0-7, 9, M) instead of default `QUALITY_FLAGS`.
@@ -58,6 +59,7 @@
 - [x] Ensure MV/MW/AY identifiers with numeric suffixes (MV1-MV7, MW1-MW7, AY1-AY2) map to field rules.
 - [ ] Enforce AU present-weather component code domains (intensity/descriptor/precip/obscuration/other/combination) per Part 5.
 - [x] Enforce AW automated present-weather code domain (00-99; 99 missing) and quality code set (0-7, 9, M) per Part 5.
+- [ ] Tighten AW automated present-weather code validation to the explicit Part 5 code list (not all `00-98` values).
 - [x] Enforce CO1 climate division number domain (00-09; 99 missing) per Part 7.
 - [x] Enforce CO1 UTC-LST offset range (-12 to +12; +99 missing) per Part 7.
 - [x] Enforce CO2-CO9 element time-offset ranges (-9999 to +9998; +9999 missing) and element-id domain per Part 7.
@@ -66,6 +68,7 @@
 - [x] Enforce ED1 runway direction range (01-36 tens of degrees; 99 missing) and visibility range (0000-5000; 9999 missing) per Part 14.
 - [x] Enforce ME1 geopotential level codes (1-5; 9 missing) per Part 27.
 - [ ] Enforce fixed-width/format constraints for additional-data numerics (e.g., AA* width and max `9998`) where NOAA specifies explicit field widths.
+- [ ] Enforce AP1-AP4 HPD gauge condition code as fixed missing (`9` only) per Part 4 ("not used at this time").
 - [ ] Enforce CRN period quantity ranges (e.g., CB/CH/CF/CG) and sensor value ranges per Part 6.
 - [ ] Enforce CRN QC/FLAG domains for CB/CF/CG/CH/CI/CN/CR/CT/CU/CV/CW/CX (QC in {1,3,9}; FLAG in 0-9) per Parts 6-8.
 - [ ] Enforce GM solar irradiance data flag domains (00-99, with 99 missing) for global/direct/diffuse/UVB flags per Part 17.
@@ -80,6 +83,7 @@
 - [ ] Enforce GM/GN/GO solar time-period min/max ranges (0001-9998) per Parts 17–18.
 - [ ] Enforce GQ1/GR1 quality codes and time-period min/max ranges (0001-9998; quality 0-3, 9) per Parts 20–21.
 - [ ] Enforce Part 15 cloud code domains for GA/GD/GG/GF1 coverage, summation, and cloud-type characteristics.
+- [ ] Align EQD parameter-code validation by identifier family: Q/P/R/C/D should accept Part 30 legacy parameter-code domains (e.g., `APC3`, `PRSWA1`, `A01xxx` patterns), while N-codes use the element+Flag1+Flag2 schema.
 
 ## P1: Missing ISD groups and sections (implementation gaps)
 
@@ -140,3 +144,5 @@
 - [ ] Enforce numeric MIN/MAX ranges from the ISD spec (beyond current CIG/VIS clamping), or document why range checks are intentionally skipped.
 - [ ] Consider enforcing record/section length constraints (control=60, mandatory=45, max record 2844, max block 8192) if parser validates structure.
 - [ ] Parse and validate REM remark length quantity (Part 30) instead of only splitting type/text.
+- [ ] Parse repeated REM remark entries in a single REM section (typed remark + length + text blocks), not just a single prefix/text split.
+- [ ] Add targeted tests for newly identified gaps: OE period/time range enforcement, AP condition code fixed-to-9 behavior, AW sparse domain validation, and Q/P/R/C/D EQD parameter-code acceptance rules.
