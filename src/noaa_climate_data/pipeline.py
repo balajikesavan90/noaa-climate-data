@@ -57,6 +57,147 @@ _VIS_COL_RE = re.compile(r"^(visibility_m)(?P<suffix>.*)$")
 _PRESSURE_COL_RE = re.compile(
     r"^(sea_level_pressure_hpa|altimeter_setting_hpa|station_pressure_hpa)(?P<suffix>.*)$"
 )
+_STATUS_COLUMNS = ("raw_data_pulled", "data_cleaned", "data_aggregated")
+
+
+def _coerce_status_series(series: pd.Series) -> pd.Series:
+    if series.dtype == bool:
+        return series
+    truthy = {"true", "1", "yes", "y", "t"}
+    return series.fillna(False).astype(str).str.strip().str.lower().isin(truthy)
+
+
+def _ensure_station_status_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    work = frame.copy()
+    for col in _STATUS_COLUMNS:
+        if col not in work.columns:
+            work[col] = False
+        else:
+            work[col] = _coerce_status_series(work[col])
+    return work
+
+
+def _load_stations_csv(stations_csv: Path) -> pd.DataFrame:
+    frame = pd.read_csv(stations_csv)
+    return _ensure_station_status_columns(frame)
+
+
+def _locate_station_index(
+    frame: pd.DataFrame,
+    file_name: str | None = None,
+    station_id: str | None = None,
+) -> int | None:
+    if file_name:
+        normalized = normalize_station_file_name(file_name)
+        matches = frame[frame["FileName"].astype(str) == normalized]
+        if not matches.empty:
+            return int(matches.index[0])
+
+    if station_id and "ID" in frame.columns:
+        key = str(station_id).lstrip("0")
+        id_series = frame["ID"].astype(str).str.lstrip("0")
+        matches = frame[id_series == key]
+        if not matches.empty:
+            return int(matches.index[0])
+
+    if station_id:
+        key = str(station_id).lstrip("0")
+        file_series = frame["FileName"].astype(str).str.replace(".csv", "", regex=False)
+        file_series = file_series.str.lstrip("0")
+        matches = frame[file_series == key]
+        if not matches.empty:
+            return int(matches.index[0])
+
+    return None
+
+
+def update_station_status(
+    stations_csv: Path,
+    *,
+    file_name: str | None = None,
+    station_id: str | None = None,
+    raw_data_pulled: bool | None = None,
+    data_cleaned: bool | None = None,
+    data_aggregated: bool | None = None,
+) -> None:
+    frame = _load_stations_csv(stations_csv)
+    idx = _locate_station_index(frame, file_name=file_name, station_id=station_id)
+    if idx is None:
+        raise ValueError("Unable to locate station row to update status.")
+    if raw_data_pulled is not None:
+        frame.loc[idx, "raw_data_pulled"] = bool(raw_data_pulled)
+    if data_cleaned is not None:
+        frame.loc[idx, "data_cleaned"] = bool(data_cleaned)
+    if data_aggregated is not None:
+        frame.loc[idx, "data_aggregated"] = bool(data_aggregated)
+    frame.to_csv(stations_csv, index=False)
+
+
+def pick_random_station(
+    stations_csv: Path,
+    seed: int | None = None,
+) -> dict[str, object]:
+    frame = _load_stations_csv(stations_csv)
+    candidates = frame[~frame["raw_data_pulled"]]
+    if candidates.empty:
+        raise ValueError("No stations available with raw_data_pulled == False.")
+    return candidates.sample(n=1, random_state=seed).iloc[0].to_dict()
+
+
+def pull_random_station_raw(
+    stations_csv: Path,
+    years: Iterable[int],
+    output_dir: Path,
+    sleep_seconds: float = 0.0,
+    seed: int | None = None,
+) -> Path:
+    station = pick_random_station(stations_csv, seed=seed)
+    file_name = str(station["FileName"])
+    raw = download_location_data(
+        file_name,
+        years,
+        sleep_seconds=sleep_seconds,
+        log_years=True,
+    )
+    if raw.empty:
+        raise ValueError("No raw data returned for selected station.")
+    station_id = Path(normalize_station_file_name(file_name)).stem
+    station_dir = output_dir / station_id
+    station_dir.mkdir(parents=True, exist_ok=True)
+    output_path = station_dir / "LocationData_Raw.parquet"
+    raw.to_parquet(output_path, index=False)
+    update_station_status(stations_csv, file_name=file_name, raw_data_pulled=True)
+    return output_path
+
+
+def clean_parquet_file(
+    raw_parquet: Path,
+    output_dir: Path | None = None,
+    stations_csv: Path | None = None,
+    file_name: str | None = None,
+    station_id: str | None = None,
+) -> Path:
+    raw = pd.read_parquet(raw_parquet)
+    cleaned = clean_noaa_dataframe(raw, keep_raw=True)
+    cleaned = _extract_time_columns(cleaned)
+    target_dir = output_dir or raw_parquet.parent
+    target_dir.mkdir(parents=True, exist_ok=True)
+    output_path = target_dir / "LocationData_Cleaned.parquet"
+    cleaned.to_parquet(output_path, index=False)
+    if stations_csv is not None:
+        if station_id is None:
+            station_id = raw_parquet.parent.name
+        update_station_status(
+            stations_csv,
+            file_name=file_name,
+            station_id=station_id,
+            data_cleaned=True,
+        )
+    return output_path
+
+
+def aggregate_parquet_placeholder(*_: object, **__: object) -> None:
+    raise NotImplementedError("Aggregation from parquet is not implemented yet.")
 
 
 def build_data_file_list(
@@ -119,6 +260,7 @@ def build_location_ids(
     if resume and output_csv.exists():
         existing = pd.read_csv(output_csv)
         if not existing.empty:
+            existing = _ensure_station_status_columns(existing)
             rows = existing.to_dict(orient="records")
             processed = set(existing["FileName"].dropna().astype(str))
             print(
@@ -198,6 +340,9 @@ def build_location_ids(
             "YEAR_COUNT": year_count,
             "METADATA_YEAR": metadata_year,
             "METADATA_COMPLETE": metadata_complete,
+            "raw_data_pulled": False,
+            "data_cleaned": False,
+            "data_aggregated": False,
         }
         if include_legacy_id:
             row["LegacyID"] = idx
@@ -235,6 +380,7 @@ def download_location_data(
     file_name: str,
     years: Iterable[int],
     sleep_seconds: float = 0.0,
+    log_years: bool = False,
 ) -> pd.DataFrame:
     frames: list[pd.DataFrame] = []
     for year in years:
@@ -246,6 +392,8 @@ def download_location_data(
         if not frame.empty:
             frame["YEAR"] = year
             frames.append(frame)
+            if log_years:
+                print(f"Downloaded {file_name} for year {year} ({len(frame)} rows).")
         if sleep_seconds > 0:
             time.sleep(sleep_seconds)
     if not frames:

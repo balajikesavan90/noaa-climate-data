@@ -13,6 +13,9 @@ from .pipeline import (
     build_data_file_list,
     build_location_ids,
     build_year_counts,
+    clean_parquet_file,
+    aggregate_parquet_placeholder,
+    pull_random_station_raw,
     process_location,
 )
 
@@ -206,6 +209,80 @@ def _parse_args() -> argparse.Namespace:
         help="Add imperial/derived unit columns alongside metric outputs",
     )
 
+    pick_parser = subparsers.add_parser(
+        "pick-location",
+        help="Pick a random station, download raw data, and write parquet",
+    )
+    pick_parser.add_argument(
+        "--stations-csv",
+        type=Path,
+        default=None,
+        help="Path to Stations.csv (defaults to latest noaa_file_index folder)",
+    )
+    pick_parser.add_argument(
+        "--start-year",
+        type=int,
+        default=DEFAULT_START_YEAR,
+    )
+    pick_parser.add_argument(
+        "--end-year",
+        type=int,
+        default=DEFAULT_END_YEAR,
+    )
+    pick_parser.add_argument(
+        "--sleep-seconds",
+        type=float,
+        default=0.0,
+        help="Delay between yearly CSV downloads",
+    )
+    pick_parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for station selection",
+    )
+    pick_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("output"),
+    )
+
+    clean_parser = subparsers.add_parser(
+        "clean-parquet",
+        help="Clean a raw parquet file and write cleaned parquet",
+    )
+    clean_parser.add_argument("raw_parquet", type=Path)
+    clean_parser.add_argument(
+        "--stations-csv",
+        type=Path,
+        default=None,
+        help="Path to Stations.csv (defaults to latest noaa_file_index folder)",
+    )
+    clean_parser.add_argument(
+        "--file-name",
+        type=str,
+        default=None,
+        help="Station file name (.csv) for status updates",
+    )
+    clean_parser.add_argument(
+        "--station-id",
+        type=str,
+        default=None,
+        help="Station ID override for status updates",
+    )
+    clean_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Output directory for cleaned parquet (default: same as input)",
+    )
+
+    aggregate_parser = subparsers.add_parser(
+        "aggregate-parquet",
+        help="Placeholder for aggregating cleaned parquet",
+    )
+    aggregate_parser.add_argument("cleaned_parquet", type=Path)
+
     return parser.parse_args()
 
 
@@ -293,6 +370,39 @@ def main() -> None:
         outputs.hourly.to_csv(output_dir / "LocationData_Hourly.csv", index=False)
         outputs.monthly.to_csv(output_dir / "LocationData_Monthly.csv", index=False)
         outputs.yearly.to_csv(output_dir / "LocationData_Yearly.csv", index=False)
+        return
+
+    if args.command == "pick-location":
+        output_dir = args.output_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+        stations_csv = args.stations_csv
+        if stations_csv is None:
+            stations_csv = _latest_index_dir() / "Stations.csv"
+        years = range(args.start_year, args.end_year + 1)
+        pull_random_station_raw(
+            stations_csv,
+            years,
+            output_dir,
+            sleep_seconds=args.sleep_seconds,
+            seed=args.seed,
+        )
+        return
+
+    if args.command == "clean-parquet":
+        stations_csv = args.stations_csv
+        if stations_csv is None:
+            stations_csv = _latest_index_dir() / "Stations.csv"
+        clean_parquet_file(
+            args.raw_parquet,
+            output_dir=args.output_dir,
+            stations_csv=stations_csv,
+            file_name=args.file_name,
+            station_id=args.station_id,
+        )
+        return
+
+    if args.command == "aggregate-parquet":
+        aggregate_parquet_placeholder(args.cleaned_parquet)
         return
 
 

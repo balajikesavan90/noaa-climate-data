@@ -143,6 +143,39 @@ Output files per station:
 | `LocationData_Monthly.csv` | Aggregated to month level |
 | `LocationData_Yearly.csv` | Aggregated to year level |
 
+### Pick a random station and pull raw parquet
+
+`Stations.csv` now includes status columns that track progress:
+
+| Column | Meaning |
+|--------|---------|
+| `raw_data_pulled` | Raw NOAA parquet was written for the station |
+| `data_cleaned` | Cleaned parquet was written for the station |
+| `data_aggregated` | Aggregated parquet outputs were written for the station |
+
+Pull a random station that has not yet downloaded raw data:
+
+```bash
+poetry run python -m noaa_climate_data.cli pick-location \
+  --start-year <START_YEAR> \
+  --end-year <END_YEAR> \
+  --sleep-seconds 0.5 \
+  --output-dir output
+```
+
+This writes `LocationData_Raw.parquet` under `output/<station>/` and marks
+`raw_data_pulled=True` in the latest `noaa_file_index/YYYYMMDD/Stations.csv`.
+
+### Clean a raw parquet
+
+```bash
+poetry run python -m noaa_climate_data.cli clean-parquet output/01001099999/LocationData_Raw.parquet \
+  --file-name 01001099999.csv
+```
+
+This writes `LocationData_Cleaned.parquet` alongside the raw parquet and marks
+`data_cleaned=True` in the latest `noaa_file_index/YYYYMMDD/Stations.csv`.
+
 ---
 
 ## Project structure

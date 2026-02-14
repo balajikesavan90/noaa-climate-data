@@ -251,3 +251,97 @@ class TestCliCommands:
         assert (output_dir / "LocationData_Hourly.csv").exists()
         assert (output_dir / "LocationData_Monthly.csv").exists()
         assert (output_dir / "LocationData_Yearly.csv").exists()
+
+    def test_cli_pick_location_invokes_pull(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        base_dir = tmp_path / "noaa_file_index" / "20250101"
+        base_dir.mkdir(parents=True)
+        (base_dir / "Stations.csv").write_text("FileName\nTEST.csv\n")
+
+        called: dict[str, object] = {}
+
+        def fake_pull_random_station_raw(
+            stations_csv: Path,
+            years: range,
+            output_dir: Path,
+            **kwargs: object,
+        ) -> Path:
+            called["stations_csv"] = stations_csv
+            called["years"] = list(years)
+            called["output_dir"] = output_dir
+            called.update(kwargs)
+            return output_dir / "LocationData_Raw.parquet"
+
+        monkeypatch.setattr(cli, "pull_random_station_raw", fake_pull_random_station_raw)
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "prog",
+                "pick-location",
+                "--start-year",
+                "2020",
+                "--end-year",
+                "2021",
+                "--sleep-seconds",
+                "0.25",
+                "--seed",
+                "7",
+            ],
+        )
+        cli.main()
+
+        assert called["stations_csv"].resolve() == (base_dir / "Stations.csv").resolve()
+        assert called["years"] == [2020, 2021]
+        assert called["output_dir"].resolve() == (tmp_path / "output").resolve()
+        assert called["sleep_seconds"] == 0.25
+        assert called["seed"] == 7
+
+    def test_cli_clean_parquet_invokes_cleaner(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        base_dir = tmp_path / "noaa_file_index" / "20250101"
+        base_dir.mkdir(parents=True)
+        (base_dir / "Stations.csv").write_text("FileName\nTEST.csv\n")
+        raw_path = tmp_path / "raw.parquet"
+        raw_path.write_text("fake")
+
+        called: dict[str, object] = {}
+
+        def fake_clean_parquet_file(
+            raw_parquet: Path,
+            **kwargs: object,
+        ) -> Path:
+            called["raw_parquet"] = raw_parquet
+            called.update(kwargs)
+            return tmp_path / "LocationData_Cleaned.parquet"
+
+        monkeypatch.setattr(cli, "clean_parquet_file", fake_clean_parquet_file)
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "prog",
+                "clean-parquet",
+                str(raw_path),
+                "--file-name",
+                "TEST.csv",
+                "--station-id",
+                "TESTID",
+            ],
+        )
+        cli.main()
+
+        assert called["raw_parquet"].resolve() == raw_path.resolve()
+        assert called["stations_csv"].resolve() == (base_dir / "Stations.csv").resolve()
+        assert called["file_name"] == "TEST.csv"
+        assert called["station_id"] == "TESTID"
