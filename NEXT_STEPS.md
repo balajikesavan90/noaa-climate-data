@@ -29,7 +29,7 @@
 - [x] Enforce OA supplementary wind speed range (0000-2000; 9999 missing) per Part 29.
 - [x] Enforce OB1/OB2 wind section ranges (period 001-998; max gust 0000-9998; direction 001-360; std 00000-99998; 999/9999/99999 missing) per Part 29.
 - [x] Ensure OA/OD/OB/OE/RH identifiers with numeric suffixes (OA1-OA3, OD1-OD3, OB1-OB2, OE1-OE3, RH1-RH3) map to field rules.
-- [ ] Enforce OE1-OE3 summary-of-day constraints from Part 29 (period fixed at `24`; speed range `00000-20000`; occurrence time `0000-2359`; calm rule remains `direction=999` with `speed=00000`).
+- [x] Enforce OE1-OE3 summary-of-day constraints from Part 29 (period fixed at `24`; speed range `00000-20000`; occurrence time `0000-2359`; calm rule remains `direction=999` with `speed=00000`).
 - [x] Restrict MA1 station pressure quality codes to Part 27 values (exclude unsupported `C`).
 - [x] Tighten MA1 station pressure quality codes to {0-7, 9, M} (currently allows A/I/P/R/U via `QUALITY_FLAGS`).
 - [x] Restrict MA1 altimeter quality codes to Part 27 values (0-7, 9, M) instead of default `QUALITY_FLAGS`.
@@ -40,15 +40,15 @@
 - [x] Enforce UA1 wave period range (00-30 sec; 99 missing) and wave height range (000-500; 999 missing) per Part 30.
 - [x] Enforce UG1/UG2 swell period range (00-14 sec; 99 missing), height range (000-500; 999 missing), and direction range (001-360; 999 missing) per Part 30.
 - [x] Enforce WA1 platform-ice source/tendency code domains (source 1-5; tendency 0-4) from Part 30.
-- [ ] Enforce WD1/WG1 water-surface ice domain codes (edge bearing, non-uniform code, ship position/penetrability, ice trend/development, growler presence, etc.) per Part 30.
-- [ ] Enforce WD1/WG1 numeric ranges (concentration 000-100; growler/iceberg quantity 000-998; WG1 edge distance 00-98) per Part 30.
-- [ ] Enforce WJ1 water-level ice domain codes (primary/secondary ice phenomena, slush condition, water level state) per Part 30.
-- [ ] Enforce WA1 platform-ice thickness range (000-998; 999 missing) per Part 30.
-- [ ] Enforce WJ1 numeric ranges (ice thickness 000-998; discharge 00000-99998; stage height -999 to +9998) per Part 30.
+- [x] Enforce WD1/WG1 water-surface ice domain codes (edge bearing, non-uniform code, ship position/penetrability, ice trend/development, growler presence, etc.) per Part 30.
+- [x] Enforce WD1/WG1 numeric ranges (concentration 000-100; growler/iceberg quantity 000-998; WG1 edge distance 00-98) per Part 30.
+- [x] Enforce WJ1 water-level ice domain codes (primary/secondary ice phenomena, slush condition, water level state) per Part 30.
+- [x] Enforce WA1 platform-ice thickness range (000-998; 999 missing) per Part 30.
+- [x] Enforce WJ1 numeric ranges (ice thickness 000-998; discharge 00000-99998; stage height -999 to +9998) per Part 30.
 - [x] Validate Control Data Section code domains (data source flag, report type code, QC process V01/V02/V03) and missing sentinels for lat/lon/elev/call letters.
-- [ ] Remove or explicitly document QC-process truncation behavior (e.g., `V020` -> `V02`) so non-spec lengths do not silently coerce.
+- [x] Remove or explicitly document QC-process truncation behavior (e.g., `V020` -> `V02`) so non-spec lengths do not silently coerce.
 - [x] Validate Control Data Section DATE/TIME domains (YYYYMMDD/HHMM ranges) per Part 2.
-- [ ] Restrict control DATE parsing to `YYYYMMDD` only (reject ISO timestamps and other formats).
+- [x] Restrict control DATE parsing to `YYYYMMDD` only (reject ISO timestamps and other formats).
 - [x] Validate Mandatory Data Section domain codes and sentinels (wind type codes, CAVOK, ceiling determination, visibility variability, special missing rules like variable wind direction).
 - [x] Restrict Mandatory Data Section quality codes for WND/CIG/VIS to {0-7, 9} (currently accepts extended `QUALITY_FLAGS`).
 - [x] Encode Mandatory Data Section edge rules (ceiling unlimited=22000, visibility >160000 clamp, wind type 9 with speed 0000 indicates calm).
@@ -57,13 +57,13 @@
 - [x] Enforce KA extreme-air-temperature code domain (N/M/O/P) and tighten KA temperature quality codes to {0-7, 9, M} per Part 24.
 - [x] Enforce MV present-weather-in-vicinity codes (00-09; 99 missing) and MW manual present-weather codes per Part 28.
 - [x] Ensure MV/MW/AY identifiers with numeric suffixes (MV1-MV7, MW1-MW7, AY1-AY2) map to field rules.
-- [ ] Enforce AU present-weather component code domains (intensity/descriptor/precip/obscuration/other/combination) per Part 5.
+- [x] Enforce AU present-weather component code domains (intensity/descriptor/precip/obscuration/other/combination) per Part 5.
 - [x] Enforce AW automated present-weather code domain (00-99; 99 missing) and quality code set (0-7, 9, M) per Part 5.
-- [ ] Tighten AW automated present-weather code validation to the explicit Part 5 code list (not all `00-98` values).
+- [x] Tighten AW automated present-weather code validation to the explicit Part 5 code list (not all `00-98` values).
 - [x] Enforce CO1 climate division number domain (00-09; 99 missing) per Part 7.
 - [x] Enforce CO1 UTC-LST offset range (-12 to +12; +99 missing) per Part 7.
 - [x] Enforce CO2-CO9 element time-offset ranges (-9999 to +9998; +9999 missing) and element-id domain per Part 7.
-- [ ] Ensure network metadata identifiers with numeric suffixes are matched (CO2-CO9, CT1-CT3, CU1-CU3, CV1-CV3, CW1, CX1-CX3).
+- [x] Ensure network metadata identifiers with numeric suffixes are matched (CO2-CO9, CT1-CT3, CU1-CU3, CV1-CV3, CW1, CX1-CX3).
 - [x] Enforce CV1-CV3 hourly temperature extreme time fields (HHMM 0000-2359; 9999 missing) per Part 11.
 - [x] Enforce ED1 runway direction range (01-36 tens of degrees; 99 missing) and visibility range (0000-5000; 9999 missing) per Part 14.
 - [x] Enforce ME1 geopotential level codes (1-5; 9 missing) per Part 27.

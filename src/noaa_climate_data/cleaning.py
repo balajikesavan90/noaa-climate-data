@@ -366,8 +366,9 @@ def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
     def _normalize_date(series: pd.Series) -> pd.Series:
         text = series.astype(str).str.strip()
         text = text.where(~text.isin({"", "nan", "None"}))
-        parsed = pd.to_datetime(text, errors="coerce", utc=True)
-        return text.where(parsed.notna())
+        match = text.str.fullmatch(r"\d{8}")
+        parsed = pd.to_datetime(text, format="%Y%m%d", errors="coerce", utc=True)
+        return text.where(match & parsed.notna())
 
     def _normalize_time(series: pd.Series) -> pd.Series:
         text = series.astype(str).str.strip()
@@ -419,8 +420,6 @@ def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
     if "QUALITY_CONTROL" in work.columns:
         series = work["QUALITY_CONTROL"].astype(str).str.strip().str.upper()
         normalized = series.where(series.isin(QC_PROCESS_CODES))
-        normalized = normalized.where(~normalized.isna(), series.str.slice(0, 3))
-        normalized = normalized.where(normalized.isin(QC_PROCESS_CODES))
         work["QUALITY_CONTROL"] = normalized.where(normalized.notna())
 
     return work

@@ -403,7 +403,12 @@ def download_location_data(
 
 def _extract_time_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce", utc=True)
+    date_series = pd.to_datetime(df["DATE"], errors="coerce", utc=True)
+    if "DATE_PARSED" in df.columns:
+        fallback = pd.to_datetime(df["DATE_PARSED"], errors="coerce", utc=True)
+        date_series = date_series.fillna(fallback)
+        df = df.drop(columns=["DATE_PARSED"])
+    df["DATE"] = date_series
     df = df.dropna(subset=["DATE"])
     df["Year"] = df["DATE"].dt.year
     df["MonthNum"] = df["DATE"].dt.month
@@ -732,6 +737,9 @@ def process_location_from_raw(
             yearly=raw,
         )
 
+    raw = raw.copy()
+    if "DATE" in raw.columns:
+        raw["DATE_PARSED"] = pd.to_datetime(raw["DATE"], errors="coerce", utc=True)
     cleaned = clean_noaa_dataframe(raw, keep_raw=True)
     cleaned = _extract_time_columns(cleaned)
     if location_id is not None:

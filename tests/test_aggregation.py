@@ -324,6 +324,21 @@ class TestAggregationStrategies:
         assert outputs.monthly.iloc[0]["temperature_c"] == pytest.approx(20.0)
         assert outputs.yearly.iloc[0]["temperature_c"] == pytest.approx(20.0)
 
+    def test_fixed_hour_accepts_iso_timestamp_dates(self):
+        raw = _raw_with_hours(
+            [
+                ("2020-01-01T01:00:00Z", 10.0),
+            ]
+        )
+        outputs = process_location_from_raw(
+            raw,
+            aggregation_strategy="fixed_hour",
+            fixed_hour=1,
+            min_days_per_month=1,
+            min_months_per_year=1,
+        )
+        assert outputs.monthly.iloc[0]["temperature_c"] == pytest.approx(10.0)
+
     def test_hour_day_month_year_rollup(self):
         raw = _raw_with_hours(
             [

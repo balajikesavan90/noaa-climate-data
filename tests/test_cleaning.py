@@ -99,6 +99,12 @@ class TestPrefixRuleMapping:
             ("MV1", "MV*"),
             ("MW2", "MW*"),
             ("AY1", "AY*"),
+            ("CO2", "CO*"),
+            ("CT3", "CT*"),
+            ("CU2", "CU*"),
+            ("CV1", "CV*"),
+            ("CW1", "CW*"),
+            ("CX3", "CX*"),
         ],
     )
     def test_numeric_suffixes_use_prefix_rules(self, prefix: str, expected_code: str):
@@ -315,11 +321,32 @@ class TestSentinelsInCleanedOutput:
         assert result["OE1__part4"] is None
         assert result["OE1__part5"] is None
 
+    def test_oe1_requires_24_hour_period(self):
+        result = clean_value_quality("1,12,00010,180,1200,4", "OE1")
+        assert result["OE1__part2"] is None
+        assert result["OE1__part3"] == pytest.approx(0.1)
+
+    def test_oe1_speed_range_enforced(self):
+        result = clean_value_quality("1,24,20001,180,1200,4", "OE1")
+        assert result["OE1__part3"] is None
+
+    def test_oe1_direction_range_enforced(self):
+        result = clean_value_quality("1,24,00010,361,1200,4", "OE1")
+        assert result["OE1__part4"] is None
+
+    def test_oe1_occurrence_time_range_enforced(self):
+        result = clean_value_quality("1,24,00010,180,2360,4", "OE1")
+        assert result["OE1__part5"] is None
+
     def test_wa1_missing_parts(self):
         result = clean_value_quality("9,999,9,9", "WA1")
         assert result["WA1__part1"] is None
         assert result["WA1__part2"] is None
         assert result["WA1__part3"] is None
+
+    def test_wa1_invalid_thickness(self):
+        result = clean_value_quality("1,999,1,1", "WA1")
+        assert result["WA1__part2"] is None
 
     def test_wd1_missing_parts(self):
         result = clean_value_quality("99,999,99,9,9,9,99,9,999,999,9", "WD1")
@@ -334,12 +361,72 @@ class TestSentinelsInCleanedOutput:
         assert result["WD1__part9"] is None
         assert result["WD1__part10"] is None
 
+    def test_wd1_invalid_edge_bearing_code(self):
+        result = clean_value_quality("11,050,06,1,1,1,00,1,050,010,1", "WD1")
+        assert result["WD1__part1"] is None
+
+    def test_wd1_invalid_concentration_rate(self):
+        result = clean_value_quality("01,101,06,1,1,1,00,1,050,010,1", "WD1")
+        assert result["WD1__part2"] is None
+
+    def test_wd1_invalid_non_uniform_code(self):
+        result = clean_value_quality("01,050,05,1,1,1,00,1,050,010,1", "WD1")
+        assert result["WD1__part3"] is None
+
+    def test_wd1_invalid_ship_position_code(self):
+        result = clean_value_quality("01,050,06,3,1,1,00,1,050,010,1", "WD1")
+        assert result["WD1__part4"] is None
+
+    def test_wd1_invalid_penetrability_code(self):
+        result = clean_value_quality("01,050,06,1,0,1,00,1,050,010,1", "WD1")
+        assert result["WD1__part5"] is None
+
+    def test_wd1_invalid_ice_trend_code(self):
+        result = clean_value_quality("01,050,06,1,1,0,00,1,050,010,1", "WD1")
+        assert result["WD1__part6"] is None
+
+    def test_wd1_invalid_development_code(self):
+        result = clean_value_quality("01,050,06,1,1,1,10,1,050,010,1", "WD1")
+        assert result["WD1__part7"] is None
+
+    def test_wd1_invalid_growler_presence_code(self):
+        result = clean_value_quality("01,050,06,1,1,1,00,3,050,010,1", "WD1")
+        assert result["WD1__part8"] is None
+
+    def test_wd1_invalid_growler_quantity(self):
+        result = clean_value_quality("01,050,06,1,1,1,00,1,999,010,1", "WD1")
+        assert result["WD1__part9"] is None
+
+    def test_wd1_invalid_iceberg_quantity(self):
+        result = clean_value_quality("01,050,06,1,1,1,00,1,050,999,1", "WD1")
+        assert result["WD1__part10"] is None
+
     def test_wg1_missing_parts(self):
         result = clean_value_quality("99,99,99,99,99,9", "WG1")
         assert result["WG1__part1"] is None
         assert result["WG1__part2"] is None
         assert result["WG1__part3"] is None
         assert result["WG1__part4"] is None
+        assert result["WG1__part5"] is None
+
+    def test_wg1_invalid_edge_bearing_code(self):
+        result = clean_value_quality("11,10,01,01,01,1", "WG1")
+        assert result["WG1__part1"] is None
+
+    def test_wg1_invalid_edge_distance(self):
+        result = clean_value_quality("01,99,01,01,01,1", "WG1")
+        assert result["WG1__part2"] is None
+
+    def test_wg1_invalid_edge_orientation_code(self):
+        result = clean_value_quality("01,10,10,01,01,1", "WG1")
+        assert result["WG1__part3"] is None
+
+    def test_wg1_invalid_formation_type_code(self):
+        result = clean_value_quality("01,10,01,10,01,1", "WG1")
+        assert result["WG1__part4"] is None
+
+    def test_wg1_invalid_navigation_effect_code(self):
+        result = clean_value_quality("01,10,01,01,10,1", "WG1")
         assert result["WG1__part5"] is None
 
     def test_wj1_missing_parts(self):
@@ -351,6 +438,30 @@ class TestSentinelsInCleanedOutput:
         assert result["WJ1__part5"] is None
         assert result["WJ1__part6"] is None
         assert result["WJ1__part7"] is None
+
+    def test_wj1_invalid_primary_ice_code(self):
+        result = clean_value_quality("010,01000,74,00,0100,1,B", "WJ1")
+        assert result["WJ1__part3"] is None
+
+    def test_wj1_invalid_secondary_ice_code(self):
+        result = clean_value_quality("010,01000,00,74,0100,1,B", "WJ1")
+        assert result["WJ1__part4"] is None
+
+    def test_wj1_invalid_slush_condition(self):
+        result = clean_value_quality("010,01000,00,00,0100,4,B", "WJ1")
+        assert result["WJ1__part6"] is None
+
+    def test_wj1_invalid_ice_thickness(self):
+        result = clean_value_quality("1000,01000,00,00,0100,1,B", "WJ1")
+        assert result["WJ1__part1"] is None
+
+    def test_wj1_invalid_discharge_rate(self):
+        result = clean_value_quality("010,100000,00,00,0100,1,B", "WJ1")
+        assert result["WJ1__part2"] is None
+
+    def test_wj1_invalid_stage_height(self):
+        result = clean_value_quality("010,01000,00,00,10000,1,B", "WJ1")
+        assert result["WJ1__part5"] is None
 
 
 # ── 2. Scale factors (÷10) ──────────────────────────────────────────────
@@ -756,6 +867,13 @@ class TestQualityNullsCorrectPart:
         assert result["AU1__part5"] is None
         assert result["AU1__part6"] is None
 
+    def test_au_invalid_component_codes(self):
+        result = clean_value_quality("5,9,10,9,6,4,1", "AU1")
+        assert result["AU1__part1"] is None
+        assert result["AU1__part3"] is None
+        assert result["AU1__part5"] is None
+        assert result["AU1__part6"] is None
+
     def test_at_quality_rejects_8(self):
         result = clean_value_quality("AU,01,FG,8", "AT1")
         assert result["AT1__part1"] is None
@@ -779,6 +897,14 @@ class TestQualityNullsCorrectPart:
     def test_aw_quality_rejects_8(self):
         result = clean_value_quality("01,8", "AW1")
         assert result["AW1__part1"] is None
+
+    def test_aw_invalid_code(self):
+        result = clean_value_quality("06,1", "AW1")
+        assert result["AW1__part1"] is None
+
+    def test_aw_valid_code(self):
+        result = clean_value_quality("89,1", "AW1")
+        assert result["AW1__part1"] == pytest.approx(89.0)
 
     def test_cb_quality_rejects_2(self):
         result = clean_value_quality("05,+000123,2,0", "CB1")
@@ -1380,7 +1506,7 @@ class TestControlAndMandatoryNormalization:
                 "CALL_SIGN": ["99999", "KJFK"],
                 "SOURCE": ["9", "4"],
                 "REPORT_TYPE": ["FM-12", "BOGUS"],
-                "QUALITY_CONTROL": ["V020", "V99"],
+                "QUALITY_CONTROL": ["V020", "V02"],
             }
         )
         cleaned = clean_noaa_dataframe(df, keep_raw=True)
@@ -1390,14 +1516,14 @@ class TestControlAndMandatoryNormalization:
         assert pd.isna(cleaned.loc[0, "CALL_SIGN"])
         assert pd.isna(cleaned.loc[0, "SOURCE"])
         assert cleaned.loc[0, "REPORT_TYPE"] == "FM-12"
-        assert cleaned.loc[0, "QUALITY_CONTROL"] == "V02"
+        assert pd.isna(cleaned.loc[0, "QUALITY_CONTROL"])
         assert cleaned.loc[1, "LATITUDE"] == pytest.approx(45.0)
         assert cleaned.loc[1, "LONGITUDE"] == pytest.approx(-120.0)
         assert cleaned.loc[1, "ELEVATION"] == pytest.approx(100.0)
         assert cleaned.loc[1, "CALL_SIGN"] == "KJFK"
         assert cleaned.loc[1, "SOURCE"] == "4"
         assert cleaned.loc[1, "REPORT_TYPE"] == "BOGUS"
-        assert pd.isna(cleaned.loc[1, "QUALITY_CONTROL"])
+        assert cleaned.loc[1, "QUALITY_CONTROL"] == "V02"
 
     def test_control_date_time_validation(self):
         df = pd.DataFrame(
@@ -1412,14 +1538,14 @@ class TestControlAndMandatoryNormalization:
         assert pd.isna(cleaned.loc[1, "DATE"])
         assert pd.isna(cleaned.loc[1, "TIME"])
 
-    def test_control_date_accepts_iso_timestamps(self):
+    def test_control_date_rejects_iso_timestamps(self):
         df = pd.DataFrame(
             {
                 "DATE": ["2024-01-31T23:59:00Z", "2024-13-01T00:00:00Z"],
             }
         )
         cleaned = clean_noaa_dataframe(df, keep_raw=True)
-        assert cleaned.loc[0, "DATE"] == "2024-01-31T23:59:00Z"
+        assert pd.isna(cleaned.loc[0, "DATE"])
         assert pd.isna(cleaned.loc[1, "DATE"])
 
     def test_mandatory_clamps_and_calm_wind(self):
