@@ -2,7 +2,17 @@
 
 ## Big picture
 - Python rewrite of legacy R scripts; the pipeline is split across `noaa_client` (remote listing/download), `cleaning` (comma-encoded field expansion), and `pipeline` (end-to-end transforms). See [src/noaa_climate_data/noaa_client.py](src/noaa_climate_data/noaa_client.py), [src/noaa_climate_data/cleaning.py](src/noaa_climate_data/cleaning.py), and [src/noaa_climate_data/pipeline.py](src/noaa_climate_data/pipeline.py).
-- Data flow: list years/files → count year coverage → select full-coverage stations → download station CSVs → clean → add time columns → filter “complete” months/years → aggregate to monthly/yearly outputs.
+- Target outputs for researchers: `raw_parquet` (immutable ingest), `cleaned_parquet` (standardized columns + quality flags), domain splits (temperature, dew, rainfall, wind, etc), and domain aggregates (monthly/yearly) built from the split datasets.
+- Current top focus: make the cleaned dataset contract accurate and stable; downstream domain splits and aggregates come after cleaning quality is locked in.
+- Data flow (current): list years/files → count year coverage → select full-coverage stations → download station CSVs → clean → add time columns → filter complete months/years → aggregate to monthly/yearly outputs.
+
+## Source map (src/noaa_climate_data)
+- [src/noaa_climate_data/__init__.py](src/noaa_climate_data/__init__.py): Package entry point; exposes public package metadata and keeps imports minimal to avoid side effects.
+- [src/noaa_climate_data/constants.py](src/noaa_climate_data/constants.py): Shared constants (URLs, field scales, quality flags) used by the client, cleaning, and pipeline modules.
+- [src/noaa_climate_data/noaa_client.py](src/noaa_climate_data/noaa_client.py): Remote listing/download helpers for NOAA Global Hourly CSVs; provides inputs to the pipeline and CLI.
+- [src/noaa_climate_data/cleaning.py](src/noaa_climate_data/cleaning.py): Parsing and expansion of NOAA comma-encoded fields, scale/quality handling, and data normalization prior to aggregation.
+- [src/noaa_climate_data/pipeline.py](src/noaa_climate_data/pipeline.py): Orchestrates end-to-end transforms, including time columns, completeness filters, best-hour selection, and aggregation.
+- [src/noaa_climate_data/cli.py](src/noaa_climate_data/cli.py): CLI entry points that wire together the client, cleaning, and pipeline flows for file-listing and station processing.
 
 ## Key workflows (Poetry)
 - Install: `poetry install` (from [README.md](README.md)).
