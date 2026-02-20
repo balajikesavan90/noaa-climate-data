@@ -405,6 +405,8 @@ class FieldPartRule:
     max_value: float | None = None
     kind: str = "numeric"
     agg: str = "mean"  # mean | max | min | mode | sum | drop | circular_mean
+    token_width: int | None = None  # Expected fixed width for token validation (A4)
+    token_pattern: re.Pattern[str] | None = None  # Token format pattern (A4)
 
 
 @dataclass(frozen=True)
@@ -3721,22 +3723,40 @@ _REPEATED_IDENTIFIER_RANGES: dict[str, range] = {
 
 
 def is_valid_repeated_identifier(prefix: str) -> bool | None:
+    """Validate repeated identifier format with exact suffix digit count.
+    
+    Returns:
+        True if valid repeated identifier (e.g., OA1, CO3, RH2)
+        False if malformed (e.g., OA01, CO02, RH0001 - wrong digit count)
+        None if not a repeated identifier pattern
+    """
     for key, allowed in _REPEATED_IDENTIFIER_RANGES.items():
         if prefix.startswith(key):
             suffix = prefix[len(key):]
-            if not suffix.isdigit():
+            # Must be exactly 1 digit for all current families (A2)
+            if not suffix.isdigit() or len(suffix) != 1:
                 return False
             return int(suffix) in allowed
     return None
 
 
 def is_valid_eqd_identifier(prefix: str) -> bool | None:
+    """Validate EQD identifier format with strict suffix requirements.
+    
+    Returns:
+        True if valid EQD identifier (e.g., Q01-Q99, N01-N99)
+        False if malformed (e.g., Q0, Q100, Q01A, N001 - wrong format)
+        None if not an EQD identifier pattern
+    """
+    # Reject single-digit suffixes (Q0-Q9, N0-N9)
     if re.fullmatch(r"[QPRCDN]\d", prefix):
         return False
+    # Must be exactly 2 digits, no letters mixed in (A2)
     match = re.fullmatch(r"([QPRCDN])(\d{2})", prefix)
     if not match:
         return None
     idx = int(match.group(2))
+    # Reject 00 suffix
     return idx != 0
 
 
@@ -3755,6 +3775,75 @@ def get_field_rule(prefix: str) -> FieldRule | None:
         if prefix.startswith(key):
             return rule
     return None
+
+
+def get_expected_part_count(identifier: str) -> int | None:
+    """Get expected comma-part count for an identifier.
+    
+    Args:
+        identifier: NOAA field identifier (e.g., 'WND', 'TMP', 'OA1')
+    
+    Returns:
+        Expected number of comma-separated parts, or None if identifier unknown
+    """
+    rule = get_field_rule(identifier)
+    if rule is None:
+        return None
+    return len(rule.parts)
+
+
+def get_token_width_rules(identifier: str, part: int) -> dict[str, int | re.Pattern[str]] | None:
+    """Get fixed-width validation rules for a specific part of an identifier.
+    
+    Args:
+        identifier: NOAA field identifier (e.g., 'WND', 'TMP')
+        part: Part index (1-based)
+    
+    Returns:
+        Dict with 'width' and/or 'pattern' keys, or None if no width rules defined
+    """
+    rule = get_field_rule(identifier)
+    if rule is None or part not in rule.parts:
+        return None
+    part_rule = rule.parts[part]
+    result = {}
+    if part_rule.token_width is not None:
+        result["width"] = part_rule.token_width
+    if part_rule.token_pattern is not None:
+        result["pattern"] = part_rule.token_pattern
+    return result if result else None
+
+
+def _build_known_identifiers() -> set[str]:
+    """Build comprehensive set of all valid NOAA identifiers for allowlist (A1).
+    
+    Returns:
+        Set containing all valid identifier names that should be expanded
+    """
+    identifiers = set()
+    
+    # Static identifiers from FIELD_RULES
+    identifiers.update(FIELD_RULES.keys())
+    
+    # Standalone and prefix identifiers from FIELD_RULE_PREFIXES
+    # This includes HAIL, ED1, IA1, IA2, etc.
+    identifiers.update(FIELD_RULE_PREFIXES.keys())
+    
+    # Repeated identifier families (e.g., OA1-OA3, CO1-CO9)
+    for prefix, index_range in _REPEATED_IDENTIFIER_RANGES.items():
+        for idx in index_range:
+            identifiers.add(f"{prefix}{idx}")
+    
+    # EQD identifiers (Q01-Q99, P01-P99, R01-R99, C01-C99, D01-D99, N01-N99)
+    for letter in "QPRCDN":
+        for idx in range(1, 100):  # 01-99
+            identifiers.add(f"{letter}{idx:02d}")
+    
+    return identifiers
+
+
+# Allowlist of all valid NOAA identifiers (A1)
+KNOWN_IDENTIFIERS: set[str] = _build_known_identifiers()
 
 
 # ── Column classification helpers ────────────────────────────────────────

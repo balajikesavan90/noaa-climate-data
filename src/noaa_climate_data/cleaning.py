@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 import re
 from typing import Iterable
 
 import pandas as pd
+
+# Module-level logger for strict parsing warnings
+logger = logging.getLogger(__name__)
 
 from .constants import (
     ADDITIONAL_DATA_PREFIXES,
@@ -14,6 +18,7 @@ from .constants import (
     EQD_ELEMENT_NAMES,
     EQD_FLAG1_CODES,
     EQD_FLAG2_CODES,
+    KNOWN_IDENTIFIERS,
     LEGACY_EQD_MSD_PATTERN,
     LEGACY_EQD_PARAMETER_CODES,
     QNN_ELEMENT_IDENTIFIERS,
@@ -22,8 +27,10 @@ from .constants import (
     QC_PROCESS_CODES,
     REPORT_TYPE_CODES,
     FieldPartRule,
+    get_expected_part_count,
     get_field_registry_entry,
     get_field_rule,
+    get_token_width_rules,
     is_valid_eqd_identifier,
     is_valid_repeated_identifier,
     to_friendly_column,
@@ -228,7 +235,19 @@ def _expand_parsed(
     parsed: ParsedField,
     prefix: str,
     allow_quality: bool,
+    strict_mode: bool = True,
 ) -> dict[str, object]:
+    """Expand multi-part parsed field into column dictionary.
+
+    Args:
+        parsed: ParsedField with parts, values, and quality
+        prefix: Field identifier
+        allow_quality: Whether to include quality column
+        strict_mode: If True, enforce token width validation (A4)
+
+    Returns:
+        Dict mapping output column names to values
+    """
     payload: dict[str, object] = {}
     is_variable_direction = (
         prefix == "WND"
@@ -302,6 +321,35 @@ def _expand_parsed(
         if _is_missing_value(part, part_rule):
             payload[key] = None
             continue
+        
+        # A4: Strict mode token width/format validation
+        if strict_mode:
+            width_rules = get_token_width_rules(prefix, idx)
+            if width_rules:
+                part_stripped = part.strip()
+                # Check token width
+                if 'width' in width_rules:
+                    expected_width = width_rules['width']
+                    # Handle signed values (e.g., temperature)
+                    test_value = part_stripped.lstrip('+-')
+                    if len(test_value) != expected_width:
+                        logger.warning(
+                            f"[PARSE_STRICT] Rejected {prefix} part {idx}: "
+                            f"token width {len(test_value)}, expected {expected_width}"
+                        )
+                        payload[key] = None
+                        continue
+                # Check token pattern
+                if 'pattern' in width_rules:
+                    pattern = width_rules['pattern']
+                    if not pattern.fullmatch(part_stripped):
+                        logger.warning(
+                            f"[PARSE_STRICT] Rejected {prefix} part {idx}: "
+                            f"token format mismatch (pattern validation failed)"
+                        )
+                        payload[key] = None
+                        continue
+        
         if part_rule and part_rule.kind == "quality" and part_rule.allowed_quality:
             if part.strip().upper() not in part_rule.allowed_quality:
                 payload[key] = None
@@ -359,18 +407,49 @@ def _is_value_quality_field(prefix: str, part_count: int) -> bool:
     return len(rule.parts) == 1
 
 
-def clean_value_quality(raw: str, prefix: str) -> dict[str, object]:
+def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict[str, object]:
+    """Parse and validate a comma-encoded NOAA field value.
+
+    Args:
+        raw: Raw comma-separated field value
+        prefix: Field identifier (column name)
+        strict_mode: If True, enforce validation rules (A2-A4) with logging
+
+    Returns:
+        Dict mapping output column names to parsed values, or empty dict if invalid
+    """
     eqd_valid = is_valid_eqd_identifier(prefix)
     if eqd_valid is False:
+        if strict_mode:
+            logger.warning(f"[PARSE_STRICT] Rejected {prefix}: invalid EQD identifier format")
         return {}
     repeated_valid = is_valid_repeated_identifier(prefix)
     if repeated_valid is False:
+        if strict_mode:
+            logger.warning(f"[PARSE_STRICT] Rejected {prefix}: invalid repeated identifier format")
         return {}
     parsed = parse_field(raw)
+    
+    # A3: Strict mode arity validation - check expected vs actual part count
+    if strict_mode:
+        expected_parts = get_expected_part_count(prefix)
+        if expected_parts is not None and len(parsed.parts) != expected_parts:
+            if len(parsed.parts) < expected_parts:
+                logger.warning(
+                    f"[PARSE_STRICT] Rejected {prefix}: truncated payload - "
+                    f"expected {expected_parts} parts, got {len(parsed.parts)}"
+                )
+            else:
+                logger.warning(
+                    f"[PARSE_STRICT] Rejected {prefix}: extra payload - "
+                    f"expected {expected_parts} parts, got {len(parsed.parts)}"
+                )
+            return {}
+    
     if len(parsed.parts) != 2:
-        return _expand_parsed(parsed, prefix, allow_quality=True)
+        return _expand_parsed(parsed, prefix, allow_quality=True, strict_mode=strict_mode)
     if not _is_value_quality_field(prefix, len(parsed.parts)):
-        return _expand_parsed(parsed, prefix, allow_quality=True)
+        return _expand_parsed(parsed, prefix, allow_quality=True, strict_mode=strict_mode)
     field_rule = get_field_rule(prefix)
     part_rule = field_rule.parts.get(1) if field_rule else None
     entry = get_field_registry_entry(prefix, 1, suffix="value")
@@ -486,7 +565,11 @@ def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
     return work
 
 
-def clean_noaa_dataframe(df: pd.DataFrame, keep_raw: bool = True) -> pd.DataFrame:
+def clean_noaa_dataframe(
+    df: pd.DataFrame,
+    keep_raw: bool = True,
+    strict_mode: bool = True,
+) -> pd.DataFrame:
     """Expand NOAA comma-encoded fields into parsed numeric columns.
 
     For fields with the pattern value,quality this will create
@@ -494,6 +577,16 @@ def clean_noaa_dataframe(df: pd.DataFrame, keep_raw: bool = True) -> pd.DataFram
     quality filter. For fields with additional parts, the parts are expanded
     into `<column>__partN` columns and, when available, a
     `<column>__quality` column.
+
+    Args:
+        df: Input DataFrame with NOAA Global Hourly data
+        keep_raw: If True, keep original raw columns alongside expanded ones
+        strict_mode: If True, only expand known NOAA identifiers and enforce
+                     validation rules (A1-A4). If False, use legacy permissive
+                     parsing. Rejections are logged with [PARSE_STRICT] prefix.
+
+    Returns:
+        DataFrame with expanded and cleaned columns
     """
     cleaned = df.copy()
     if "ADD" in cleaned.columns:
@@ -501,9 +594,33 @@ def clean_noaa_dataframe(df: pd.DataFrame, keep_raw: bool = True) -> pd.DataFram
         add_mask = add_series.replace("", pd.NA).dropna().eq("ADD")
         if add_mask.empty or add_mask.all():
             cleaned = cleaned.drop(columns=["ADD"])
+
+    # Priority parsing: handle REM before generic expansion to preserve typed parsing (step 2)
+    processed_columns = set()
+    if "REM" in cleaned.columns:
+        remark_types = []
+        remark_texts = []
+        for value in cleaned["REM"]:
+            remark_type, remark_text = _parse_remark(value)
+            remark_types.append(remark_type)
+            remark_texts.append(remark_text)
+        cleaned["REM__type"] = remark_types
+        cleaned["REM__text"] = remark_texts
+        processed_columns.add("REM")
+
     expansion_frames: list[pd.DataFrame] = []
 
     for column in cleaned.columns:
+        # Skip columns already processed by priority parsing
+        if column in processed_columns:
+            continue
+
+        # A1: Strict mode allowlist gate - only expand known NOAA identifiers
+        # Use get_field_rule() to leverage prefix matching logic (e.g., KA1 via KA prefix)
+        if strict_mode and get_field_rule(column) is None:
+            # Skip expansion for unknown identifiers, keep raw column
+            continue
+
         series = cleaned[column]
         if not pd.api.types.is_object_dtype(series) and not pd.api.types.is_string_dtype(series):
             continue
@@ -516,7 +633,7 @@ def clean_noaa_dataframe(df: pd.DataFrame, keep_raw: bool = True) -> pd.DataFram
             if value == "":
                 parsed_rows.append({})
                 continue
-            payload = clean_value_quality(value, column)
+            payload = clean_value_quality(value, column, strict_mode=strict_mode)
             parsed_rows.append(payload)
 
         expanded = pd.DataFrame(parsed_rows, index=cleaned.index)
@@ -527,16 +644,7 @@ def clean_noaa_dataframe(df: pd.DataFrame, keep_raw: bool = True) -> pd.DataFram
     if expansion_frames:
         cleaned = pd.concat([cleaned] + expansion_frames, axis=1)
 
-    if "REM" in cleaned.columns:
-        remark_types = []
-        remark_texts = []
-        for value in cleaned["REM"]:
-            remark_type, remark_text = _parse_remark(value)
-            remark_types.append(remark_type)
-            remark_texts.append(remark_text)
-        cleaned["REM__type"] = remark_types
-        cleaned["REM__text"] = remark_texts
-
+    # QNN parsing (REM already handled in priority parsing above)
     if "QNN" in cleaned.columns:
         qnn_elements = []
         qnn_flags = []
