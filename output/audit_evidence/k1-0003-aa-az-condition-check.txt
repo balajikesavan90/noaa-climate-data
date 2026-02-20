@@ -1,0 +1,3 @@
+{'AA1__part1': 1.0, 'AA1__part2': 1.0, 'AA1__part3': 'Z', 'AA1__part4': 1.0, 'AA1__part1__qc_pass': True, 'AA1__part1__qc_status': 'PASS', 'AA1__part1__qc_reason': None, 'AA1__part2__qc_pass': True, 'AA1__part2__qc_status': 'PASS', 'AA1__part2__qc_reason': None, 'AA1__quality': '1'}
+{'AZ1__part1': 1.0, 'AZ1__part2': 1.0, 'AZ1__part3': 24.0, 'AZ1__part4': 1.0}
+{'AZ1__part1': 1.0, 'AZ1__part2': 1.0, 'AZ1__part3': None, 'AZ1__part4': 1.0}

@@ -1,0 +1,1 @@
+[{'remarks_type_code': 'SYN', 'remarks_text': '052AAXX 01004'}, {'remarks_type_code': 'MET', 'remarks_text': '003ABC'}]

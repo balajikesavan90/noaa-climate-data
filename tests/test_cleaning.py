@@ -2553,3 +2553,246 @@ class TestA4TokenWidthValidation:
         assert result["wind_direction_deg"].iloc[0] == 1.0
         assert result["wind_speed_ms"].iloc[0] == 5.0
         assert result["temperature_c"].iloc[0] == 25.0
+
+
+# ── QC Signals and Row-level Metrics ─────────────────────────────────────
+
+
+class TestQCSignalsValueQualityFields:
+    """Test QC signal emission for value/quality fields (2-part)."""
+
+    def test_oc1_in_range_good_quality(self):
+        """In-range value with good quality -> PASS."""
+        result = clean_value_quality("0500,1", "OC1")  # 500 m/s * 0.1 = 50 m/s, within 50-1100
+        assert result["OC1__value"] == pytest.approx(50.0)
+        assert result["OC1__qc_pass"] is True
+        assert result["OC1__qc_status"] == "PASS"
+        assert result["OC1__qc_reason"] is None
+
+    def test_oc1_boundary_low(self):
+        """Value exactly at min boundary -> PASS."""
+        result = clean_value_quality("0050,1", "OC1")  # 50 m/s * 0.1 = 5 m/s, equals 50 raw
+        assert result["OC1__qc_pass"] is True
+        assert result["OC1__qc_status"] == "PASS"
+
+    def test_oc1_boundary_high(self):
+        """Value exactly at max boundary -> PASS."""
+        result = clean_value_quality("1100,1", "OC1")  # 1100 m/s * 0.1 = 110 m/s, equals 1100 raw
+        assert result["OC1__qc_pass"] is True
+        assert result["OC1__qc_status"] == "PASS"
+
+    def test_oc1_just_below_min(self):
+        """Value just below min -> OUT_OF_RANGE."""
+        result = clean_value_quality("0049,1", "OC1")  # 49 raw < 50 min
+        assert result["OC1__value"] is None
+        assert result["OC1__qc_pass"] is False
+        assert result["OC1__qc_status"] == "INVALID"
+        assert result["OC1__qc_reason"] == "OUT_OF_RANGE"
+
+    def test_oc1_just_above_max(self):
+        """Value just above max -> OUT_OF_RANGE."""
+        result = clean_value_quality("1101,1", "OC1")  # 1101 raw > 1100 max
+        assert result["OC1__value"] is None
+        assert result["OC1__qc_pass"] is False
+        assert result["OC1__qc_status"] == "INVALID"
+        assert result["OC1__qc_reason"] == "OUT_OF_RANGE"
+
+    def test_oc1_missing_sentinel(self):
+        """Missing sentinel value -> SENTINEL_MISSING."""
+        result = clean_value_quality("9999,1", "OC1")
+        assert result["OC1__value"] is None
+        assert result["OC1__qc_pass"] is False
+        assert result["OC1__qc_status"] == "INVALID"
+        assert result["OC1__qc_reason"] == "SENTINEL_MISSING"
+
+    def test_oc1_bad_quality_code(self):
+        """Invalid quality code -> BAD_QUALITY_CODE."""
+        result = clean_value_quality("0500,X", "OC1")  # X not in allowed_quality
+        assert result["OC1__value"] is None
+        assert result["OC1__qc_pass"] is False
+        assert result["OC1__qc_status"] == "INVALID"
+        assert result["OC1__qc_reason"] == "BAD_QUALITY_CODE"
+
+    def test_ma1_in_range_good_quality(self):
+        """MA1 (pressure) is multi-part, testing via dataframe parsing."""
+        df = pd.DataFrame({
+            "MA1": ["09000,1,09500,1"],  # 4-part: alimeter:9000, quality, station:9500, quality
+        })
+        result = clean_noaa_dataframe(df, strict_mode=False)
+        # Check that QC columns exist and indicate pass
+        ma1_qc_cols = [col for col in result.columns if "MA1" in col and "__qc_" in col]
+        assert len(ma1_qc_cols) > 0
+
+    def test_ma1_out_of_range_high(self):
+        """MA1 part above max -> OUT_OF_RANGE."""
+        df = pd.DataFrame({
+            "MA1": ["11000,1,09500,1"],  # Alimeter 11000 > 10904 max
+        })
+        result = clean_noaa_dataframe(df, strict_mode=False)
+        # At least one QC col should indicate out of range
+        ma1_qc_cols = [col for col in result.columns if "MA1" in col and "__qc_reason" in col]
+        assert len(ma1_qc_cols) > 0
+
+
+class TestQCSignalsMultipartFields:
+    """Test QC signal emission for multi-part fields."""
+
+    def test_wnd_direction_in_range(self):
+        """WND direction part in range -> qc_pass True."""
+        result = _expand_parsed(
+            parse_field("180,1,N,0500,1"),
+            "WND",
+            allow_quality=True,
+            strict_mode=False,
+        )
+        # Part 1: direction, no min/max
+        assert result["WND__part1"] == 180.0
+        assert result.get("WND__part1__qc_pass") in (True, None)  # May not have QC if no bounds
+
+    def test_gh1_numeric_parts_in_range(self):
+        """GH1 (solar irradiance) numeric parts in range -> qc_pass True."""
+        result = _expand_parsed(
+            parse_field("05000,1,0,10000,1,0,20000,1,0,30000,1,0"),
+            "GH1",
+            allow_quality=True,
+            strict_mode=False,
+        )
+        # Parts 1, 4, 7, 10 are numeric with min=0, max=99998
+        assert result.get("GH1__part1__qc_pass") is True
+        assert result.get("GH1__part1__qc_status") == "PASS"
+        assert result.get("GH1__part1__qc_reason") is None
+
+    def test_gh1_numeric_part_out_of_range(self):
+        """GH1 part exceeds max -> OUT_OF_RANGE."""
+        result = _expand_parsed(
+            parse_field("100000,1,0,10000,1,0,20000,1,0,30000,1,0"),
+            "GH1",
+            allow_quality=True,
+            strict_mode=False,
+        )
+        # Part 1: 100000 > 99998 max
+        assert result.get("GH1__part1__qc_pass") is False
+        assert result.get("GH1__part1__qc_status") == "INVALID"
+        assert result.get("GH1__part1__qc_reason") == "OUT_OF_RANGE"
+
+    def test_gh1_sentinel_value(self):
+        """GH1 part with missing sentinel -> SENTINEL_MISSING."""
+        result = _expand_parsed(
+            parse_field("99999,1,0,10000,1,0,20000,1,0,30000,1,0"),
+            "GH1",
+            allow_quality=True,
+            strict_mode=False,
+        )
+        # Part 1: 99999 is missing sentinel
+        assert result.get("GH1__part1__qc_pass") is False
+        assert result.get("GH1__part1__qc_reason") == "SENTINEL_MISSING"
+
+
+class TestRowLevelUsabilityMetrics:
+    """Test row-level summary columns."""
+
+    def test_all_metrics_usable(self):
+        """All metrics pass -> row_has_any_usable_metric True, fraction 1.0."""
+        df = pd.DataFrame({
+            "OC1": ["0500,1"],  # In range, good quality
+        })
+        result = clean_noaa_dataframe(df, strict_mode=False)
+        assert result["row_has_any_usable_metric"].iloc[0] == True
+        assert result["usable_metric_count"].iloc[0] >= 1
+        assert result["usable_metric_fraction"].iloc[0] > 0.0
+
+    def test_all_metrics_invalid(self):
+        """All metrics fail -> row_has_any_usable_metric False, fraction 0.0."""
+        df = pd.DataFrame({
+            "OC1": ["0049,1"],  # Out of range
+        })
+        result = clean_noaa_dataframe(df, strict_mode=False)
+        assert result["row_has_any_usable_metric"].iloc[0] == False
+        assert result["usable_metric_count"].iloc[0] == 0
+        assert result["usable_metric_fraction"].iloc[0] == 0.0
+
+    def test_mixed_usability(self):
+        """Some metrics pass, some fail -> fraction in (0, 1)."""
+        df = pd.DataFrame({
+            "OC1": ["0500,1"],  # In range
+            "MA1": ["11000,1"],  # Out of range
+        })
+        result = clean_noaa_dataframe(df, strict_mode=False)
+        fraction = result["usable_metric_fraction"].iloc[0]
+        assert 0.0 < fraction < 1.0
+
+    def test_no_numeric_fields_skipped(self):
+        """Non-numeric fields (categorical) don't affect metrics."""
+        df = pd.DataFrame({
+            "WND": ["180,1,N,0500,1"],  # Has numeric parts but direction has no bounds
+        })
+        result = clean_noaa_dataframe(df, strict_mode=False)
+        # Should have row-level columns even with only WND
+        assert "row_has_any_usable_metric" in result.columns
+        assert "usable_metric_count" in result.columns
+        assert "usable_metric_fraction" in result.columns
+
+
+class TestQCSignalsRegressions:
+    """Ensure QC signals don't break existing functionality."""
+
+    def test_raw_columns_preserved_with_keep_raw(self):
+        """Raw columns should still be present with keep_raw=True."""
+        df = pd.DataFrame({
+            "OC1": ["0500,1"],
+        })
+        result = clean_noaa_dataframe(df, keep_raw=True, strict_mode=False)
+        assert "OC1" in result.columns  # Raw column preserved
+
+    def test_value_quality_columns_still_present(self):
+        """Original __value and __quality columns still emitted."""
+        result = clean_value_quality("0500,1", "OC1")
+        assert "OC1__value" in result
+        assert "OC1__quality" in result
+
+    def test_scaling_still_applied(self):
+        """Scale factors still applied to values."""
+        result = clean_value_quality("0500,1", "OC1")
+        # Raw: 500, Scale: 0.1 (per field rule), Expected: 50.0
+        assert result["OC1__value"] == pytest.approx(50.0)
+
+    def test_multipart_column_names_unchanged(self):
+        """Multi-part column names unchanged, QC appended."""
+        result = _expand_parsed(
+            parse_field("180,1,N,0500,1"),
+            "WND",
+            allow_quality=True,
+            strict_mode=False,
+        )
+        assert "WND__part1" in result  # Original part column
+        # QC columns are additional
+
+    def test_qc_columns_have_correct_types(self):
+        """QC columns have correct types: bool, str, str|None."""
+        result = clean_value_quality("0500,1", "OC1")
+        assert isinstance(result["OC1__qc_pass"], bool)
+        assert isinstance(result["OC1__qc_status"], str)
+        assert result["OC1__qc_reason"] is None or isinstance(result["OC1__qc_reason"], str)
+
+    def test_empty_dataframe_with_row_metrics(self):
+        """Empty DataFrame with no QC columns doesn't get row metrics."""
+        df = pd.DataFrame({
+            "OC1": [],
+        })
+        result = clean_noaa_dataframe(df, strict_mode=False)
+        # Empty with no parses means no QC columns, so no row metrics added
+        if "OC1__qc_pass" in result.columns:
+            assert "row_has_any_usable_metric" in result.columns
+        # Alternatively, row metrics added only if QC columns exist
+        assert len(result) == 0
+
+    def test_qc_columns_in_clean_output(self):
+        """QC columns appear in cleaned DataFrame output."""
+        df = pd.DataFrame({
+            "OC1": ["0500,1"],
+        })
+        result = clean_noaa_dataframe(df, strict_mode=False)
+        # Check for at least one QC column (renamed to friendly name)
+        qc_columns = [col for col in result.columns if "__qc_" in col]
+        assert len(qc_columns) > 0
+

@@ -454,6 +454,38 @@ EQD_UNIT_RULE = FieldRule(
     },
 )
 
+# ============================================================================
+# QC Signal Constants (Phase 5: Numeric Range Validation & QC Signal Derivation)
+# ============================================================================
+# These constants drive the emission of __qc_pass, __qc_status, __qc_reason columns
+# in clean_noaa_dataframe() and _expand_parsed(). They standardize QC signal outputs
+# across all numeric fields and enable row-level usability metrics.
+#
+# Scope: Initial rollout covers OC1 (wind gust), MA1 (station pressure), GE1/GF1/GG
+# (cloud heights/coverage), GH1 (solar radiation), and KA/KB (temperatures), with
+# planned expansion to all FieldPartRule-governed numeric fields.
+#
+# QC Status Values (2-tier, per _compute_qc_signals):
+QC_STATUS_VALUES = frozenset({"PASS", "INVALID"})
+#   - PASS: All validation checks passed (quality flag OK, not sentinel, in range)
+#   - INVALID: Any validation check failed (reason in QC_REASON_ENUM)
+#
+# QC Reason Codes (failures only, None if PASS):
+QC_REASON_ENUM = frozenset(
+    {"OUT_OF_RANGE", "BAD_QUALITY_CODE", "SENTINEL_MISSING", "MALFORMED_TOKEN"}
+)
+#   - OUT_OF_RANGE: Numeric value outside [min_value, max_value] from FieldPartRule
+#   - BAD_QUALITY_CODE: Quality flag not in allowed_quality set
+#   - SENTINEL_MISSING: Value matched missing_values sentinel (e.g., 9999 for OC1)
+#   - MALFORMED_TOKEN: Token width or format validation failed (A4 check)
+#
+# Row-level Usability Summary Indicators:
+# Any field ending with __qc_pass is auto-detected and counted in row summaries:
+#   - row_has_any_usable_metric: Boolean - at least one *__qc_pass is True
+#   - usable_metric_count: Integer - count of True *__qc_pass values
+#   - usable_metric_fraction: Float [0, 1] - usable_metric_count / total *__qc_pass columns
+USABILITY_METRIC_INDICATORS = ["qc_pass"]
+
 
 FIELD_RULES: dict[str, FieldRule] = {
     "WND": FieldRule(

@@ -25,6 +25,9 @@ from .constants import (
     REM_TYPE_CODES,
     QUALITY_FLAGS,
     QC_PROCESS_CODES,
+    QC_STATUS_VALUES,
+    QC_REASON_ENUM,
+    USABILITY_METRIC_INDICATORS,
     REPORT_TYPE_CODES,
     FieldPartRule,
     get_expected_part_count,
@@ -237,13 +240,25 @@ def _expand_parsed(
     allow_quality: bool,
     strict_mode: bool = True,
 ) -> dict[str, object]:
-    """Expand multi-part parsed field into column dictionary.
+    """Expand multi-part parsed field into column dictionary with QC signals.
+
+    For each numeric part, emits:
+    - `{PREFIX}__partN`: Numeric or categorical value (scaled if applicable)
+    - `{PREFIX}__partN__qc_pass`: Boolean - range/quality checks passed
+    - `{PREFIX}__partN__qc_status`: String - "PASS" or "INVALID"
+    - `{PREFIX}__partN__qc_reason`: Reason for failure (or None if PASS)
+
+    QC signal values indicate:
+    - OUT_OF_RANGE: Value outside min/max bounds from FieldPartRule
+    - SENTINEL_MISSING: Value matched missing sentinel pattern
+    - BAD_QUALITY_CODE: Quality flag outside allowed set
+    - MALFORMED_TOKEN: Token width or format validation failed
 
     Args:
         parsed: ParsedField with parts, values, and quality
-        prefix: Field identifier
-        allow_quality: Whether to include quality column
-        strict_mode: If True, enforce token width validation (A4)
+        prefix: Field identifier (e.g., "WND", "MA1", "GE1")
+        allow_quality: Whether to include quality column if present
+        strict_mode: If True, enforce token width validation (A4) and log rejections
 
     Returns:
         Dict mapping output column names to values
@@ -390,6 +405,43 @@ def _expand_parsed(
         if prefix == "VIS" and idx == 1 and scaled is not None and scaled > 160000:
             scaled = 160000.0
         payload[key] = scaled
+    
+    # Add QC signals for numeric parts in multi-part fields
+    for idx, (part, value) in enumerate(zip(parsed.parts, parsed.values), start=1):
+        part_rule = field_rule.parts.get(idx) if field_rule else None
+        if part_rule is None or part_rule.kind != "numeric":
+            continue
+        entry = get_field_registry_entry(prefix, idx, suffix="part")
+        key = entry.internal_name if entry else f"{prefix}__part{idx}"
+        if key not in payload:
+            continue
+        
+        # Determine QC signals based on the current state
+        is_sentinel = _is_missing_value(part, part_rule)
+        
+        # Check quality for this part
+        part_quality = _quality_for_part(prefix, idx, parsed.parts) if allow_quality else None
+        allowed_for_part = _allowed_quality_for_value(prefix, idx)
+        bad_quality = part_quality is not None and part_quality not in allowed_for_part
+        
+        # Check range (value is pre-scale)
+        out_of_range = False
+        if value is not None and part_rule.kind == "numeric":
+            if part_rule.min_value is not None and value < part_rule.min_value:
+                out_of_range = True
+            elif part_rule.max_value is not None and value > part_rule.max_value:
+                out_of_range = True
+        
+        qc_pass, qc_status, qc_reason = _compute_qc_signals(
+            is_sentinel=is_sentinel,
+            bad_quality=bad_quality,
+            out_of_range=out_of_range,
+        )
+        
+        payload[f"{key}__qc_pass"] = qc_pass
+        payload[f"{key}__qc_status"] = qc_status
+        payload[f"{key}__qc_reason"] = qc_reason
+    
     if allow_quality and quality_value is not None:
         payload[f"{prefix}__quality"] = quality_value
     return payload
@@ -407,16 +459,82 @@ def _is_value_quality_field(prefix: str, part_count: int) -> bool:
     return len(rule.parts) == 1
 
 
-def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict[str, object]:
-    """Parse and validate a comma-encoded NOAA field value.
+def _compute_qc_signals(
+    is_sentinel: bool, bad_quality: bool, out_of_range: bool
+) -> tuple[bool, str, str | None]:
+    """Compute QC signals based on validation checks.
+
+    Maps validation failure reasons to standardized QC status and reason codes,
+    following the pattern defined by QC_STATUS_VALUES and QC_REASON_ENUM in constants:
+    - BAD_QUALITY_CODE: Quality flag outside allowed_quality set (per FieldPartRule)
+    - SENTINEL_MISSING: Value matched missing sentinel pattern (e.g., 9999 for OC1)
+    - OUT_OF_RANGE: Numeric value outside min/max bounds from FieldPartRule
+    - All checks pass → PASS status with None reason
+
+    Priority order: bad_quality > is_sentinel > out_of_range (first match wins).
 
     Args:
-        raw: Raw comma-separated field value
-        prefix: Field identifier (column name)
-        strict_mode: If True, enforce validation rules (A2-A4) with logging
+        is_sentinel: Value was a missing sentinel (pre-scale)
+        bad_quality: Quality code failed validation against allowed_quality
+        out_of_range: Numeric value outside min/max bounds (pre-scale)
 
     Returns:
-        Dict mapping output column names to parsed values, or empty dict if invalid
+        Tuple of (qc_pass: bool, qc_status: str, qc_reason: str | None)
+            qc_pass: True if all checks pass, False otherwise
+            qc_status: "PASS" or "INVALID" (values from QC_STATUS_VALUES)
+            qc_reason: string from QC_REASON_ENUM, or None if qc_pass is True
+
+    Example:
+        >>> _compute_qc_signals(False, False, False)  # All checks passed
+        (True, 'PASS', None)
+        >>> _compute_qc_signals(False, False, True)   # Out of range
+        (False, 'INVALID', 'OUT_OF_RANGE')
+        >>> _compute_qc_signals(True, False, False)   # Sentinel value
+        (False, 'INVALID', 'SENTINEL_MISSING')
+    """
+    if bad_quality:
+        return False, "INVALID", "BAD_QUALITY_CODE"
+    if is_sentinel:
+        return False, "INVALID", "SENTINEL_MISSING"
+    if out_of_range:
+        return False, "INVALID", "OUT_OF_RANGE"
+    return True, "PASS", None
+
+
+def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict[str, object]:
+    """Parse and validate a comma-encoded 2-part NOAA value/quality field.
+
+    Applies range validation (pre-scale), quality code checking, and sentinel detection
+    to emit QC signals per _compute_qc_signals(). Raw value is preserved in __value unless
+    QC check fails (out_of_range or bad_quality), in which case __value is None.
+
+    For 2-part value/quality fields, emits:
+    - {PREFIX}__value: Numeric value (scaled per FieldPartRule, None if invalid)
+    - {PREFIX}__quality: Quality code string  
+    - {PREFIX}__qc_pass: Boolean - all checks passed
+    - {PREFIX}__qc_status: String - "PASS" or "INVALID" (from QC_STATUS_VALUES)
+    - {PREFIX}__qc_reason: String from QC_REASON_ENUM, or None if PASS
+
+    Validation order (pre-scale):
+    1. Quality code against allowed_quality set (per FieldPartRule)
+    2. Sentinel detection against missing_values set
+    3. Range check: min_value ≤ numeric ≤ max_value
+
+    Args:
+        raw: Raw comma-separated field value (e.g., "0500,1" for OC1 wind gust)
+        prefix: Field identifier used to look up FieldPartRule (e.g., "OC1", "MA1")
+        strict_mode: If True, enforce validation rules (A2-A4) with [PARSE_STRICT] logging.
+                     If False, use permissive parsing (legacy mode).
+
+    Returns:
+        Dict with keys like {PREFIX}__value, {PREFIX}__quality, {PREFIX}__qc_*
+        Returns empty dict {} if EQD/repeated identifier validation fails in strict mode.
+
+    Examples:
+        >>> clean_value_quality("0500,1", "OC1")
+        {'OC1__value': 50.0, 'OC1__quality': '1', 'OC1__qc_pass': True, ...}
+        >>> clean_value_quality("1101,1", "OC1")  # 1101 > max 1100
+        {'OC1__value': None, 'OC1__qc_pass': False, 'OC1__qc_reason': 'OUT_OF_RANGE', ...}
     """
     eqd_valid = is_valid_eqd_identifier(prefix)
     if eqd_valid is False:
@@ -504,22 +622,47 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
                     }
     
     value: float | None
-    if part_rule and _is_missing_value(parsed.parts[0], part_rule):
+    raw_part = parsed.parts[0]
+    
+    # Check if it's a sentinel/missing value
+    is_sentinel = part_rule and _is_missing_value(raw_part, part_rule)
+    
+    if is_sentinel:
         value = None
     else:
         value = parsed.values[0]
-    if quality is not None and quality not in allowed_quality:
+    
+    # Check if quality is bad
+    bad_quality = quality is not None and quality not in allowed_quality
+    if bad_quality:
         value = None
+    
+    # Check if value is out of range
+    out_of_range = False
     if value is not None and part_rule and part_rule.kind == "numeric":
         if part_rule.min_value is not None and value < part_rule.min_value:
             value = None
+            out_of_range = True
         elif part_rule.max_value is not None and value > part_rule.max_value:
             value = None
+            out_of_range = True
+    
     if value is not None and part_rule and part_rule.scale is not None:
         value = value * part_rule.scale
+    
+    # Compute QC signals
+    qc_pass, qc_status, qc_reason = _compute_qc_signals(
+        is_sentinel=bool(is_sentinel),
+        bad_quality=bad_quality,
+        out_of_range=out_of_range,
+    )
+    
     return {
         value_key: value,
         f"{prefix}__quality": quality,
+        f"{prefix}__qc_pass": qc_pass,
+        f"{prefix}__qc_status": qc_status,
+        f"{prefix}__qc_reason": qc_reason,
     }
 
 
@@ -603,13 +746,23 @@ def clean_noaa_dataframe(
     keep_raw: bool = True,
     strict_mode: bool = True,
 ) -> pd.DataFrame:
-    """Expand NOAA comma-encoded fields into parsed numeric columns.
+    """Expand NOAA comma-encoded fields into parsed numeric columns with QC signals.
 
-    For fields with the pattern value,quality this will create
-    `<column>__value` and `<column>__quality` columns and apply the NOAA
-    quality filter. For fields with additional parts, the parts are expanded
-    into `<column>__partN` columns and, when available, a
-    `<column>__quality` column.
+    For fields with the pattern value,quality this will create:
+    - `<column>__value`: Numeric value (scaled, None if invalid)
+    - `<column>__quality`: NOAA quality code
+    - `<column>__qc_pass`: Boolean - all validations passed
+    - `<column>__qc_status`: String - "PASS" or "INVALID"
+    - `<column>__qc_reason`: String - reason for failure (or None if PASS)
+
+    For multi-part fields, creates:
+    - `<column>__partN`: Component values
+    - `<column>__partN__qc_*`: QC signals for numeric parts
+
+    Row-level usability summary (if any QC columns exist):
+    - `row_has_any_usable_metric`: Boolean - at least one metric passed QC
+    - `usable_metric_count`: Integer - count of passed metrics
+    - `usable_metric_fraction`: Float [0, 1] - fraction of metrics that passed
 
     Args:
         df: Input DataFrame with NOAA Global Hourly data
@@ -619,7 +772,7 @@ def clean_noaa_dataframe(
                      parsing. Rejections are logged with [PARSE_STRICT] prefix.
 
     Returns:
-        DataFrame with expanded and cleaned columns
+        DataFrame with expanded, cleaned, and QC columns
     """
     cleaned = df.copy()
     if "ADD" in cleaned.columns:
@@ -707,5 +860,18 @@ def clean_noaa_dataframe(
     rename_map = {col: to_friendly_column(col) for col in cleaned.columns}
     if any(key != value for key, value in rename_map.items()):
         cleaned = cleaned.rename(columns=rename_map)
+
+    # Add row-level usability metrics based on QC columns
+    qc_pass_columns = [col for col in cleaned.columns if col.endswith("__qc_pass")]
+    if qc_pass_columns:
+        # Create row summaries
+        cleaned["row_has_any_usable_metric"] = cleaned[qc_pass_columns].any(axis=1)
+        cleaned["usable_metric_count"] = cleaned[qc_pass_columns].sum(axis=1)
+        total_metrics = len(qc_pass_columns)
+        cleaned["usable_metric_fraction"] = (
+            cleaned["usable_metric_count"] / total_metrics
+            if total_metrics > 0
+            else 0.0
+        )
 
     return cleaned

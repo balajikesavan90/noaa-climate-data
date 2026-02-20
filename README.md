@@ -196,6 +196,33 @@ tests/
 
 ---
 
+## QC Signals & Data Quality
+
+Every numeric field in cleaned output now includes **QC signal columns** indicating data quality:
+
+- `{FIELD}__qc_pass` (Boolean) – Validation checks passed (range, quality flag, sentinel)
+- `{FIELD}__qc_status` (String) – "PASS" or "INVALID"
+- `{FIELD}__qc_reason` (String or None) – Reason for failure (e.g., "OUT_OF_RANGE", "BAD_QUALITY_CODE", "SENTINEL_MISSING")
+
+Plus row-level summaries:
+- `row_has_any_usable_metric` (Boolean) – At least one metric passed QC
+- `usable_metric_count` (Integer) – Count of passing metrics
+- `usable_metric_fraction` (Float [0, 1]) – Fraction of metrics that passed
+
+**Current scope**: OC1 (wind), MA1 (pressure), GE1/GF1/GG (cloud), GH1 (solar), KA/KB (temperature)
+
+**Example usage**:
+```python
+from noaa_climate_data.cleaning import clean_noaa_dataframe
+df = clean_noaa_dataframe(df_raw)
+df_quality = df[df["OC1__qc_pass"] == True]  # Keep valid wind gust only
+high_quality = df[df["usable_metric_fraction"] >= 0.75]  # ≥75% metrics passed
+```
+
+For detailed documentation, see [QC_SIGNALS_ARCHITECTURE.md](QC_SIGNALS_ARCHITECTURE.md).
+
+---
+
 ## Data pipeline details
 
 ### 1. Data acquisition
