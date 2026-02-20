@@ -431,7 +431,8 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
     parsed = parse_field(raw)
     
     # A3: Strict mode arity validation - check expected vs actual part count
-    if strict_mode:
+    # Skip validation for value/quality fields (they have special 2-part handling)
+    if strict_mode and not _is_value_quality_field(prefix, len(parsed.parts)):
         expected_parts = get_expected_part_count(prefix)
         if expected_parts is not None and len(parsed.parts) != expected_parts:
             if len(parsed.parts) < expected_parts:
