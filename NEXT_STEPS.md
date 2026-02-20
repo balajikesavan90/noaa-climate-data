@@ -92,13 +92,13 @@
 - [x] Enforce Part 15 `GH1` solar-radiation value ranges (`0000/00000-99998`, `99999` missing) for average/min/max/std components.
 - [x] Enforce Part 17-18 `GM/GN/GO` numeric component ranges beyond time-period checks (irradiance values, GN zenith angle, GO net-radiation min/max).
 - [x] Enforce Part 27 pressure numeric MIN/MAX ranges for MA1/MD1/MF1/MG1/MH1/MK1 values (currently mostly sentinel + quality gating only).
-- [ ] Validate Part 27 `MK1` max/min sea-level-pressure occurrence timestamps as DDHHMM in `010000-312359` (with `999999` missing) instead of accepting arbitrary 6-char tokens.
-- [ ] Enforce Part 24 numeric/day ranges for KA/KB/KC/KD/KF/KG, including KC date-token validation (`01-31` per token) and documented period/value min/max bounds.
-- [ ] Enforce Part 23 numeric MIN/MAX ranges for IA2/IB1/IB2/IC1 fields (period/temperature/std-dev/wind-movement/evaporation/pan-water temperatures), not just sentinel and quality gating.
-- [ ] Enforce Part 26 `ST1` numeric MIN/MAX ranges for soil temperature (`-1100..+0630`) and temperature depth (`0000..9998`) in addition to sentinel/quality checks.
-- [ ] Enforce Part 20/21 value bounds for `GQ1`/`GR1`: mean zenith/azimuth angles `0000..3600` and extraterrestrial radiation fields `0000..9998` (beyond existing time-period checks).
-- [ ] Enforce Part 24 `KE1` day-count field ranges (`00..31`, `99` missing) for all four threshold-count parts.
-- [ ] Tighten Part 29 `OE1-OE3` occurrence-time validation to true HHMM semantics (reject invalid minute values like `0060`/`1261`, not just values above `2359`).
+- [x] Validate Part 27 `MK1` max/min sea-level-pressure occurrence timestamps as DDHHMM in `010000-312359` (with `999999` missing) instead of accepting arbitrary 6-char tokens.
+- [x] Enforce Part 24 numeric/day ranges for KA/KB/KC/KD/KF/KG, including KC date-token validation (`01-31` per token) and documented period/value min/max bounds.
+- [x] Enforce Part 23 numeric MIN/MAX ranges for IA2/IB1/IB2/IC1 fields (period/temperature/std-dev/wind-movement/evaporation/pan-water temperatures), not just sentinel and quality gating.
+- [x] Enforce Part 26 `ST1` numeric MIN/MAX ranges for soil temperature (`-1100..+0630`) and temperature depth (`0000..9998`) in addition to sentinel/quality checks.
+- [x] Enforce Part 20/21 value bounds for `GQ1`/`GR1`: mean zenith/azimuth angles `0000..3600` and extraterrestrial radiation fields `0000..9998` (beyond existing time-period checks).
+- [x] Enforce Part 24 `KE1` day-count field ranges (`00..31`, `99` missing) for all four threshold-count parts.
+- [x] Tighten Part 29 `OE1-OE3` occurrence-time validation to true HHMM semantics (reject invalid minute values like `0060`/`1261`, not just values above `2359`).
 - [ ] Enforce Part 29 `OC1` wind-gust numeric range (`0050..1100`, `9999` missing) in addition to existing quality gating.
 - [ ] Enforce Part 29 `RH1-RH3` period/humidity numeric ranges (period `001..744`, humidity `000..100`, with `999` missing sentinels).
 - [ ] Enforce Part 4 `AH1-AH6` and `AI1-AI6` numeric/date-time ranges (period, depth, and ending DDHHMM occurrence in `010000..312359`).

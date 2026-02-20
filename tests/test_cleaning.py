@@ -283,6 +283,16 @@ class TestSentinelsInCleanedOutput:
         assert result["IA2__part1"] is None
         assert result["IA2__part2"] is None
 
+    def test_ia2_range_enforced(self):
+        result = clean_value_quality("000,+0100,1", "IA2")
+        assert result["IA2__part1"] is None
+        result = clean_value_quality("481,+0100,1", "IA2")
+        assert result["IA2__part1"] is None
+        result = clean_value_quality("001,-1101,1", "IA2")
+        assert result["IA2__part2"] is None
+        result = clean_value_quality("001,+1501,1", "IA2")
+        assert result["IA2__part2"] is None
+
     def test_ka_invalid_extreme_code(self):
         result = clean_value_quality("005,X,0123,1", "KA1")
         assert result["KA1__part2"] is None
@@ -294,10 +304,30 @@ class TestSentinelsInCleanedOutput:
         assert result["KA1__part2"] == "N"
         assert result["KA1__part3"] == pytest.approx(12.3)
 
+    def test_ka_range_enforced(self):
+        result = clean_value_quality("000,N,0123,1", "KA1")
+        assert result["KA1__part1"] is None
+        result = clean_value_quality("481,N,0123,1", "KA1")
+        assert result["KA1__part1"] is None
+        result = clean_value_quality("005,N,-0933,1", "KA1")
+        assert result["KA1__part3"] is None
+        result = clean_value_quality("005,N,+0619,1", "KA1")
+        assert result["KA1__part3"] is None
+
     def test_kb_missing_parts(self):
         result = clean_value_quality("999,9,+9999,1", "KB1")
         assert result["KB1__part1"] is None
         assert result["KB1__part2"] is None
+        assert result["KB1__part3"] is None
+
+    def test_kb_range_enforced(self):
+        result = clean_value_quality("000,A,0123,1", "KB1")
+        assert result["KB1__part1"] is None
+        result = clean_value_quality("745,A,0123,1", "KB1")
+        assert result["KB1__part1"] is None
+        result = clean_value_quality("001,A,-9901,1", "KB1")
+        assert result["KB1__part3"] is None
+        result = clean_value_quality("001,A,+6301,1", "KB1")
         assert result["KB1__part3"] is None
 
     def test_kc_missing_parts(self):
@@ -307,10 +337,26 @@ class TestSentinelsInCleanedOutput:
         assert result["KC1__part3"] is None
         assert result["KC1__part4"] is None
 
+    def test_kc_range_and_date_enforced(self):
+        result = clean_value_quality("N,1,-1101,011016,1", "KC1")
+        assert result["KC1__part3"] is None
+        result = clean_value_quality("N,1,0001,321016,1", "KC1")
+        assert result["KC1__part4"] is None
+        result = clean_value_quality("N,1,0001,011016,1", "KC1")
+        assert result["KC1__part4"] == pytest.approx(11016.0)
+
     def test_kd_missing_parts(self):
         result = clean_value_quality("999,9,9999,1", "KD1")
         assert result["KD1__part1"] is None
         assert result["KD1__part2"] is None
+        assert result["KD1__part3"] is None
+
+    def test_kd_range_enforced(self):
+        result = clean_value_quality("000,H,0001,1", "KD1")
+        assert result["KD1__part1"] is None
+        result = clean_value_quality("745,H,0001,1", "KD1")
+        assert result["KD1__part1"] is None
+        result = clean_value_quality("001,H,5001,1", "KD1")
         assert result["KD1__part3"] is None
 
     def test_ke_missing_parts(self):
@@ -320,8 +366,24 @@ class TestSentinelsInCleanedOutput:
         assert result["KE1__part5"] is None
         assert result["KE1__part7"] is None
 
+    def test_ke_range_enforced(self):
+        result = clean_value_quality("32,1,01,1,01,1,01,1", "KE1")
+        assert result["KE1__part1"] is None
+        result = clean_value_quality("01,1,32,1,01,1,01,1", "KE1")
+        assert result["KE1__part3"] is None
+        result = clean_value_quality("01,1,01,1,32,1,01,1", "KE1")
+        assert result["KE1__part5"] is None
+        result = clean_value_quality("01,1,01,1,01,1,32,1", "KE1")
+        assert result["KE1__part7"] is None
+
     def test_kf_missing_parts(self):
         result = clean_value_quality("9999,1", "KF1")
+        assert result["KF1__part1"] is None
+
+    def test_kf_range_enforced(self):
+        result = clean_value_quality("-10000,1", "KF1")
+        assert result["KF1__part1"] is None
+        result = clean_value_quality("10000,1", "KF1")
         assert result["KF1__part1"] is None
 
     def test_kg_missing_parts(self):
@@ -330,6 +392,16 @@ class TestSentinelsInCleanedOutput:
         assert result["KG1__part2"] is None
         assert result["KG1__part3"] is None
         assert result["KG1__part4"] is None
+
+    def test_kg_range_enforced(self):
+        result = clean_value_quality("000,D,0001,D,1", "KG1")
+        assert result["KG1__part1"] is None
+        result = clean_value_quality("745,D,0001,D,1", "KG1")
+        assert result["KG1__part1"] is None
+        result = clean_value_quality("001,D,-9901,D,1", "KG1")
+        assert result["KG1__part3"] is None
+        result = clean_value_quality("001,D,+6301,D,1", "KG1")
+        assert result["KG1__part3"] is None
 
 
 class TestAdditionalDataFixedWidth:
@@ -400,6 +472,14 @@ class TestCrnRanges:
         assert result["ST1__part4"] is None
         assert result["ST1__part6"] is None
         assert result["ST1__part8"] is None
+
+    def test_st1_range_enforced(self):
+        result = clean_value_quality("1,-1101,4,0050,4,01,4,2,4", "ST1")
+        assert result["ST1__part2"] is None
+        result = clean_value_quality("1,0631,4,0050,4,01,4,2,4", "ST1")
+        assert result["ST1__part2"] is None
+        result = clean_value_quality("1,0123,4,9999,4,01,4,2,4", "ST1")
+        assert result["ST1__part4"] is None
 
     def test_me1_missing_parts(self):
         result = clean_value_quality("9,9999,1", "ME1")
@@ -473,6 +553,14 @@ class TestCrnRanges:
     def test_oe1_occurrence_time_range_enforced(self):
         result = clean_value_quality("1,24,00010,180,2360,4", "OE1")
         assert result["OE1__part5"] is None
+
+    def test_oe1_occurrence_time_minutes_enforced(self):
+        result = clean_value_quality("1,24,00010,180,0060,4", "OE1")
+        assert result["OE1__part5"] is None
+        result = clean_value_quality("1,24,00010,180,1261,4", "OE1")
+        assert result["OE1__part5"] is None
+        result = clean_value_quality("1,24,00010,180,2359,4", "OE1")
+        assert result["OE1__part5"] == pytest.approx(2359.0)
 
     def test_wa1_missing_parts(self):
         result = clean_value_quality("9,999,9,9", "WA1")
@@ -659,6 +747,36 @@ class TestScaleFactors:
     def test_ic1_evaporation_scaled(self):
         result = clean_value_quality("24,0100,1,4,050,1,4,+050,1,4,+040,1,4", "IC1")
         assert result["IC1__part5"] == pytest.approx(0.5)
+
+    def test_ib1_range_enforced(self):
+        result = clean_value_quality("-10000,1,0,0000,1,0,0000,1,0,0000,1,0", "IB1")
+        assert result["IB1__part1"] is None
+        result = clean_value_quality("10000,1,0,0000,1,0,0000,1,0,0000,1,0", "IB1")
+        assert result["IB1__part1"] is None
+        result = clean_value_quality("0000,1,0,-10000,1,0,0000,1,0,0000,1,0", "IB1")
+        assert result["IB1__part4"] is None
+        result = clean_value_quality("0000,1,0,0000,1,0,0000,1,0,9999,1,0", "IB1")
+        assert result["IB1__part10"] is None
+
+    def test_ib2_range_enforced(self):
+        result = clean_value_quality("-10000,1,0,0000,1,0", "IB2")
+        assert result["IB2__part1"] is None
+        result = clean_value_quality("0000,1,0,9999,1,0", "IB2")
+        assert result["IB2__part4"] is None
+
+    def test_ic1_range_enforced(self):
+        result = clean_value_quality("00,0100,1,4,050,1,4,+050,1,4,+040,1,4", "IC1")
+        assert result["IC1__part1"] is None
+        result = clean_value_quality("99,0100,1,4,050,1,4,+050,1,4,+040,1,4", "IC1")
+        assert result["IC1__part1"] is None
+        result = clean_value_quality("24,10000,1,4,050,1,4,+050,1,4,+040,1,4", "IC1")
+        assert result["IC1__part2"] is None
+        result = clean_value_quality("24,0100,1,4,1000,1,4,+050,1,4,+040,1,4", "IC1")
+        assert result["IC1__part5"] is None
+        result = clean_value_quality("24,0100,1,4,050,1,4,+501,1,4,+040,1,4", "IC1")
+        assert result["IC1__part8"] is None
+        result = clean_value_quality("24,0100,1,4,050,1,4,+050,1,4,-101,1,4", "IC1")
+        assert result["IC1__part11"] is None
 
     def test_kb_scaled(self):
         result = clean_value_quality("024,A,0100,1", "KB1")
@@ -1379,6 +1497,12 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("0000,0123,1,0456,1", "GQ1")
         assert result["GQ1__part1"] is None
 
+    def test_gq1_angle_range(self):
+        result = clean_value_quality("0060,3601,1,0456,1", "GQ1")
+        assert result["GQ1__part2"] is None
+        result = clean_value_quality("0060,0123,1,3601,1", "GQ1")
+        assert result["GQ1__part4"] is None
+
     def test_gr1_missing_parts(self):
         result = clean_value_quality("9999,9999,9,9999,9", "GR1")
         assert result["GR1__part1"] is None
@@ -1393,6 +1517,12 @@ class TestQualityNullsCorrectPart:
     def test_gr1_time_period_range(self):
         result = clean_value_quality("0000,0800,1,0900,1", "GR1")
         assert result["GR1__part1"] is None
+
+    def test_gr1_value_range(self):
+        result = clean_value_quality("0060,9999,1,0900,1", "GR1")
+        assert result["GR1__part2"] is None
+        result = clean_value_quality("0060,0800,1,9999,1", "GR1")
+        assert result["GR1__part4"] is None
 
     def test_gh1_flag_domain(self):
         result = clean_value_quality("00010,1,A,00000,1,0,00000,1,0,00000,1,0", "GH1")
@@ -1523,6 +1653,16 @@ class TestQualityNullsCorrectPart:
     def test_mk1_range_enforced(self):
         result = clean_value_quality("08599,051500,1,08600,051500,1", "MK1")
         assert result["MK1__part1"] is None
+
+    def test_mk1_invalid_occurrence_timestamp(self):
+        result = clean_value_quality("08600,051560,1,08600,311260,1", "MK1")
+        assert result["MK1__part2"] is None
+        assert result["MK1__part5"] is None
+
+    def test_mk1_valid_occurrence_timestamp(self):
+        result = clean_value_quality("08600,051500,1,08600,311259,1", "MK1")
+        assert result["MK1__part2"] == pytest.approx(51500.0)
+        assert result["MK1__part5"] == pytest.approx(311259.0)
 
     def test_ay_quality_rejects_4(self):
         result = clean_value_quality("1,4,12,1", "AY1")
