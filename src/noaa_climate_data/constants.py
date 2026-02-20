@@ -1204,6 +1204,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 kind="categorical",
                 agg="drop",
                 missing_values={"999999"},
+                allowed_pattern=DDHHMM_PATTERN,
             ),  # end date-time
             5: FieldPartRule(
                 kind="quality",
@@ -1227,6 +1228,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 kind="categorical",
                 agg="drop",
                 missing_values={"999999"},
+                allowed_pattern=DDHHMM_PATTERN,
             ),  # end date-time
             5: FieldPartRule(
                 kind="quality",

@@ -101,7 +101,7 @@
 - [x] Tighten Part 29 `OE1-OE3` occurrence-time validation to true HHMM semantics (reject invalid minute values like `0060`/`1261`, not just values above `2359`).
 - [x] Enforce Part 29 `OC1` wind-gust numeric range (`0050..1100`, `9999` missing) in addition to existing quality gating.
 - [x] Enforce Part 29 `RH1-RH3` period/humidity numeric ranges (period `001..744`, humidity `000..100`, with `999` missing sentinels).
-- [ ] Enforce Part 4 `AH1-AH6` and `AI1-AI6` numeric/date-time ranges (period, depth, and ending DDHHMM occurrence in `010000..312359`).
+- [x] Enforce Part 4 `AH1-AH6` and `AI1-AI6` numeric/date-time ranges (period, depth, and ending DDHHMM occurrence in `010000..312359`).
 - [ ] Enforce remaining Part 4 precipitation/snow bounds outside `AH/AI`: `AB1` monthly total max (`50000`), `AD1` amount/date ranges (`00000..20000`, `0101..3131` tokens), `AE1` day-count ranges (`00..31`), `AJ1` depth/equivalent-water maxima (`1200`/`120000`), `AK1` depth/date ranges (`0000..1500`, day tokens `01..31`), `AL1-AL4` period/depth ranges (`00..72`, `000..500`), `AM1` amount/date ranges (`0000..2000`, `0101..3131`), and `AN1` period range (`001..744`).
 - [ ] Enforce remaining Part 6 CRN numeric ranges for `CI1` and `CN1-CN4` diagnostics (temperature, humidity/std-dev, voltages, resistor/signature, minutes-open, and wattage bounds).
 - [ ] Enforce Parts 9/10/11/13 numeric bounds for `CT*`/`CU*`/`CV*`/`CX*` value components (temperature/standard deviation/precipitation/frequency limits), not only quality and sentinel checks.

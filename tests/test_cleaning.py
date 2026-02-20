@@ -1797,6 +1797,14 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("015,0123,1,010100,C", "AH1")
         assert result["AH1__part2"] is None
 
+    def test_ah_end_datetime_range_enforced(self):
+        result = clean_value_quality("015,0123,1,006000,1", "AH1")
+        assert result["AH1__part4"] is None
+        result = clean_value_quality("015,0123,1,320000,1", "AH1")
+        assert result["AH1__part4"] is None
+        result = clean_value_quality("015,0123,1,051010,1", "AH1")
+        assert result["AH1__part4"] == pytest.approx(51010.0)
+
     def test_ai_missing_and_quality(self):
         result = clean_value_quality("999,9999,9,999999,1", "AI1")
         assert result["AI1__part1"] is None
@@ -1807,6 +1815,14 @@ class TestQualityNullsCorrectPart:
     def test_ai_quality_rejects_c(self):
         result = clean_value_quality("060,0123,1,010100,C", "AI1")
         assert result["AI1__part2"] is None
+
+    def test_ai_end_datetime_range_enforced(self):
+        result = clean_value_quality("060,0123,1,006000,1", "AI1")
+        assert result["AI1__part4"] is None
+        result = clean_value_quality("060,0123,1,320000,1", "AI1")
+        assert result["AI1__part4"] is None
+        result = clean_value_quality("060,0123,1,051010,1", "AI1")
+        assert result["AI1__part4"] == pytest.approx(51010.0)
 
     def test_ak_missing_and_quality(self):
         result = clean_value_quality("9999,9,999999,1", "AK1")
