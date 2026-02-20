@@ -89,9 +89,9 @@
 - [x] Parse QNN original-observation blocks to the Part 30 tokenized format (`QNN@1234...` plus 6-char data values), including repeated element blocks and strict token-width validation.
 - [x] Enforce exact repeated-identifier bounds from spec (Parts 7/29/30) instead of broad prefix matching: reject out-of-domain IDs such as `CO10`, `OA4`/`OD4`/`OE4`/`RH4`, and `Q00`/`P00`/`R00`/`C00`/`D00`/`N00`.
 - [x] Enforce Part 15 cloud-height numeric ranges for GA/GD/GG/GE1/GF1 (currently sentinel handling exists, but documented MIN/MAX bounds are not applied).
-- [ ] Enforce Part 15 `GH1` solar-radiation value ranges (`0000/00000-99998`, `99999` missing) for average/min/max/std components.
-- [ ] Enforce Part 17-18 `GM/GN/GO` numeric component ranges beyond time-period checks (irradiance values, GN zenith angle, GO net-radiation min/max).
-- [ ] Enforce Part 27 pressure numeric MIN/MAX ranges for MA1/MD1/MF1/MG1/MH1/MK1 values (currently mostly sentinel + quality gating only).
+- [x] Enforce Part 15 `GH1` solar-radiation value ranges (`0000/00000-99998`, `99999` missing) for average/min/max/std components.
+- [x] Enforce Part 17-18 `GM/GN/GO` numeric component ranges beyond time-period checks (irradiance values, GN zenith angle, GO net-radiation min/max).
+- [x] Enforce Part 27 pressure numeric MIN/MAX ranges for MA1/MD1/MF1/MG1/MH1/MK1 values (currently mostly sentinel + quality gating only).
 - [ ] Validate Part 27 `MK1` max/min sea-level-pressure occurrence timestamps as DDHHMM in `010000-312359` (with `999999` missing) instead of accepting arbitrary 6-char tokens.
 - [ ] Enforce Part 24 numeric/day ranges for KA/KB/KC/KD/KF/KG, including KC date-token validation (`01-31` per token) and documented period/value min/max bounds.
 - [ ] Enforce Part 23 numeric MIN/MAX ranges for IA2/IB1/IB2/IC1 fields (period/temperature/std-dev/wind-movement/evaporation/pan-water temperatures), not just sentinel and quality gating.
@@ -106,10 +106,22 @@
 - [ ] Enforce remaining Part 6 CRN numeric ranges for `CI1` and `CN1-CN4` diagnostics (temperature, humidity/std-dev, voltages, resistor/signature, minutes-open, and wattage bounds).
 - [ ] Enforce Parts 9/10/11/13 numeric bounds for `CT*`/`CU*`/`CV*`/`CX*` value components (temperature/standard deviation/precipitation/frequency limits), not only quality and sentinel checks.
 - [ ] Extend exact repeated-identifier bound enforcement beyond Parts 7/29/30 to other fixed-cardinality families (e.g., `AH/AI/AL/AO`, `AT/AU/AW/AX/AZ`, `GA/GD/GG`, `MV/MW`).
+- [ ] Enforce exact identifier token format (field-length + suffix shape) for already-gated Part 7/29/30 and EQD families: reject malformed IDs that currently pass via prefix fallback (e.g., `CO02`, `OA01`, `RH0001`, `Q100`, `Q01A`, `N001`).
 - [ ] Disambiguate Part 4 `AH*` vs `AI*` friendly-column naming: both currently map to identical `precip_short_duration_*` names, producing duplicate columns and obscuring NOAA’s distinct 5-45 minute (`AH`) vs 60-180 minute (`AI`) semantics.
 - [ ] Fix `REM` parsing order so comma-bearing remark text does not get consumed by generic comma expansion before typed REM parsing (especially when `keep_raw=False`).
 - [ ] Rework Part 30 `QNN` parsing to preserve raw ASCII payload semantics (no blanket uppercasing/whitespace stripping), allow spec-compliant 4-char source/flag tokens beyond alphanumeric-only checks, and avoid greedy tokenization that can misread data values beginning with `A`-`Y` as extra element blocks.
 - [ ] Limit generic all-9 post-clean nulling to fields where NOAA defines all-9 sentinels; current blanket object-column pass can erase valid Part 30 text payloads (e.g., `REM__text='999'`, `QNN__data_values='999999'`).
+- [ ] Use Part 2 control `DATE` + `TIME` together when deriving timestamps/hours; current `_extract_time_columns` ignores `TIME` for split-field inputs, collapsing observations into hour `00`.
+- [ ] Enforce exact Part 2 longitude domain bounds from scaled values: accept `-179.999..+180.000` and reject `-180.000` (current normalization uses `-180.0..180.0`).
+- [ ] Prevent pipeline fallback from bypassing Part 2 `DATE` format rules: `process_location_from_raw` currently pre-parses raw `DATE` and `_extract_time_columns` backfills rejected non-`YYYYMMDD` values via `DATE_PARSED`.
+- [ ] Enforce Part 2 `CALL_SIGN` structural constraints for `POS 52-56` (5-character ASCII field; `99999` missing) instead of accepting arbitrary non-empty string lengths.
+- [ ] Enforce strict field arity per identifier (expected comma-part count): reject truncated/extra payloads (e.g., `TMP` without quality, `WND` missing speed quality) instead of emitting partial parsed values.
+- [ ] Enforce fixed-width token formats beyond Part 4 additional numerics: validate documented POS/width/sign conventions for mandatory and other sections so shortened tokens like `WND=1,1,N,5,1` or `TMP=250,1` are not accepted as valid measurements.
+- [ ] Restrict comma-field expansion to known NOAA coded identifiers only; current generic parsing can split non-spec metadata columns (e.g., `NAME`) into synthetic `__part*` outputs and mutate schema.
+- [ ] Enforce numeric-domain type strictness: for parts documented as numeric-only domains, reject/null malformed non-numeric tokens instead of preserving raw text fallback (e.g., `WND__part1='A90'`, `WND__part4='0A50'`).
+- [ ] Preserve Part 30 EQD original-value text fidelity (`FLD LEN: 6`, ASCII domain): keep `Q##/P##/R##/C##/D##/N##` part1 as text (including leading zeros/sign formatting) rather than float-coercing numeric-like values.
+- [ ] Preserve fixed-width categorical code representation for numeric-like code domains (e.g., Part 5/28 `AT/AW/MV/MW` weather codes): avoid float coercion that collapses `01` to `1.0`.
+- [ ] Enforce Part 6 CRN QC missing semantics: when QC code is `9` (`Missing`), null associated measurement values for CRN unique groups (`CB/CF/CG/CH/CI/CN`) instead of retaining them.
 
 ## P1: Missing ISD groups and sections (implementation gaps)
 
@@ -173,3 +185,7 @@
 - [ ] Parse repeated REM remark entries in a single REM section (typed remark + length + text blocks), not just a single prefix/text split.
 - [ ] Add targeted tests for newly identified gaps: OE period/time range enforcement, AP condition code fixed-to-9 behavior, AW sparse domain validation, and Q/P/R/C/D EQD parameter-code acceptance rules.
 - [ ] Add regression tests for new parser edge cases: remaining Part 4 range/date validation (`AB/AD/AE/AJ/AK/AL/AM/AN`), `AH`/`AI` friendly-column collision detection, `QNN` ASCII-preservation/token-boundary handling, and protection against blanket all-9 nulling of valid REM/QNN text payloads.
+- [ ] Add regression tests for malformed identifier rejection in currently-gated families (`CO02`/`OA01`/`Q100`/`Q01A`/`N001`) and for Part 2 split `DATE`+`TIME` hour extraction behavior.
+- [ ] Add regression tests for sixth-pass Part 2 control gaps: longitude lower-bound edge handling (`-180.000` vs `-179.999`), `CALL_SIGN` width/domain enforcement, and pipeline-level rejection of non-`YYYYMMDD` dates despite `DATE_PARSED` fallback.
+- [ ] Add regression tests for parser strictness on field structure: unknown comma-bearing metadata columns should not be expanded, malformed/truncated part-count payloads should be rejected, and non-conformant token widths should not be coerced into valid values.
+- [ ] Add regression tests for fifth-pass issues: numeric-domain malformed-token rejection (no raw-text fallback), EQD part1 6-char text preservation (`001234` stays text), categorical code-width preservation (`01` not coerced to `1.0`), and CRN QC=`9` missing-value nulling behavior.

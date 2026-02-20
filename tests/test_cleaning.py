@@ -1398,6 +1398,11 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("00010,1,A,00000,1,0,00000,1,0,00000,1,0", "GH1")
         assert result["GH1__part3"] is None
 
+    def test_gh1_value_range(self):
+        result = clean_value_quality("100000,1,0,99998,1,0,00000,1,0,00000,1,0", "GH1")
+        assert result["GH1__part1"] is None
+        assert result["GH1__part4"] == pytest.approx(9999.8)
+
     def test_gm1_data_flag_domain(self):
         result = clean_value_quality("0060,0123,AA,1,0456,00,1,0789,00,1,0123,1", "GM1")
         assert result["GM1__part3"] is None
@@ -1421,13 +1426,29 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("0000,0123,00,1,0456,00,1,0789,00,1,0123,1", "GM1")
         assert result["GM1__part1"] is None
 
+    def test_gm1_value_range(self):
+        result = clean_value_quality("0060,10000,00,1,0456,00,1,0789,00,1,0123,1", "GM1")
+        assert result["GM1__part2"] is None
+
     def test_gn1_time_period_range(self):
         result = clean_value_quality("0000,0123,1,0456,1,0789,1,0123,1,090,1", "GN1")
         assert result["GN1__part1"] is None
 
+    def test_gn1_value_range(self):
+        result = clean_value_quality("0060,10000,1,0456,1,0789,1,0123,1,090,1", "GN1")
+        assert result["GN1__part2"] is None
+
+    def test_gn1_zenith_range(self):
+        result = clean_value_quality("0060,0123,1,0456,1,0789,1,0123,1,1000,1", "GN1")
+        assert result["GN1__part10"] is None
+
     def test_go1_time_period_range(self):
         result = clean_value_quality("0000,0123,1,0456,1,0789,1", "GO1")
         assert result["GO1__part1"] is None
+
+    def test_go1_value_range(self):
+        result = clean_value_quality("0060,-1000,1,0456,1,0789,1", "GO1")
+        assert result["GO1__part2"] is None
 
     def test_ia1_quality_rejects_8(self):
         result = clean_value_quality("01,8", "IA1")
@@ -1477,6 +1498,31 @@ class TestQualityNullsCorrectPart:
     def test_mg1_quality_rejects_1(self):
         result = clean_value_quality("10132,1,09876,9", "MG1")
         assert result["MG1__part1"] is None
+
+    def test_ma1_range_enforced(self):
+        result = clean_value_quality("08634,1,04500,1", "MA1")
+        assert result["MA1__part1"] is None
+
+    def test_md1_range_enforced(self):
+        result = clean_value_quality("4,1,501,1,+801,1", "MD1")
+        assert result["MD1__part3"] is None
+        assert result["MD1__part5"] is None
+
+    def test_mf1_range_enforced(self):
+        result = clean_value_quality("04499,1,08600,1", "MF1")
+        assert result["MF1__part1"] is None
+
+    def test_mg1_range_enforced(self):
+        result = clean_value_quality("04500,4,08599,4", "MG1")
+        assert result["MG1__part3"] is None
+
+    def test_mh1_range_enforced(self):
+        result = clean_value_quality("04500,1,08599,1", "MH1")
+        assert result["MH1__part3"] is None
+
+    def test_mk1_range_enforced(self):
+        result = clean_value_quality("08599,051500,1,08600,051500,1", "MK1")
+        assert result["MK1__part1"] is None
 
     def test_ay_quality_rejects_4(self):
         result = clean_value_quality("1,4,12,1", "AY1")

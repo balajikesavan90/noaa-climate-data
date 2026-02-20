@@ -202,3 +202,325 @@ Added these new items to `NEXT_STEPS.md`:
 - `QNN` ASCII-preserving/non-greedy parsing hardening.
 - Restricting blanket all-9 nulling to spec-governed fields.
 - New regression tests for these scenarios.
+
+## Third Pass: New Misalignments Beyond Existing NEXT_STEPS
+
+Date: 2026-02-14 (third pass)
+
+Scope for this pass:
+
+- Re-read `part-01` through `part-30` one-by-one.
+- Compared against current code and tests:
+  - `src/noaa_climate_data/cleaning.py`
+  - `src/noaa_climate_data/constants.py`
+  - `src/noaa_climate_data/pipeline.py`
+  - `tests/test_cleaning.py`
+- Filtered out all misalignments already tracked in `NEXT_STEPS.md`.
+
+### Part-by-Part Snapshot (New Findings Only)
+
+| Part | Alignment | New misalignment in this pass |
+| --- | --- | --- |
+| 01 Preface | Section model and overall parsing structure remain aligned. | None newly identified. |
+| 02 Control | DATE/TIME format validation exists in cleaning (`YYYYMMDD`/`HHMM`). | **New:** Part 2 split `DATE`+`TIME` semantics are not preserved in hour extraction; `_extract_time_columns` uses `DATE` only and ignores `TIME` (`src/noaa_climate_data/pipeline.py:404`). |
+| 03 Mandatory | Mandatory groups (`WND/CIG/VIS/TMP/DEW/SLP`) remain implemented and tested. | None newly identified. |
+| 04 Additional | Existing Part 4 coverage and prior gaps are already tracked in `NEXT_STEPS.md`. | None newly identified beyond existing backlog. |
+| 05 Weather Occurrence | Existing AT/AU/AW/AX/AY/AZ implementation remains aligned with prior tracking. | None newly identified. |
+| 06 CRN Unique | Existing CRN groups remain implemented as previously documented. | None newly identified. |
+| 07 Network Metadata | `CO1` and `CO2-CO9` rule families exist. | **New (shared identifier-format issue):** malformed token shapes are accepted (e.g., `CO02`) even though identifiers are fixed-length 3-char tokens in spec (`isd-format-document-parts/part-07-network-metadata.md:5`, `isd-format-document-parts/part-07-network-metadata.md:43`). |
+| 08 CRN Control | `CR1` remains implemented and tested. | None newly identified. |
+| 09 Subhourly Temperature | `CT1-CT3` support remains in place. | None newly identified beyond existing backlog. |
+| 10 Hourly Temperature | `CU1-CU3` support remains in place. | None newly identified beyond existing backlog. |
+| 11 Hourly Temp Extreme | `CV1-CV3` support remains in place. | None newly identified beyond existing backlog. |
+| 12 Subhourly Wetness | `CW1` support remains in place. | None newly identified. |
+| 13 Geonor Summary | `CX1-CX3` support remains in place. | None newly identified beyond existing backlog. |
+| 14 Runway Visual Range | `ED1` support remains in place. | None newly identified. |
+| 15 Cloud and Solar | `GA/GD/GE1/GF1/GG/GH` remain implemented with prior tracked gaps. | None newly identified beyond existing backlog. |
+| 16 Sunshine | `GJ/GK/GL` support remains in place. | None newly identified. |
+| 17 Solar Irradiance | `GM/GN` support remains in place. | None newly identified beyond existing backlog. |
+| 18 Net Solar Radiation | `GO` support remains in place. | None newly identified beyond existing backlog. |
+| 19 Modeled Solar Irradiance | `GP1` support remains in place. | None newly identified. |
+| 20 Hourly Solar Angle | `GQ1` support remains in place. | None newly identified beyond existing backlog. |
+| 21 Hourly Extraterrestrial Radiation | `GR1` support remains in place. | None newly identified beyond existing backlog. |
+| 22 Hail | `HAIL` support remains in place. | None newly identified. |
+| 23 Ground Surface | `IA/IB/IC` support remains in place. | None newly identified beyond existing backlog. |
+| 24 Temperature | `KA/KB/KC/KD/KE/KF/KG` support remains in place. | None newly identified beyond existing backlog. |
+| 25 Sea Surface Temperature | `SA1` support remains in place. | None newly identified. |
+| 26 Soil Temperature | `ST1` support remains in place. | None newly identified beyond existing backlog. |
+| 27 Pressure | `MA/MD/ME/MF/MG/MH/MK` support remains in place. | None newly identified beyond existing backlog. |
+| 28 Weather Extended | `MV/MW` support remains in place. | None newly identified beyond existing backlog. |
+| 29 Wind | `OA/OB/OC/OD/OE/RH` support remains in place. | **New (shared identifier-format issue):** malformed suffix width/shape forms (e.g., `OA01`, `RH0001`) are accepted although identifiers are fixed-width 3-char tokens (`isd-format-document-parts/part-29-wind-data.md:5`, `isd-format-document-parts/part-29-wind-data.md:9`, `isd-format-document-parts/part-29-wind-data.md:245`, `isd-format-document-parts/part-29-wind-data.md:311`, `isd-format-document-parts/part-29-wind-data.md:387`). |
+| 30 Marine | Marine groups, EQD, REM, QNN support remain in place with prior tracked gaps. | **New (shared identifier-format issue):** malformed EQD identifiers (e.g., `Q100`, `Q01A`, `N001`) are accepted, despite Part 30 defining `Q01-Q99`/`N01-N99` as 3-char identifiers (`isd-format-document-parts/part-30-marine-data.md:790`, `isd-format-document-parts/part-30-marine-data.md:794`, `isd-format-document-parts/part-30-marine-data.md:803`). |
+
+### Net-New Misalignments (Third Pass)
+
+1. Identifier token format is not strictly enforced for currently-gated families (Parts 7/29/30 + EQD).
+   - NOAA docs define these identifiers as fixed-length 3-character tokens with explicit suffix ranges (`CO2-CO9`, `OA1-OA3`, `OD1-OD3`, `OE1-OE3`, `RH1-RH3`, `Q01-Q99`, `N01-N99`).
+   - Current validation accepts malformed variants because:
+     - repeated-ID checks allow any numeric suffix width (`int(suffix)` only), and
+     - prefix fallback in `get_field_rule` matches with `startswith(...)`.
+   - Relevant code: `src/noaa_climate_data/constants.py:3162`, `src/noaa_climate_data/constants.py:3172`, `src/noaa_climate_data/constants.py:3182`.
+   - Reproduced with `get_field_rule(...)` / `clean_value_quality(...)`: `CO02`, `OA01`, `RH0001`, `Q100`, `Q01A`, `N001` currently parse as valid.
+
+2. Part 2 split `DATE`+`TIME` semantics are lost when deriving hourly timestamps.
+   - Part 2 defines date and time as separate control fields (`POS: 16-23` and `POS: 24-27`) (`isd-format-document-parts/part-02-control-data-section.md:32`, `isd-format-document-parts/part-02-control-data-section.md:39`).
+   - Current `_extract_time_columns` derives datetime from `DATE` alone and sets `Hour` from that timestamp; `TIME` is not fused into datetime.
+   - Relevant code: `src/noaa_climate_data/pipeline.py:404`.
+   - Reproduced: with `DATE='20240101'` and `TIME='2300'`, parsed `Hour` remains `0` instead of `23`.
+
+### Added to Next Steps (Third Pass)
+
+Added new checklist items in `NEXT_STEPS.md`:
+
+- Strict identifier token-shape enforcement for already-gated Part 7/29/30 + EQD families (`NEXT_STEPS.md:109`).
+- Use control `DATE`+`TIME` jointly during timestamp/hour derivation (`NEXT_STEPS.md:114`).
+- Regression tests for both new gaps (`NEXT_STEPS.md:178`).
+
+## Fourth Pass: New Misalignments Beyond Current NEXT_STEPS
+
+Date: 2026-02-15 (fourth pass)
+
+Scope for this pass:
+
+- Re-read `part-01` through `part-30` one-by-one.
+- Re-checked parsing behavior and tests:
+  - `src/noaa_climate_data/cleaning.py`
+  - `src/noaa_climate_data/constants.py`
+  - `tests/test_cleaning.py`
+- Filtered out items already present in `NEXT_STEPS.md`.
+
+### Part-by-Part Snapshot (Fourth Pass)
+
+| Part | Alignment | New misalignment in this pass |
+| --- | --- | --- |
+| 01 Preface | Existing parser/readme structure remains aligned with document framing. | None newly identified. |
+| 02 Control | Control normalization for `DATE`/`TIME`/lat/lon/elevation/source/report/QC remains implemented. | **Cross-cutting parser strictness gap applies:** parser expansion is driven by comma presence, not NOAA identifier allowlist. |
+| 03 Mandatory | `WND/CIG/VIS/TMP/DEW/SLP` parsing, quality gating, and key edge rules remain implemented. | **Cross-cutting structural gaps apply:** strict arity and fixed-width token compliance are not enforced. |
+| 04 Additional | Additional groups are broadly implemented with sentinel/quality handling and many range checks. | **Cross-cutting structural gap applies:** exact expected part-count per identifier is not enforced. |
+| 05 Weather Occurrence | `AT/AU/AW/AX/AY/AZ` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 06 CRN Unique | `CB/CF/CG/CH/CI/CN` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 07 Network Metadata | `CO*/CR1/CT*/CU*/CV*/CW1/CX*` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 08 CRN Control | `CR1` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 09 Subhourly Temperature | `CT1-CT3` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 10 Hourly Temperature | `CU1-CU3` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 11 Hourly Temperature Extreme | `CV1-CV3` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 12 Subhourly Wetness | `CW1` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 13 Geonor Summary | `CX1-CX3` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 14 Runway Visual Range | `ED1` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 15 Cloud and Solar | `GA/GD/GE1/GF1/GG/GH1` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 16 Sunshine | `GJ/GK/GL` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 17 Solar Irradiance | `GM/GN` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 18 Net Solar Radiation | `GO` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 19 Modeled Solar Irradiance | `GP1` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 20 Hourly Solar Angle | `GQ1` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 21 Hourly Extraterrestrial Radiation | `GR1` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 22 Hail | `HAIL` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 23 Ground Surface | `IA/IB/IC` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 24 Temperature | `KA/KB/KC/KD/KE/KF/KG` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 25 Sea Surface Temperature | `SA1` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 26 Soil Temperature | `ST1` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 27 Pressure | `MA/MD/ME/MF/MG/MH/MK` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 28 Weather Extended | `MV/MW` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 29 Wind | `OA/OB/OC/OD/OE/RH` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+| 30 Marine | `UA/UG/WA/WD/WG/WJ/EQD/REM/QNN` support remains implemented. | Cross-cutting arity/width strictness gap applies. |
+
+### Net-New Misalignments (Fourth Pass)
+
+1. Comma-driven expansion is not restricted to known NOAA field identifiers.
+   - NOAA sections are identifier-defined (`ADD`, `AA1-AA4`, etc.) and fixed-format (`isd-format-document-parts/part-04-additional-data-section.md:25`, `isd-format-document-parts/part-04-additional-data-section.md:37`; similarly `OA1-OA3` in `isd-format-document-parts/part-29-wind-data.md:5`, `isd-format-document-parts/part-29-wind-data.md:9`).
+   - Current cleaner expands *any* object column with commas (`src/noaa_climate_data/cleaning.py:506`, `src/noaa_climate_data/cleaning.py:511`, `src/noaa_climate_data/cleaning.py:519`), and unknown prefixes are still parsed via generic expansion path (`src/noaa_climate_data/cleaning.py:362`, `src/noaa_climate_data/cleaning.py:371`, `src/noaa_climate_data/cleaning.py:373`).
+   - Reproduced: `clean_noaa_dataframe(... {'NAME': 'CHARLOTTESVILLE, VA US'})` creates synthetic `NAME__part1`/`NAME__part2` columns (and drops raw `NAME` when `keep_raw=False`).
+
+2. Field arity (expected part count) is not enforced for known identifiers.
+   - Spec structures are fixed by position/field definitions (for example WND spans fixed components at `POS: 61-70` in `isd-format-document-parts/part-03-mandatory-data-section.md:22`, `isd-format-document-parts/part-03-mandatory-data-section.md:76`; Part 4 groups define explicit `FLD LEN` and item counts in `isd-format-document-parts/part-04-additional-data-section.md:33`, `isd-format-document-parts/part-04-additional-data-section.md:43`).
+   - Current logic accepts malformed/truncated payloads because any non-2-part input is expanded without expected-count validation (`src/noaa_climate_data/cleaning.py:370`, `src/noaa_climate_data/cleaning.py:371`, `src/noaa_climate_data/cleaning.py:373`), and missing quality parts return `None` instead of hard failure (`src/noaa_climate_data/cleaning.py:75`, `src/noaa_climate_data/cleaning.py:77`).
+   - Reproduced: `TMP='+0250'` and `WND='180,1,N,0050'` are accepted and emit partial parsed values.
+
+3. Fixed-width token-format enforcement is limited to Part 4 additional numeric prefixes.
+   - NOAA docs use fixed-width fields broadly (for example WND direction/speed widths in `isd-format-document-parts/part-03-mandatory-data-section.md:22`, `isd-format-document-parts/part-03-mandatory-data-section.md:60`; Part 4 explicitly states per-item `FLD LEN` in `isd-format-document-parts/part-04-additional-data-section.md:43`, `isd-format-document-parts/part-04-additional-data-section.md:51`).
+   - Current width enforcement is scoped only through `_additional_data_fixed_width` and `ADDITIONAL_DATA_PREFIXES` (`src/noaa_climate_data/cleaning.py:101`, `src/noaa_climate_data/cleaning.py:107`, `src/noaa_climate_data/cleaning.py:309`).
+   - Reproduced: shortened non-conformant tokens like `WND='1,1,N,5,1'` and `TMP='250,1'` are accepted and scaled into valid outputs.
+
+### Test Coverage Gap (Fourth Pass)
+
+- `tests/test_cleaning.py` does not currently include regression cases for:
+  - unknown comma-bearing metadata columns being expanded,
+  - malformed/truncated part-count payload rejection,
+  - non-conformant fixed-width token rejection outside Part 4 additional numeric fields.
+
+### Added to Next Steps (Fourth Pass)
+
+Added checklist items in `NEXT_STEPS.md` for:
+
+- strict per-identifier arity enforcement,
+- fixed-width token-format enforcement outside Part 4 additional numerics,
+- restricting comma expansion to known NOAA identifiers,
+- regression tests for the above parser-structure strictness gaps.
+
+## Fifth Pass: New Misalignments Beyond Current NEXT_STEPS
+
+Date: 2026-02-15 (fifth pass)
+
+Scope for this pass:
+
+- Re-read `part-01` through `part-30` one-by-one.
+- Re-validated parser behavior and tests with emphasis on data-cleaning type semantics:
+  - `src/noaa_climate_data/cleaning.py`
+  - `src/noaa_climate_data/constants.py`
+  - `tests/test_cleaning.py`
+- Filtered out all issues already tracked in `NEXT_STEPS.md`.
+
+### Part-by-Part Snapshot (Fifth Pass)
+
+| Part | Alignment | New misalignment in this pass |
+| --- | --- | --- |
+| 01 Preface | Existing dataset framing and section model remain aligned. | None newly identified. |
+| 02 Control | Control-field normalization (DATE/TIME/lat/lon/source/report/QC) remains implemented. | None newly identified. |
+| 03 Mandatory | Mandatory section parsing remains implemented with prior constraints. | **New:** numeric-domain parts can retain malformed non-numeric tokens as raw strings instead of being nulled/rejected. |
+| 04 Additional | Additional section remains broadly implemented with prior tracked gaps. | None newly identified beyond existing backlog. |
+| 05 Weather Occurrence | AT/AU/AW/AX/AY/AZ support remains implemented. | **New (shared categorical-coercion issue):** numeric-like code-domain values are emitted as floats, losing fixed-width code semantics. |
+| 06 CRN Unique | CB/CF/CG/CH/CI/CN support remains implemented. | **New:** CRN QC code `9` (“Missing”) is treated as acceptable for value retention instead of nulling paired values. |
+| 07 Network Metadata | CO/CR/CT/CU/CV/CW/CX support remains implemented. | None newly identified beyond existing backlog. |
+| 08 CRN Control | CR1 support remains implemented. | None newly identified beyond existing backlog. |
+| 09 Subhourly Temperature | CT1-CT3 support remains implemented. | None newly identified beyond existing backlog. |
+| 10 Hourly Temperature | CU1-CU3 support remains implemented. | None newly identified beyond existing backlog. |
+| 11 Hourly Temperature Extreme | CV1-CV3 support remains implemented. | None newly identified beyond existing backlog. |
+| 12 Subhourly Wetness | CW1 support remains implemented. | None newly identified beyond existing backlog. |
+| 13 Geonor Summary | CX1-CX3 support remains implemented. | None newly identified beyond existing backlog. |
+| 14 Runway Visual Range | ED1 support remains implemented. | None newly identified beyond existing backlog. |
+| 15 Cloud and Solar | GA/GD/GE/GF/GG/GH support remains implemented. | None newly identified beyond existing backlog. |
+| 16 Sunshine | GJ/GK/GL support remains implemented. | None newly identified beyond existing backlog. |
+| 17 Solar Irradiance | GM/GN support remains implemented. | None newly identified beyond existing backlog. |
+| 18 Net Solar Radiation | GO support remains implemented. | None newly identified beyond existing backlog. |
+| 19 Modeled Solar Irradiance | GP1 support remains implemented. | None newly identified beyond existing backlog. |
+| 20 Hourly Solar Angle | GQ1 support remains implemented. | None newly identified beyond existing backlog. |
+| 21 Hourly Extraterrestrial Radiation | GR1 support remains implemented. | None newly identified beyond existing backlog. |
+| 22 Hail | HAIL support remains implemented. | None newly identified beyond existing backlog. |
+| 23 Ground Surface | IA/IB/IC support remains implemented. | None newly identified beyond existing backlog. |
+| 24 Temperature | KA/KB/KC/KD/KE/KF/KG support remains implemented. | None newly identified beyond existing backlog. |
+| 25 Sea Surface Temperature | SA1 support remains implemented. | None newly identified beyond existing backlog. |
+| 26 Soil Temperature | ST1 support remains implemented. | None newly identified beyond existing backlog. |
+| 27 Pressure | MA/MD/ME/MF/MG/MH/MK support remains implemented. | None newly identified beyond existing backlog. |
+| 28 Weather Extended | MV/MW support remains implemented. | **New (shared categorical-coercion issue):** weather code fields defined as 2-char ASCII codes are emitted as floats when numeric-like. |
+| 29 Wind | OA/OB/OC/OD/OE/RH support remains implemented. | None newly identified beyond existing backlog. |
+| 30 Marine | UA/UG/WA/WD/WG/WJ/EQD/REM/QNN support remains implemented. | **New:** EQD original-value text loses 6-char ASCII fidelity when numeric-like (leading zeros/sign formatting dropped by float coercion). |
+
+### Net-New Misalignments (Fifth Pass)
+
+1. Numeric-domain parts can preserve malformed text instead of enforcing numeric compliance.
+   - NOAA numeric parts are documented as numeric-only domains (e.g., WND direction/speed in Part 3: `DOM` numeric characters) (`isd-format-document-parts/part-03-mandatory-data-section.md:27`, `isd-format-document-parts/part-03-mandatory-data-section.md:65`).
+   - Current expansion stores raw token text whenever float parsing fails (`src/noaa_climate_data/cleaning.py:328`, `src/noaa_climate_data/cleaning.py:329`), including numeric-designated parts.
+   - Reproduced: `clean_value_quality("A90,1,N,0050,1", "WND")` emits `WND__part1="A90"` and `clean_value_quality("180,1,N,0A50,1", "WND")` emits `WND__part4="0A50"` instead of null/reject.
+
+2. Part 30 EQD original value text is not preserved as 6-character ASCII text when numeric-like.
+   - Part 30 defines EQD original value as `FLD LEN: 6` with ASCII-domain text (`isd-format-document-parts/part-30-marine-data.md:808`, `isd-format-document-parts/part-30-marine-data.md:811`, `isd-format-document-parts/part-30-marine-data.md:1010`, `isd-format-document-parts/part-30-marine-data.md:1013`).
+   - EQD part 1 is configured as categorical (`src/noaa_climate_data/constants.py:428`, `src/noaa_climate_data/constants.py:441`), but generic parse/coercion converts numeric-like tokens to float (`src/noaa_climate_data/cleaning.py:220`, `src/noaa_climate_data/cleaning.py:222`, `src/noaa_climate_data/cleaning.py:339`).
+   - Reproduced: `clean_value_quality("001234,1,APC3", "Q01")` emits `Q01__part1=1234.0`, losing leading zeros from the original 6-char text.
+
+3. Numeric-like categorical code fields lose fixed-width code semantics through float coercion.
+   - NOAA code fields are specified as fixed-width ASCII codes (for example Part 5/28 weather code fields are `FLD LEN: 2` with explicit `00..` code domains) (`isd-format-document-parts/part-05-weather-occurrence-data.md:31`, `isd-format-document-parts/part-05-weather-occurrence-data.md:33`, `isd-format-document-parts/part-28-weather-occurrence-data-extended.md:72`, `isd-format-document-parts/part-28-weather-occurrence-data-extended.md:75`).
+   - Current parser converts any numeric-like token to float regardless of categorical kind (`src/noaa_climate_data/cleaning.py:220`, `src/noaa_climate_data/cleaning.py:222`, `src/noaa_climate_data/cleaning.py:339`).
+   - Existing tests currently encode float expectations for such codes (e.g., `AT1__part2 == 1.0`, `AW1__part1 == 99.0`) (`tests/test_cleaning.py:1069`, `tests/test_cleaning.py:1078`), confirming representation drift from fixed-width code semantics.
+
+4. Part 6 CRN QC code `9` (“Missing”) does not null associated value components.
+   - Part 6 CRN QC definitions repeatedly specify `1 = Passed`, `3 = Failed`, `9 = Missing` (e.g., CB/CF/CG/CH sections) (`isd-format-document-parts/part-06-climate-reference-network-unique-data.md:36`, `isd-format-document-parts/part-06-climate-reference-network-unique-data.md:38`, `isd-format-document-parts/part-06-climate-reference-network-unique-data.md:80`, `isd-format-document-parts/part-06-climate-reference-network-unique-data.md:82`, `isd-format-document-parts/part-06-climate-reference-network-unique-data.md:117`, `isd-format-document-parts/part-06-climate-reference-network-unique-data.md:119`, `isd-format-document-parts/part-06-climate-reference-network-unique-data.md:174`, `isd-format-document-parts/part-06-climate-reference-network-unique-data.md:176`).
+   - Current rules allow `{1,3,9}` as valid QC-domain values (`src/noaa_climate_data/constants.py:1526`, `src/noaa_climate_data/constants.py:1544`, `src/noaa_climate_data/constants.py:1562`, `src/noaa_climate_data/constants.py:1586`, `src/noaa_climate_data/constants.py:2968`, `src/noaa_climate_data/constants.py:3001`), and value gating only drops on out-of-domain quality (`src/noaa_climate_data/cleaning.py:286`, `src/noaa_climate_data/cleaning.py:287`, `src/noaa_climate_data/cleaning.py:288`).
+   - Reproduced: `clean_value_quality("05,+000123,9,0", "CB1")` retains `CB1__part2=12.3` even though QC is `9` (missing).
+
+### Test Coverage Gap (Fifth Pass)
+
+- `tests/test_cleaning.py` does not currently include regression cases for:
+  - malformed alpha tokens in numeric-domain parts falling through as raw strings,
+  - EQD original-value text fidelity (6-char text preservation, including leading zeros),
+  - CRN QC `9` missing-semantics behavior for associated values.
+
+### Added to Next Steps (Fifth Pass)
+
+Added checklist items in `NEXT_STEPS.md` for:
+
+- strict numeric-domain type enforcement (no raw-text fallback in numeric parts),
+- EQD original-value text fidelity preservation,
+- categorical code representation preservation for fixed-width code fields,
+- CRN QC `9` missing-semantics enforcement,
+- targeted regression tests for these cases.
+
+## Sixth Pass: New Misalignments Beyond Current NEXT_STEPS
+
+Date: 2026-02-20 (sixth pass)
+
+Scope for this pass:
+
+- Re-read `part-01` through `part-30` sequentially (one part at a time).
+- Re-checked control normalization and pipeline timestamp derivation:
+  - `src/noaa_climate_data/cleaning.py`
+  - `src/noaa_climate_data/pipeline.py`
+  - `tests/test_cleaning.py`
+- Filtered out issues already tracked in `NEXT_STEPS.md`.
+
+### Part-by-Part Snapshot (Sixth Pass)
+
+| Part | Alignment | New misalignment in this pass |
+| --- | --- | --- |
+| 01 Preface | Existing section model and dataset framing remain aligned. | None newly identified. |
+| 02 Control | Core control normalization (`DATE`/`TIME`/lat/lon/elevation/source/report/QC) remains present. | **New:** longitude lower bound is off by 0.001 degrees; **new:** pipeline `DATE_PARSED` fallback re-accepts non-`YYYYMMDD` dates; **new:** `CALL_SIGN` fixed-width/domain constraints are not enforced. |
+| 03 Mandatory | Mandatory groups and core parsing behavior remain implemented. | None newly identified beyond existing backlog. |
+| 04 Additional | Additional groups remain implemented with prior tracked gaps. | None newly identified beyond existing backlog. |
+| 05 Weather Occurrence | AT/AU/AW/AX/AY/AZ remain implemented. | None newly identified beyond existing backlog. |
+| 06 CRN Unique | CB/CF/CG/CH/CI/CN remain implemented. | None newly identified beyond existing backlog. |
+| 07 Network Metadata | CO/CR/CT/CU/CV/CW/CX remain implemented. | None newly identified beyond existing backlog. |
+| 08 CRN Control | CR1 remains implemented. | None newly identified beyond existing backlog. |
+| 09 Subhourly Temperature | CT1-CT3 remain implemented. | None newly identified beyond existing backlog. |
+| 10 Hourly Temperature | CU1-CU3 remain implemented. | None newly identified beyond existing backlog. |
+| 11 Hourly Temperature Extreme | CV1-CV3 remain implemented. | None newly identified beyond existing backlog. |
+| 12 Subhourly Wetness | CW1 remains implemented. | None newly identified beyond existing backlog. |
+| 13 Geonor Summary | CX1-CX3 remain implemented. | None newly identified beyond existing backlog. |
+| 14 Runway Visual Range | ED1 remains implemented. | None newly identified beyond existing backlog. |
+| 15 Cloud and Solar | GA/GD/GE1/GF1/GG/GH1 remain implemented. | None newly identified beyond existing backlog. |
+| 16 Sunshine | GJ/GK/GL remain implemented. | None newly identified beyond existing backlog. |
+| 17 Solar Irradiance | GM1/GN1 remain implemented. | None newly identified beyond existing backlog. |
+| 18 Net Solar Radiation | GO1 remains implemented. | None newly identified beyond existing backlog. |
+| 19 Modeled Solar Irradiance | GP1 remains implemented. | None newly identified beyond existing backlog. |
+| 20 Hourly Solar Angle | GQ1 remains implemented. | None newly identified beyond existing backlog. |
+| 21 Hourly Extraterrestrial Radiation | GR1 remains implemented. | None newly identified beyond existing backlog. |
+| 22 Hail | HAIL remains implemented. | None newly identified beyond existing backlog. |
+| 23 Ground Surface | IA/IB/IC remain implemented. | None newly identified beyond existing backlog. |
+| 24 Temperature | KA/KB/KC/KD/KE/KF/KG remain implemented. | None newly identified beyond existing backlog. |
+| 25 Sea Surface Temperature | SA1 remains implemented. | None newly identified beyond existing backlog. |
+| 26 Soil Temperature | ST1 remains implemented. | None newly identified beyond existing backlog. |
+| 27 Pressure | MA/MD/ME/MF/MG/MH/MK remain implemented. | None newly identified beyond existing backlog. |
+| 28 Weather Extended | MV/MW remain implemented. | None newly identified beyond existing backlog. |
+| 29 Wind | OA/OB/OC/OD/OE/RH remain implemented. | None newly identified beyond existing backlog. |
+| 30 Marine | UA/UG/WA/WD/WG/WJ/EQD/REM/QNN remain implemented. | None newly identified beyond existing backlog. |
+
+### Net-New Misalignments (Sixth Pass)
+
+1. Part 2 longitude minimum is too permissive by one scaled unit.
+   - Spec sets longitude to `MIN: -179999` and `MAX: +180000` (scaled by 1000), i.e. `[-179.999, +180.000]` (`isd-format-document-parts/part-02-control-data-section.md:102`, `isd-format-document-parts/part-02-control-data-section.md:106`, `isd-format-document-parts/part-02-control-data-section.md:107`).
+   - Current normalization uses `between(-180.0, 180.0)` (`src/noaa_climate_data/cleaning.py:450`), so `-180.000` is retained even though it is below spec minimum.
+   - Reproduced: `clean_noaa_dataframe(pd.DataFrame({'LONGITUDE':['-180.000']}))` keeps `-180.000`.
+
+2. Part 2 strict `DATE` format enforcement is bypassed in pipeline processing.
+   - Spec defines control date as numeric `YYYYMMDD` (`isd-format-document-parts/part-02-control-data-section.md:32`, `isd-format-document-parts/part-02-control-data-section.md:36`).
+   - Cleaning correctly rejects ISO timestamps (`tests/test_cleaning.py:1890`), but pipeline precomputes `DATE_PARSED` from raw `DATE` (`src/noaa_climate_data/pipeline.py:742`) and `_extract_time_columns` backfills `DATE` from that fallback (`src/noaa_climate_data/pipeline.py:407`, `src/noaa_climate_data/pipeline.py:409`).
+   - Reproduced: `process_location_from_raw` accepts `DATE='2024-01-01T01:00:00Z'` and emits `Hour=1`, despite Part 2 format rules.
+
+3. Part 2 `CALL_SIGN` field-width/domain constraints are not enforced.
+   - Spec defines call letters at `POS: 52-56` (5-character field) with ASCII-domain text and `99999` missing (`isd-format-document-parts/part-02-control-data-section.md:173`, `isd-format-document-parts/part-02-control-data-section.md:174`, `isd-format-document-parts/part-02-control-data-section.md:177`).
+   - Current logic only strips whitespace and nulls sentinel/blank values (`src/noaa_climate_data/cleaning.py:464`, `src/noaa_climate_data/cleaning.py:466`), allowing non-5-character values through.
+   - Reproduced: values like `"A"` and `"@@@@@@"` survive normalization.
+
+### Test Coverage Gap (Sixth Pass)
+
+- `tests/test_cleaning.py` currently lacks regression cases for:
+  - Part 2 longitude lower-bound edge (`-180.000` should null; `-179.999` should pass),
+  - `CALL_SIGN` fixed-width/domain validation,
+  - pipeline-level rejection of non-`YYYYMMDD` control dates when using `process_location_from_raw`.
+
+### Added to Next Steps (Sixth Pass)
+
+Added checklist items in `NEXT_STEPS.md` for:
+
+- exact Part 2 longitude lower-bound enforcement (`-179.999` minimum),
+- preventing `DATE_PARSED` fallback from bypassing strict control-date format rules,
+- enforcing Part 2 `CALL_SIGN` field-width/domain constraints,
+- regression tests for those three gaps.
