@@ -96,13 +96,22 @@ class TestPrefixRuleMapping:
     @pytest.mark.parametrize(
         ("prefix", "expected_code"),
         [
+            ("AH1", "AH*"),
+            ("AI6", "AI*"),
+            ("AL4", "AL*"),
+            ("AO1", "AO*"),
+            ("AT8", "AT*"),
+            ("AU9", "AU*"),
+            ("AW4", "AW*"),
+            ("AX6", "AX*"),
+            ("AZ2", "AZ*"),
             ("OA1", "OA*"),
             ("OD2", "OD*"),
             ("OB1", "OB*"),
             ("OE3", "OE*"),
             ("RH2", "RH*"),
-            ("MV1", "MV*"),
-            ("MW2", "MW*"),
+            ("MV7", "MV*"),
+            ("MW7", "MW*"),
             ("AY1", "AY*"),
             ("CO2", "CO*"),
             ("CT3", "CT*"),
@@ -110,6 +119,9 @@ class TestPrefixRuleMapping:
             ("CV1", "CV*"),
             ("CW1", "CW*"),
             ("CX3", "CX*"),
+            ("GA6", "GA*"),
+            ("GD6", "GD*"),
+            ("GG6", "GG*"),
             ("GD1", "GD*"),
             ("GH1", "GH*"),
             ("GJ1", "GJ*"),
@@ -127,7 +139,33 @@ class TestPrefixRuleMapping:
 
     @pytest.mark.parametrize(
         "prefix",
-        ["CO10", "OA4", "OD4", "OB3", "OE4", "RH4", "CT4", "CU4", "CV4", "CW2", "CX4"],
+        [
+            "AH7",
+            "AI7",
+            "AL5",
+            "AO5",
+            "AT9",
+            "AU10",
+            "AW5",
+            "AX7",
+            "AZ3",
+            "CO10",
+            "GA7",
+            "GD7",
+            "GG7",
+            "MV8",
+            "MW8",
+            "OA4",
+            "OD4",
+            "OB3",
+            "OE4",
+            "RH4",
+            "CT4",
+            "CU4",
+            "CV4",
+            "CW2",
+            "CX4",
+        ],
     )
     def test_invalid_repeated_identifiers_rejected(self, prefix: str):
         assert get_field_rule(prefix) is None
@@ -1338,8 +1376,18 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("+00123,2,0", "CT1")
         assert result["CT1__part1"] is None
 
+    def test_ct_range_enforced(self):
+        result = clean_value_quality("-10000,1,0", "CT1")
+        assert result["CT1__part1"] is None
+
     def test_cu_std_quality_rejects_2(self):
         result = clean_value_quality("+00123,1,0,0100,2,0", "CU1")
+        assert result["CU1__part4"] is None
+
+    def test_cu_range_enforced(self):
+        result = clean_value_quality("10000,1,0,0100,1,0", "CU1")
+        assert result["CU1__part1"] is None
+        result = clean_value_quality("+00123,1,0,10000,1,0", "CU1")
         assert result["CU1__part4"] is None
 
     def test_cv_min_quality_rejects_2(self):
@@ -1360,6 +1408,12 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("+00123,1,0,1200,1,0,+00234,1,0,2400,1,0", "CV1")
         assert result["CV1__part10"] is None
 
+    def test_cv_range_enforced(self):
+        result = clean_value_quality("10000,1,0,1200,1,0,+00234,1,0,1300,1,0", "CV1")
+        assert result["CV1__part1"] is None
+        result = clean_value_quality("+00123,1,0,1200,1,0,10000,1,0,1300,1,0", "CV1")
+        assert result["CV1__part7"] is None
+
     def test_cw_wet2_missing(self):
         result = clean_value_quality("00010,1,0,99999,1,0", "CW1")
         assert result["CW1__part4"] is None
@@ -1367,6 +1421,12 @@ class TestQualityNullsCorrectPart:
     def test_cx_precip_quality_rejects_2(self):
         result = clean_value_quality("+00100,2,0,1000,1,0,1000,1,0,1000,1,0", "CX1")
         assert result["CX1__part1"] is None
+
+    def test_cx_range_enforced(self):
+        result = clean_value_quality("100000,1,0,1000,1,0,1000,1,0,1000,1,0", "CX1")
+        assert result["CX1__part1"] is None
+        result = clean_value_quality("+00100,1,0,10000,1,0,1000,1,0,1000,1,0", "CX1")
+        assert result["CX1__part4"] is None
 
     def test_ed1_missing_parts(self):
         result = clean_value_quality("99,9,9999,1", "ED1")

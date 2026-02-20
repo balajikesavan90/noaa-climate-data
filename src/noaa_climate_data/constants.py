@@ -1720,7 +1720,13 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "CT": FieldRule(
         code="CT*",
         parts={
-            1: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=2),
+            1: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=2,
+                min_value=-9999,
+                max_value=9998,
+            ),
             2: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             3: FieldPartRule(
                 kind="quality",
@@ -1732,14 +1738,26 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "CU": FieldRule(
         code="CU*",
         parts={
-            1: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=2),
+            1: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=2,
+                min_value=-9999,
+                max_value=9998,
+            ),
             2: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             3: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
             ),
-            4: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=5),
+            4: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=5,
+                min_value=0,
+                max_value=9998,
+            ),
             5: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             6: FieldPartRule(
                 kind="quality",
@@ -1751,7 +1769,13 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "CV": FieldRule(
         code="CV*",
         parts={
-            1: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=2),
+            1: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=2,
+                min_value=-9999,
+                max_value=9998,
+            ),
             2: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             3: FieldPartRule(
                 kind="quality",
@@ -1771,7 +1795,13 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
             ),
-            7: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=8),
+            7: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=8,
+                min_value=-9999,
+                max_value=9999,
+            ),
             8: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             9: FieldPartRule(
                 kind="quality",
@@ -1815,28 +1845,49 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "CX": FieldRule(
         code="CX*",
         parts={
-            1: FieldPartRule(scale=0.1, missing_values={"99999"}, quality_part=2),
+            1: FieldPartRule(
+                scale=0.1,
+                missing_values={"99999"},
+                quality_part=2,
+                min_value=-99999,
+                max_value=99999,
+            ),
             2: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             3: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
             ),
-            4: FieldPartRule(missing_values={"9999"}, quality_part=5),
+            4: FieldPartRule(
+                missing_values={"9999"},
+                quality_part=5,
+                min_value=0,
+                max_value=9999,
+            ),
             5: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             6: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
             ),
-            7: FieldPartRule(missing_values={"9999"}, quality_part=8),
+            7: FieldPartRule(
+                missing_values={"9999"},
+                quality_part=8,
+                min_value=0,
+                max_value=9998,
+            ),
             8: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             9: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"},
             ),
-            10: FieldPartRule(missing_values={"9999"}, quality_part=11),
+            10: FieldPartRule(
+                missing_values={"9999"},
+                quality_part=11,
+                min_value=0,
+                max_value=9998,
+            ),
             11: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             12: FieldPartRule(
                 kind="quality",
@@ -3641,12 +3692,26 @@ _EQD_PREFIX_RULES.update({f"N{digit}": EQD_UNIT_RULE for digit in "0123456789"})
 FIELD_RULE_PREFIXES.update(_EQD_PREFIX_RULES)
 
 _REPEATED_IDENTIFIER_RANGES: dict[str, range] = {
+    "AH": range(1, 7),
+    "AI": range(1, 7),
+    "AL": range(1, 5),
+    "AO": range(1, 5),
+    "AT": range(1, 9),
+    "AU": range(1, 10),
+    "AW": range(1, 5),
+    "AX": range(1, 7),
+    "AZ": range(1, 3),
     "CO": range(1, 10),
     "CT": range(1, 4),
     "CU": range(1, 4),
     "CV": range(1, 4),
     "CW": range(1, 2),
     "CX": range(1, 4),
+    "GA": range(1, 7),
+    "GD": range(1, 7),
+    "GG": range(1, 7),
+    "MV": range(1, 8),
+    "MW": range(1, 8),
     "OA": range(1, 4),
     "OD": range(1, 4),
     "OB": range(1, 3),
