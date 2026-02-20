@@ -208,6 +208,12 @@ def _parse_args() -> argparse.Namespace:
         default=False,
         help="Add imperial/derived unit columns alongside metric outputs",
     )
+    process_parser.add_argument(
+        "--permissive",
+        action="store_true",
+        default=False,
+        help="Disable strict parsing (allows unknown identifiers and malformed fields)",
+    )
 
     pick_parser = subparsers.add_parser(
         "pick-location",
@@ -363,6 +369,7 @@ def main() -> None:
             fixed_hour=args.fixed_hour,
             sleep_seconds=args.sleep_seconds,
             add_unit_conversions=args.add_unit_conversions,
+            strict_mode=not args.permissive,
         )
 
         outputs.raw.to_csv(output_dir / "LocationData_Raw.csv", index=False)

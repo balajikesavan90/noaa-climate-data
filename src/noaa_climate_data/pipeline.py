@@ -176,9 +176,10 @@ def clean_parquet_file(
     stations_csv: Path | None = None,
     file_name: str | None = None,
     station_id: str | None = None,
+    strict_mode: bool = True,
 ) -> Path:
     raw = pd.read_parquet(raw_parquet)
-    cleaned = clean_noaa_dataframe(raw, keep_raw=True)
+    cleaned = clean_noaa_dataframe(raw, keep_raw=True, strict_mode=strict_mode)
     cleaned = _extract_time_columns(cleaned)
     target_dir = output_dir or raw_parquet.parent
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -704,6 +705,7 @@ def process_location(
     fixed_hour: int | None = None,
     sleep_seconds: float = 0.0,
     add_unit_conversions: bool = False,
+    strict_mode: bool = True,
 ) -> LocationDataOutputs:
     raw = download_location_data(file_name, years, sleep_seconds=sleep_seconds)
     return process_location_from_raw(
@@ -715,6 +717,7 @@ def process_location(
         min_months_per_year=min_months_per_year,
         fixed_hour=fixed_hour,
         add_unit_conversions=add_unit_conversions,
+        strict_mode=strict_mode,
     )
 
 
@@ -727,6 +730,7 @@ def process_location_from_raw(
     min_months_per_year: int = 12,
     fixed_hour: int | None = None,
     add_unit_conversions: bool = False,
+    strict_mode: bool = True,
 ) -> LocationDataOutputs:
     if raw.empty:
         return LocationDataOutputs(
@@ -740,7 +744,7 @@ def process_location_from_raw(
     raw = raw.copy()
     if "DATE" in raw.columns:
         raw["DATE_PARSED"] = pd.to_datetime(raw["DATE"], errors="coerce", utc=True)
-    cleaned = clean_noaa_dataframe(raw, keep_raw=True)
+    cleaned = clean_noaa_dataframe(raw, keep_raw=True, strict_mode=strict_mode)
     cleaned = _extract_time_columns(cleaned)
     if location_id is not None:
         cleaned["ID"] = location_id
