@@ -1248,23 +1248,47 @@ class TestQualityNullsCorrectPart:
         assert result["CI1__part10"] is None
         assert result["CI1__part11"] is None
 
+    def test_ci1_range_enforced(self):
+        result = clean_value_quality("10000,1,0,00020,1,0,00030,1,0,00040,1,0", "CI1")
+        assert result["CI1__part1"] is None
+        result = clean_value_quality("00010,1,0,00020,1,0,00030,1,0,99999,1,0", "CI1")
+        assert result["CI1__part10"] is None
+
     def test_cn1_datalogger_quality_rejects_2(self):
         result = clean_value_quality("0123,1,0,0456,1,0,0789,2,0", "CN1")
         assert result["CN1__part7"] is None
 
+    def test_cn1_range_enforced(self):
+        result = clean_value_quality("9999,1,0,0456,1,0,0789,1,0", "CN1")
+        assert result["CN1__part1"] is None
+
     def test_cn2_door_open_missing(self):
         result = clean_value_quality("0001,1,0,0002,1,0,99,1,0", "CN2")
+        assert result["CN2__part7"] is None
+
+    def test_cn2_range_enforced(self):
+        result = clean_value_quality("0001,1,0,0002,1,0,61,1,0", "CN2")
         assert result["CN2__part7"] is None
 
     def test_cn3_signature_quality_rejects_2(self):
         result = clean_value_quality("000100,1,0,000200,2,0", "CN3")
         assert result["CN3__part4"] is None
 
+    def test_cn3_range_enforced(self):
+        result = clean_value_quality("999999,1,0,000200,1,0", "CN3")
+        assert result["CN3__part1"] is None
+
     def test_cn4_flag_missing_and_quality_rejects_2(self):
         result = clean_value_quality("9,1,0,0001,1,0,100,2,0,100,1,0", "CN4")
         assert result["CN4__part1"] is None
         assert result["CN4__part7"] is None
         assert result["CN4__part10"] == pytest.approx(10.0)
+
+    def test_cn4_range_enforced(self):
+        result = clean_value_quality("1,1,0,8193,1,0,100,1,0,100,1,0", "CN4")
+        assert result["CN4__part4"] is None
+        result = clean_value_quality("1,1,0,0001,1,0,501,1,0,100,1,0", "CN4")
+        assert result["CN4__part7"] is None
 
     def test_co1_missing_parts(self):
         result = clean_value_quality("99,+99", "CO1")
@@ -1762,6 +1786,10 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("00500,1,8", "AB1")
         assert result["AB1__part1"] is None
 
+    def test_ab_monthly_total_range(self):
+        result = clean_value_quality("50001,1,1", "AB1")
+        assert result["AB1__part1"] is None
+
     def test_ac_duration_characteristic_codes(self):
         result = clean_value_quality("4,C,1", "AC1")
         assert result["AC1__part1"] is None
@@ -1776,10 +1804,27 @@ class TestQualityNullsCorrectPart:
         assert result["AD1__part3"] is None
         assert result["AD1__part5"] is None
 
+    def test_ad_amount_and_date_range(self):
+        result = clean_value_quality("20001,2,0102,0102,0102,1", "AD1")
+        assert result["AD1__part1"] is None
+        result = clean_value_quality("01000,2,3201,0102,0102,1", "AD1")
+        assert result["AD1__part3"] is None
+
     def test_ae_missing_and_quality(self):
         result = clean_value_quality("99,1,05,8,10,1,00,1", "AE1")
         assert result["AE1__part1"] is None
         assert result["AE1__part3"] is None
+
+    def test_ae_day_count_range(self):
+        result = clean_value_quality("32,1,00,1,00,1,00,1", "AE1")
+        assert result["AE1__part1"] is None
+        result = clean_value_quality("00,1,32,1,00,1,00,1", "AE1")
+        assert result["AE1__part3"] is None
+
+    def test_aj_range_enforced(self):
+        result = clean_value_quality("1201,1,1,120001,1,1", "AJ1")
+        assert result["AJ1__part1"] is None
+        assert result["AJ1__part4"] is None
 
     def test_ag_discrepancy_and_missing_depth(self):
         result = clean_value_quality("9,999", "AG1")
@@ -1834,6 +1879,12 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("0100,1,010203,C", "AK1")
         assert result["AK1__part1"] is None
 
+    def test_ak_range_enforced(self):
+        result = clean_value_quality("1501,1,010203,1", "AK1")
+        assert result["AK1__part1"] is None
+        result = clean_value_quality("0100,1,320203,1", "AK1")
+        assert result["AK1__part3"] is None
+
     def test_al_missing_and_quality(self):
         result = clean_value_quality("99,999,9,1", "AL1")
         assert result["AL1__part1"] is None
@@ -1842,6 +1893,12 @@ class TestQualityNullsCorrectPart:
 
     def test_al_quality_rejects_c(self):
         result = clean_value_quality("24,010,1,C", "AL1")
+        assert result["AL1__part2"] is None
+
+    def test_al_range_enforced(self):
+        result = clean_value_quality("73,010,1,1", "AL1")
+        assert result["AL1__part1"] is None
+        result = clean_value_quality("24,501,1,1", "AL1")
         assert result["AL1__part2"] is None
 
     def test_am_missing_and_quality(self):
@@ -1856,6 +1913,12 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("0100,1,0102,0203,0304,C", "AM1")
         assert result["AM1__part1"] is None
 
+    def test_am_range_enforced(self):
+        result = clean_value_quality("2001,1,0102,0203,0304,1", "AM1")
+        assert result["AM1__part1"] is None
+        result = clean_value_quality("0100,1,3202,0203,0304,1", "AM1")
+        assert result["AM1__part3"] is None
+
     def test_an_missing_and_quality(self):
         result = clean_value_quality("999,9999,9,1", "AN1")
         assert result["AN1__part1"] is None
@@ -1864,6 +1927,12 @@ class TestQualityNullsCorrectPart:
 
     def test_an_quality_rejects_c(self):
         result = clean_value_quality("024,0100,1,C", "AN1")
+        assert result["AN1__part2"] is None
+
+    def test_an_range_enforced(self):
+        result = clean_value_quality("000,0100,1,1", "AN1")
+        assert result["AN1__part1"] is None
+        result = clean_value_quality("024,9999,1,1", "AN1")
         assert result["AN1__part2"] is None
 
     def test_ao_missing_and_quality(self):
