@@ -141,9 +141,16 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--k", type=int, nargs="+", default=[1, 2, 3], help="Combination sizes to generate (e.g., 1 2 3).")
     ap.add_argument("--limit", type=int, default=None, help="Limit combos per k (for readability).")
-    ap.add_argument("--format", choices=["md", "csv"], default="md", help="Output format.")
+    ap.add_argument("--format", choices=["md", "csv"], default=None, help="Output format (auto-detected from --out if omitted).")
     ap.add_argument("--out", type=str, default=None, help="Output path. If omitted: prints to stdout.")
     args = ap.parse_args()
+
+    # Auto-detect format from --out extension if not explicitly specified
+    if args.format is None:
+        if args.out and args.out.lower().endswith(".csv"):
+            args.format = "csv"
+        else:
+            args.format = "md"
 
     families = get_families()
 
