@@ -471,6 +471,38 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
         and part_rule.allowed_quality
     ):
         allowed_quality = part_rule.allowed_quality
+    
+    # A4: Token width validation for value/quality fields
+    if strict_mode:
+        width_rules = get_token_width_rules(prefix, 1)
+        if width_rules:
+            part_stripped = parsed.parts[0].strip()
+            # Check token width (handling signed values)
+            if 'width' in width_rules:
+                expected_width = width_rules['width']
+                test_value = part_stripped.lstrip('+-')
+                if len(test_value) != expected_width:
+                    logger.warning(
+                        f"[PARSE_STRICT] Rejected {prefix} part 1: "
+                        f"token width {len(test_value)}, expected {expected_width}"
+                    )
+                    return {
+                        value_key: None,
+                        f"{prefix}__quality": quality,
+                    }
+            # Check token pattern
+            if 'pattern' in width_rules:
+                pattern = width_rules['pattern']
+                if not pattern.fullmatch(part_stripped):
+                    logger.warning(
+                        f"[PARSE_STRICT] Rejected {prefix} part 1: "
+                        f"token format mismatch (pattern validation failed)"
+                    )
+                    return {
+                        value_key: None,
+                        f"{prefix}__quality": quality,
+                    }
+    
     value: float | None
     if part_rule and _is_missing_value(parsed.parts[0], part_rule):
         value = None
@@ -620,6 +652,7 @@ def clean_noaa_dataframe(
         # Use get_field_rule() to leverage prefix matching logic (e.g., KA1 via KA prefix)
         if strict_mode and get_field_rule(column) is None:
             # Skip expansion for unknown identifiers, keep raw column
+            logger.warning(f"[PARSE_STRICT] Skipping unknown identifier: {column}")
             continue
 
         series = cleaned[column]

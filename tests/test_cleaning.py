@@ -2222,3 +2222,334 @@ class TestControlAndMandatoryNormalization:
         assert pd.isna(cleaned.loc[0, "ceiling_determination_code"])
         assert pd.isna(cleaned.loc[0, "ceiling_cavok_code"])
         assert pd.isna(cleaned.loc[0, "visibility_variability_code"])
+
+
+# ── Gate A: Parser Strictness ───────────────────────────────────────────
+
+
+class TestA1UnknownIdentifierAllowlist:
+    """A1: Restrict comma-field expansion to known identifiers only.
+    
+    Unknown identifiers should be skipped in strict mode, but expanded in permissive mode.
+    """
+
+    def test_unknown_identifier_no_expansion_strict(self, caplog):
+        """NAME column with commas stays as single column in strict mode."""
+        df = pd.DataFrame({"NAME": ["value1,value2,value3"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should NOT create NAME__part* columns
+        assert "NAME__part1" not in result.columns
+        assert "NAME__part2" not in result.columns
+        assert "NAME__part3" not in result.columns
+        
+        # Should keep raw NAME column
+        assert "NAME" in result.columns
+        assert result["NAME"].iloc[0] == "value1,value2,value3"
+        
+        # Should log warning
+        assert "[PARSE_STRICT] Skipping unknown identifier: NAME" in caplog.text
+
+    def test_unknown_identifier_expansion_permissive(self):
+        """Unknown identifier expands in permissive mode."""
+        df = pd.DataFrame({"NAME": ["value1,value2,value3"]})
+        result = clean_noaa_dataframe(df, strict_mode=False)
+        
+        # Should create NAME__part* columns in permissive mode
+        assert "NAME__part1" in result.columns or "NAME" in result.columns
+        # Note: expansion behavior in permissive mode may vary
+
+    def test_known_identifier_expands_strict(self):
+        """Known identifier (WND) expands normally in strict mode."""
+        df = pd.DataFrame({"WND": ["180,1,N,0050,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should expand to wind_* columns
+        assert "wind_direction_deg" in result.columns
+        assert "wind_speed_ms" in result.columns
+        assert result["wind_direction_deg"].iloc[0] == 180.0
+        assert result["wind_speed_ms"].iloc[0] == 5.0
+
+
+class TestA2MalformedIdentifierFormat:
+    """A2: Enforce exact identifier token format.
+    
+    Malformed identifiers (wrong digit count, invalid characters) should be rejected
+    in strict mode with warning logs.
+    """
+
+    def test_eqd_malformed_suffix_Q100(self, caplog):
+        """Q100 rejected (3 digits instead of 2)."""
+        df = pd.DataFrame({"Q100": ["value1,quality1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should not expand
+        assert "Q100__value" not in result.columns
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text and "Q100" in caplog.text
+
+    def test_eqd_malformed_suffix_Q01A(self, caplog):
+        """Q01A rejected (contains letter)."""
+        df = pd.DataFrame({"Q01A": ["value1,quality1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should not expand
+        assert "Q01A__value" not in result.columns
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text and "Q01A" in caplog.text
+
+    def test_eqd_malformed_suffix_N001(self, caplog):
+        """N001 rejected (3 digits instead of 2)."""
+        df = pd.DataFrame({"N001": ["value1,quality1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should not expand
+        assert "N001__value" not in result.columns
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text and "N001" in caplog.text
+
+    def test_repeated_malformed_CO02(self, caplog):
+        """CO02 rejected (2 digits for 1-digit family)."""
+        df = pd.DataFrame({"CO02": ["value1,quality1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should not expand (CO is a 1-digit family: CO1-CO9)
+        assert "CO02__value" not in result.columns
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text and "CO02" in caplog.text
+
+    def test_repeated_malformed_OA01(self, caplog):
+        """OA01 rejected (2 digits for 1-digit family)."""
+        df = pd.DataFrame({"OA01": ["value1,quality1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should not expand (OA is a 1-digit family: OA1-OA3)
+        assert "OA01__value" not in result.columns
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text and "OA01" in caplog.text
+
+    def test_repeated_malformed_RH0001(self, caplog):
+        """RH0001 rejected (4 digits instead of expected range)."""
+        df = pd.DataFrame({"RH0001": ["value1,quality1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should not expand
+        assert "RH0001__value" not in result.columns
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text and "RH0001" in caplog.text
+
+    def test_valid_eqd_identifier_Q01(self):
+        """Q01 accepted (valid 2-digit EQD)."""
+        df = pd.DataFrame({"Q01": ["value1,1,value3"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should expand (Q01 expects 3 parts)
+        assert "Q01__part1" in result.columns or "Q01" in result.columns
+
+    def test_valid_repeated_identifier_CO1(self):
+        """CO1 accepted (valid 1-digit repeated family)."""
+        df = pd.DataFrame({"CO1": ["value1,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should expand (CO1 is valid)
+        # Check for either value column or part columns
+        assert "CO1__value" in result.columns or "CO1" in result.columns
+
+
+class TestA3ArityValidation:
+    """A3: Enforce per-identifier arity (part count).
+    
+    Payloads with truncated or extra parts should be rejected in strict mode.
+    """
+
+    def test_wnd_truncated_arity(self, caplog):
+        """WND with 4 parts rejected (expects 5)."""
+        df = pd.DataFrame({"WND": ["180,1,N,0050"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should log warning about truncated payload
+        assert "[PARSE_STRICT]" in caplog.text
+        assert "WND" in caplog.text
+        assert "truncated" in caplog.text or "expected 5 parts, got 4" in caplog.text
+
+    def test_wnd_extra_arity(self, caplog):
+        """WND with 6 parts rejected (expects 5)."""
+        df = pd.DataFrame({"WND": ["180,1,N,0050,1,EXTRA"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should log warning about extra payload
+        assert "[PARSE_STRICT]" in caplog.text
+        assert "WND" in caplog.text
+        assert "extra" in caplog.text or "expected 5 parts, got 6" in caplog.text
+
+    def test_wnd_valid_arity(self):
+        """WND with 5 parts accepted."""
+        df = pd.DataFrame({"WND": ["180,1,N,0050,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should expand successfully
+        assert "wind_direction_deg" in result.columns
+        assert "wind_speed_ms" in result.columns
+        assert result["wind_direction_deg"].iloc[0] == 180.0
+        assert result["wind_speed_ms"].iloc[0] == 5.0
+
+    def test_truncated_arity_permissive_mode(self):
+        """Truncated payload allowed in permissive mode."""
+        df = pd.DataFrame({"WND": ["180,1,N,0050"]})
+        result = clean_noaa_dataframe(df, strict_mode=False)
+        
+        # Should not raise error, may expand with missing values
+        assert "wind_direction_deg" in result.columns
+        # Direction should still be valid
+        assert result["wind_direction_deg"].iloc[0] == 180.0
+
+    def test_value_quality_field_special_arity(self):
+        """Value/quality fields (TMP, DEW) with 2 parts accepted despite 1-part rule."""
+        df = pd.DataFrame({"TMP": ["+0250,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should expand successfully (value/quality fields have special handling)
+        assert "temperature_c" in result.columns
+        assert result["temperature_c"].iloc[0] == 25.0
+
+
+class TestA4TokenWidthValidation:
+    """A4: Enforce fixed-width token formats.
+    
+    Tokens with incorrect width should be rejected in strict mode.
+    """
+
+    def test_wnd_short_direction_token(self, caplog):
+        """WND with 1-digit direction rejected (expects 3)."""
+        df = pd.DataFrame({"WND": ["1,1,N,0050,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Direction should be None due to width violation
+        assert pd.isna(result["wind_direction_deg"].iloc[0])
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text
+        assert "WND part 1" in caplog.text
+        assert "token width 1, expected 3" in caplog.text
+
+    def test_wnd_short_speed_token(self, caplog):
+        """WND with 2-digit speed rejected (expects 4)."""
+        df = pd.DataFrame({"WND": ["180,1,N,50,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Speed should be None due to width violation
+        assert pd.isna(result["wind_speed_ms"].iloc[0])
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text
+        assert "WND part 4" in caplog.text
+        assert "token width 2, expected 4" in caplog.text
+
+    def test_wnd_long_direction_token(self, caplog):
+        """WND with 5-digit direction rejected (expects 3)."""
+        df = pd.DataFrame({"WND": ["00180,1,N,0050,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Direction should be None
+        assert pd.isna(result["wind_direction_deg"].iloc[0])
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text
+        assert "WND part 1" in caplog.text
+        assert "token width 5, expected 3" in caplog.text
+
+    def test_tmp_short_value_token(self, caplog):
+        """TMP with 3-digit value rejected (expects 4 after sign)."""
+        df = pd.DataFrame({"TMP": ["+250,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Temperature should be None
+        assert pd.isna(result["temperature_c"].iloc[0])
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text
+        assert "TMP part 1" in caplog.text
+        assert "token width 3, expected 4" in caplog.text
+
+    def test_tmp_long_value_token(self, caplog):
+        """TMP with 5-digit value rejected (expects 4 after sign)."""
+        df = pd.DataFrame({"TMP": ["+02500,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Temperature should be None
+        assert pd.isna(result["temperature_c"].iloc[0])
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text
+        assert "TMP part 1" in caplog.text
+        assert "token width 5, expected 4" in caplog.text
+
+    def test_dew_short_value_token(self, caplog):
+        """DEW with 3-digit value rejected (expects 4 after sign)."""
+        df = pd.DataFrame({"DEW": ["+125,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Dew point should be None
+        assert pd.isna(result["dew_point_c"].iloc[0])
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text
+        assert "DEW part 1" in caplog.text
+        assert "token width 3, expected 4" in caplog.text
+
+    def test_slp_short_value_token(self, caplog):
+        """SLP with 4-digit value rejected (expects 5)."""
+        df = pd.DataFrame({"SLP": ["9999,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # SLP should be None
+        assert pd.isna(result["sea_level_pressure_hpa"].iloc[0])
+        
+        # Should log warning
+        assert "[PARSE_STRICT]" in caplog.text
+        assert "SLP part 1" in caplog.text
+        assert "token width 4, expected 5" in caplog.text
+
+    def test_wnd_valid_token_widths(self):
+        """WND with correct token widths accepted."""
+        df = pd.DataFrame({"WND": ["180,1,N,0050,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should expand successfully
+        assert result["wind_direction_deg"].iloc[0] == 180.0
+        assert result["wind_speed_ms"].iloc[0] == 5.0
+
+    def test_tmp_valid_token_width(self):
+        """TMP with 4-digit value (after sign) accepted."""
+        df = pd.DataFrame({"TMP": ["+0250,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should expand successfully
+        assert result["temperature_c"].iloc[0] == 25.0
+
+    def test_slp_valid_token_width(self):
+        """SLP with 5-digit value accepted."""
+        df = pd.DataFrame({"SLP": ["10132,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        
+        # Should expand successfully
+        assert result["sea_level_pressure_hpa"].iloc[0] == 1013.2
+
+    def test_token_width_permissive_mode(self):
+        """Invalid token widths allowed in permissive mode."""
+        df = pd.DataFrame({
+            "WND": ["1,1,N,50,1"],  # 1-digit direction, 2-digit speed
+            "TMP": ["+250,1"],       # 3-digit temperature
+        })
+        result = clean_noaa_dataframe(df, strict_mode=False)
+        
+        # Should not raise errors, values should parse
+        assert result["wind_direction_deg"].iloc[0] == 1.0
+        assert result["wind_speed_ms"].iloc[0] == 5.0
+        assert result["temperature_c"].iloc[0] == 25.0

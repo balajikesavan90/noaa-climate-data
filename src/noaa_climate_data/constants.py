@@ -459,23 +459,36 @@ FIELD_RULES: dict[str, FieldRule] = {
     "WND": FieldRule(
         code="WND",
         parts={
-            1: FieldPartRule(missing_values={"999"}, quality_part=2, agg="circular_mean"),
+            1: FieldPartRule(
+                missing_values={"999"},
+                quality_part=2,
+                agg="circular_mean",
+                token_width=3,  # Wind direction: 3 digits (001-360)
+            ),
             2: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=MANDATORY_QUALITY_FLAGS,
+                token_width=1,  # Direction quality code: 1 char
             ),  # direction quality
             3: FieldPartRule(
                 kind="categorical",
                 agg="drop",
                 missing_values={"9"},
                 allowed_values={"A", "B", "C", "H", "N", "R", "Q", "T", "V"},
+                token_width=1,  # Wind type code: 1 char
             ),  # wind type code
-            4: FieldPartRule(scale=0.1, missing_values={"9999"}, quality_part=5),
+            4: FieldPartRule(
+                scale=0.1,
+                missing_values={"9999"},
+                quality_part=5,
+                token_width=4,  # Wind speed: 4 digits (0000-0900)
+            ),
             5: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=MANDATORY_QUALITY_FLAGS,
+                token_width=1,  # Speed quality code: 1 char
             ),  # speed quality
         },
     ),
@@ -533,6 +546,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"9999"},
                 quality_part=2,
                 allowed_quality=QUALITY_FLAGS,
+                token_width=4,  # Temperature: 4 digits after sign (+/-NNNN)
             )
         },
     ),
@@ -544,6 +558,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"9999"},
                 quality_part=2,
                 allowed_quality=QUALITY_FLAGS,
+                token_width=4,  # Dew point: 4 digits after sign (+/-NNNN)
             )
         },
     ),
@@ -555,6 +570,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99999"},
                 quality_part=2,
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "9"},
+                token_width=5,  # Sea level pressure: 5 digits (08600-10900)
             )
         },
     ),
@@ -3744,20 +3760,87 @@ def is_valid_eqd_identifier(prefix: str) -> bool | None:
     """Validate EQD identifier format with strict suffix requirements.
     
     Returns:
-        True if valid EQD identifier (e.g., Q01-Q99, N01-N99)
+        True if valid EQD identifier (e.g., Q01-Q99, N01-N99, C01-C99)
         False if malformed (e.g., Q0, Q100, Q01A, N001 - wrong format)
         None if not an EQD identifier pattern
     """
-    # Reject single-digit suffixes (Q0-Q9, N0-N9)
-    if re.fullmatch(r"[QPRCDN]\d", prefix):
-        return False
-    # Must be exactly 2 digits, no letters mixed in (A2)
-    match = re.fullmatch(r"([QPRCDN])(\d{2})", prefix)
-    if not match:
+    # EQD identifiers are exactly: single letter [QPRCDN] + 2 digits
+    # Don't confuse with repeated identifiers like CN2, CO1, CR1 which are 2 letters + 1 digit
+    
+    # Not an EQD pattern if doesn't start with EQD prefix
+    if not prefix or prefix[0] not in "QPRCDN":
         return None
-    idx = int(match.group(2))
-    # Reject 00 suffix
-    return idx != 0
+    
+    # Reject single-digit suffixes (Q0-Q9, N0-N9, C0-C9, etc.)
+    if len(prefix) == 2:
+        if prefix[1].isdigit():
+            return False
+        # Not EQD pattern (probably a repeated identifier prefix like CN, CO, CR)
+        return None
+    
+    # Must be exactly 3 chars for valid EQD: letter + 2 digits
+    if len(prefix) == 3:
+        # Check if second char is a letter (like CN2, CO1) - not EQD
+        if not prefix[1].isdigit():
+            return None
+        
+        # Must match pattern: letter + 2 digits
+        match = re.fullmatch(r"([QPRCDN])(\d{2})", prefix)
+        if not match:
+            # Starts with EQD prefix but format is wrong (e.g., Q1A)
+            return False
+        
+        idx = int(match.group(2))
+        # Reject 00 suffix
+        return idx != 0
+    
+    # More than 3 characters - check if it looks like malformed EQD
+    if len(prefix) > 3:
+        # If it's single letter + all digits, it's malformed EQD (too many digits)
+        if prefix[1:].isdigit():
+            return False  # e.g., Q100, N001
+        # Otherwise not an EQD pattern at all
+        return None
+    
+    # Single character - not EQD
+    return None
+
+
+def is_valid_identifier(identifier: str) -> bool:
+    """Validate if an identifier is a known, well-formed NOAA field identifier.
+    
+    Combines all validation checks: allowlist membership, EQD format, repeated format,
+    and prefix family matching.
+    
+    Args:
+        identifier: NOAA field identifier to validate
+    
+    Returns:
+        True if identifier is valid and known, False otherwise
+    
+    Examples:
+        >>> is_valid_identifier("WND")  # Static identifier
+        True
+        >>> is_valid_identifier("Q01")  # Valid EQD
+        True
+        >>> is_valid_identifier("CO1")  # Valid repeated
+        True
+        >>> is_valid_identifier("KA1")  # Valid prefix family (KA)
+        True
+        >>> is_valid_identifier("Q100")  # Malformed EQD (3 digits)
+        False
+        >>> is_valid_identifier("OA01")  # Malformed repeated (2 digits)
+        False
+        >>> is_valid_identifier("NAME")  # Unknown identifier
+        False
+    """
+    # Use get_field_rule which already implements all validation logic:
+    # - KNOWN_IDENTIFIERS allowlist (A1)
+    # - EQD format validation (A2)
+    # - Repeated identifier format validation (A2)
+    # - Prefix family matching (e.g., KA1 via KA prefix)
+    rule = get_field_rule(identifier)
+    return rule is not None
 
 
 def get_field_rule(prefix: str) -> FieldRule | None:
