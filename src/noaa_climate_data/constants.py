@@ -564,6 +564,8 @@ FIELD_RULES: dict[str, FieldRule] = {
                 quality_part=2,
                 agg="max",
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "9", "M"},
+                min_value=50,
+                max_value=1100,
             )
         },
     ),
@@ -3117,14 +3119,24 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
     "RH": FieldRule(
         code="RH*",
         parts={
-            1: FieldPartRule(missing_values={"999"}, agg="drop"),  # period hours
+            1: FieldPartRule(
+                missing_values={"999"},
+                agg="drop",
+                min_value=1,
+                max_value=744,
+            ),  # period hours
             2: FieldPartRule(
                 kind="categorical",
                 agg="drop",
                 missing_values={"9"},
                 allowed_values={"M", "N", "X"},
             ),  # relative humidity code
-            3: FieldPartRule(missing_values={"999"}, quality_part=5),  # relative humidity percent
+            3: FieldPartRule(
+                missing_values={"999"},
+                quality_part=5,
+                min_value=0,
+                max_value=100,
+            ),  # relative humidity percent
             4: FieldPartRule(
                 kind="categorical",
                 agg="drop",

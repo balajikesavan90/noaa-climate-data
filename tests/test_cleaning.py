@@ -518,6 +518,14 @@ class TestCrnRanges:
         assert result["RH1__part4"] == "D"
         assert result["RH1__quality"] == "1"
 
+    def test_rh1_range_enforced(self):
+        result = clean_value_quality("000,M,085,D,1", "RH1")
+        assert result["RH1__part1"] is None
+        result = clean_value_quality("745,M,085,D,1", "RH1")
+        assert result["RH1__part1"] is None
+        result = clean_value_quality("024,M,101,D,1", "RH1")
+        assert result["RH1__part3"] is None
+
     def test_ob1_missing_parts(self):
         result = clean_value_quality(
             "999,9999,9,9,999,9,9,99999,9,9,99999,9,9",
@@ -1129,6 +1137,12 @@ class TestQualityNullsCorrectPart:
 
     def test_oc1_quality_rejects_c(self):
         result = clean_value_quality("0085,C", "OC1")
+        assert result["OC1__value"] is None
+
+    def test_oc1_range_enforced(self):
+        result = clean_value_quality("0049,1", "OC1")
+        assert result["OC1__value"] is None
+        result = clean_value_quality("1101,1", "OC1")
         assert result["OC1__value"] is None
 
     def test_ma1_station_pressure_quality_rejects_c(self):
