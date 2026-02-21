@@ -347,10 +347,18 @@ class TestSentinelsInCleanedOutput:
         assert result["KA1__part1"] is None
         result = clean_value_quality("481,N,0123,1", "KA1")
         assert result["KA1__part1"] is None
-        result = clean_value_quality("005,N,-0933,1", "KA1")
+        result = clean_value_quality("005,N,-1101,1", "KA1")
         assert result["KA1__part3"] is None
-        result = clean_value_quality("005,N,+0619,1", "KA1")
+        result = clean_value_quality("005,N,+6301,1", "KA1")
         assert result["KA1__part3"] is None
+
+    def test_ka_boundary_pass(self):
+        result = clean_value_quality("001,N,-1100,1", "KA1")
+        assert result["KA1__part3"] == pytest.approx(-110.0)
+        assert result["KA1__part3__qc_pass"] is True
+        result = clean_value_quality("001,N,+6300,1", "KA1")
+        assert result["KA1__part3"] == pytest.approx(630.0)
+        assert result["KA1__part3__qc_pass"] is True
 
     def test_kb_missing_parts(self):
         result = clean_value_quality("999,9,+9999,1", "KB1")
@@ -367,6 +375,14 @@ class TestSentinelsInCleanedOutput:
         assert result["KB1__part3"] is None
         result = clean_value_quality("001,A,+6301,1", "KB1")
         assert result["KB1__part3"] is None
+
+    def test_kb_boundary_pass(self):
+        result = clean_value_quality("001,A,-9900,1", "KB1")
+        assert result["KB1__part3"] == pytest.approx(-99.0)
+        assert result["KB1__part3__qc_pass"] is True
+        result = clean_value_quality("001,A,+6300,1", "KB1")
+        assert result["KB1__part3"] == pytest.approx(63.0)
+        assert result["KB1__part3__qc_pass"] is True
 
     def test_kc_missing_parts(self):
         result = clean_value_quality("9,9,+9999,999999,1", "KC1")
@@ -2613,6 +2629,14 @@ class TestQCSignalsValueQualityFields:
         assert result["OC1__qc_status"] == "INVALID"
         assert result["OC1__qc_reason"] == "BAD_QUALITY_CODE"
 
+    def test_tmp_malformed_token(self):
+        """Invalid token width -> MALFORMED_TOKEN."""
+        result = clean_value_quality("+250,1", "TMP", strict_mode=True)
+        assert result["TMP__value"] is None
+        assert result["TMP__qc_pass"] is False
+        assert result["TMP__qc_status"] == "INVALID"
+        assert result["TMP__qc_reason"] == "MALFORMED_TOKEN"
+
     def test_ma1_in_range_good_quality(self):
         """MA1 (pressure) is multi-part, testing via dataframe parsing."""
         df = pd.DataFrame({
@@ -2648,6 +2672,65 @@ class TestQCSignalsMultipartFields:
         # Part 1: direction, no min/max
         assert result["WND__part1"] == 180.0
         assert result.get("WND__part1__qc_pass") in (True, None)  # May not have QC if no bounds
+
+    def test_wnd_malformed_token(self):
+        """Invalid token width -> MALFORMED_TOKEN for numeric part."""
+        result = _expand_parsed(
+            parse_field("1,1,N,0500,1"),
+            "WND",
+            allow_quality=True,
+            strict_mode=True,
+        )
+        assert result["WND__part1"] is None
+        assert result["WND__part1__qc_pass"] is False
+        assert result["WND__part1__qc_status"] == "INVALID"
+        assert result["WND__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_ma1_part1_out_of_range(self):
+        """MA1 altimeter outside max -> OUT_OF_RANGE."""
+        result = _expand_parsed(
+            parse_field("11000,1,09500,1"),
+            "MA1",
+            allow_quality=True,
+            strict_mode=False,
+        )
+        assert result["MA1__part1__qc_pass"] is False
+        assert result["MA1__part1__qc_status"] == "INVALID"
+        assert result["MA1__part1__qc_reason"] == "OUT_OF_RANGE"
+
+    def test_ge1_base_height_boundary(self):
+        """GE1 base height boundary values -> PASS."""
+        result = _expand_parsed(
+            parse_field("1,MSL,-0400,15000"),
+            "GE1",
+            allow_quality=True,
+            strict_mode=False,
+        )
+        assert result["GE1__part3__qc_pass"] is True
+        assert result["GE1__part4__qc_pass"] is True
+
+    def test_gg_layer_coverage_out_of_range(self):
+        """GG layer coverage > 100 -> OUT_OF_RANGE."""
+        result = _expand_parsed(
+            parse_field("101,1,01000,1,99,1,99,1"),
+            "GG1",
+            allow_quality=True,
+            strict_mode=False,
+        )
+        assert result["GG1__part1__qc_pass"] is False
+        assert result["GG1__part1__qc_status"] == "INVALID"
+        assert result["GG1__part1__qc_reason"] == "OUT_OF_RANGE"
+
+    def test_gh1_boundary_max_pass(self):
+        """GH1 max boundary -> PASS."""
+        result = _expand_parsed(
+            parse_field("99998,1,0,10000,1,0,20000,1,0,30000,1,0"),
+            "GH1",
+            allow_quality=True,
+            strict_mode=False,
+        )
+        assert result.get("GH1__part1__qc_pass") is True
+        assert result.get("GH1__part1__qc_status") == "PASS"
 
     def test_gh1_numeric_parts_in_range(self):
         """GH1 (solar irradiance) numeric parts in range -> qc_pass True."""

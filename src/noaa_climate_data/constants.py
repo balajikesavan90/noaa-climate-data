@@ -466,13 +466,13 @@ EQD_UNIT_RULE = FieldRule(
 # planned expansion to all FieldPartRule-governed numeric fields.
 #
 # QC Status Values (2-tier, per _compute_qc_signals):
-QC_STATUS_VALUES = frozenset({"PASS", "INVALID"})
+QC_STATUS_VALUES = frozenset({"PASS", "INVALID", "MISSING"})
 #   - PASS: All validation checks passed (quality flag OK, not sentinel, in range)
 #   - INVALID: Any validation check failed (reason in QC_REASON_ENUM)
 #
 # QC Reason Codes (failures only, None if PASS):
 QC_REASON_ENUM = frozenset(
-    {"OUT_OF_RANGE", "BAD_QUALITY_CODE", "SENTINEL_MISSING", "MALFORMED_TOKEN"}
+    {"OUT_OF_RANGE", "BAD_QUALITY_CODE", "SENTINEL_MISSING", "MALFORMED_TOKEN", None}
 )
 #   - OUT_OF_RANGE: Numeric value outside [min_value, max_value] from FieldPartRule
 #   - BAD_QUALITY_CODE: Quality flag not in allowed_quality set
@@ -1954,6 +1954,8 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 quality_part=2,
                 agg="mean",
                 allowed_values=SKY_COVER_LAYER_CODES,
+                min_value=0,
+                max_value=100,
             ),
             2: FieldPartRule(
                 kind="quality",
@@ -2034,6 +2036,8 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 quality_part=2,
                 agg="mean",
                 allowed_values=SKY_COVER_LAYER_CODES,
+                min_value=0,
+                max_value=100,
             ),
             2: FieldPartRule(
                 kind="quality",
@@ -2096,8 +2100,8 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 scale=0.1,
                 missing_values={"9999"},
                 quality_part=4,
-                min_value=-932,
-                max_value=618,
+                min_value=-1100,
+                max_value=6300,
             ),
             4: FieldPartRule(
                 kind="quality",

@@ -264,6 +264,7 @@ def _expand_parsed(
         Dict mapping output column names to values
     """
     payload: dict[str, object] = {}
+    malformed_parts: set[int] = set()
     is_variable_direction = (
         prefix == "WND"
         and len(parsed.parts) >= 3
@@ -352,6 +353,7 @@ def _expand_parsed(
                             f"[PARSE_STRICT] Rejected {prefix} part {idx}: "
                             f"token width {len(test_value)}, expected {expected_width}"
                         )
+                        malformed_parts.add(idx)
                         payload[key] = None
                         continue
                 # Check token pattern
@@ -362,6 +364,7 @@ def _expand_parsed(
                             f"[PARSE_STRICT] Rejected {prefix} part {idx}: "
                             f"token format mismatch (pattern validation failed)"
                         )
+                        malformed_parts.add(idx)
                         payload[key] = None
                         continue
         
@@ -436,6 +439,7 @@ def _expand_parsed(
             is_sentinel=is_sentinel,
             bad_quality=bad_quality,
             out_of_range=out_of_range,
+            malformed_token=idx in malformed_parts,
         )
         
         payload[f"{key}__qc_pass"] = qc_pass
@@ -460,7 +464,7 @@ def _is_value_quality_field(prefix: str, part_count: int) -> bool:
 
 
 def _compute_qc_signals(
-    is_sentinel: bool, bad_quality: bool, out_of_range: bool
+    is_sentinel: bool, bad_quality: bool, out_of_range: bool, malformed_token: bool
 ) -> tuple[bool, str, str | None]:
     """Compute QC signals based on validation checks.
 
@@ -471,12 +475,13 @@ def _compute_qc_signals(
     - OUT_OF_RANGE: Numeric value outside min/max bounds from FieldPartRule
     - All checks pass → PASS status with None reason
 
-    Priority order: bad_quality > is_sentinel > out_of_range (first match wins).
+    Priority order: malformed_token > bad_quality > is_sentinel > out_of_range.
 
     Args:
         is_sentinel: Value was a missing sentinel (pre-scale)
         bad_quality: Quality code failed validation against allowed_quality
         out_of_range: Numeric value outside min/max bounds (pre-scale)
+        malformed_token: Token width or format validation failed (A4)
 
     Returns:
         Tuple of (qc_pass: bool, qc_status: str, qc_reason: str | None)
@@ -485,13 +490,15 @@ def _compute_qc_signals(
             qc_reason: string from QC_REASON_ENUM, or None if qc_pass is True
 
     Example:
-        >>> _compute_qc_signals(False, False, False)  # All checks passed
+        >>> _compute_qc_signals(False, False, False, False)  # All checks passed
         (True, 'PASS', None)
-        >>> _compute_qc_signals(False, False, True)   # Out of range
+        >>> _compute_qc_signals(False, False, True, False)   # Out of range
         (False, 'INVALID', 'OUT_OF_RANGE')
-        >>> _compute_qc_signals(True, False, False)   # Sentinel value
+        >>> _compute_qc_signals(True, False, False, False)   # Sentinel value
         (False, 'INVALID', 'SENTINEL_MISSING')
     """
+    if malformed_token:
+        return False, "INVALID", "MALFORMED_TOKEN"
     if bad_quality:
         return False, "INVALID", "BAD_QUALITY_CODE"
     if is_sentinel:
@@ -506,7 +513,8 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
 
     Applies range validation (pre-scale), quality code checking, and sentinel detection
     to emit QC signals per _compute_qc_signals(). Raw value is preserved in __value unless
-    QC check fails (out_of_range or bad_quality), in which case __value is None.
+    QC check fails (out_of_range, bad_quality, sentinel, malformed), in which case
+    __value is None.
 
     For 2-part value/quality fields, emits:
     - {PREFIX}__value: Numeric value (scaled per FieldPartRule, None if invalid)
@@ -604,9 +612,18 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
                         f"[PARSE_STRICT] Rejected {prefix} part 1: "
                         f"token width {len(test_value)}, expected {expected_width}"
                     )
+                    qc_pass, qc_status, qc_reason = _compute_qc_signals(
+                        is_sentinel=False,
+                        bad_quality=False,
+                        out_of_range=False,
+                        malformed_token=True,
+                    )
                     return {
                         value_key: None,
                         f"{prefix}__quality": quality,
+                        f"{prefix}__qc_pass": qc_pass,
+                        f"{prefix}__qc_status": qc_status,
+                        f"{prefix}__qc_reason": qc_reason,
                     }
             # Check token pattern
             if 'pattern' in width_rules:
@@ -616,9 +633,18 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
                         f"[PARSE_STRICT] Rejected {prefix} part 1: "
                         f"token format mismatch (pattern validation failed)"
                     )
+                    qc_pass, qc_status, qc_reason = _compute_qc_signals(
+                        is_sentinel=False,
+                        bad_quality=False,
+                        out_of_range=False,
+                        malformed_token=True,
+                    )
                     return {
                         value_key: None,
                         f"{prefix}__quality": quality,
+                        f"{prefix}__qc_pass": qc_pass,
+                        f"{prefix}__qc_status": qc_status,
+                        f"{prefix}__qc_reason": qc_reason,
                     }
     
     value: float | None
@@ -655,6 +681,7 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
         is_sentinel=bool(is_sentinel),
         bad_quality=bad_quality,
         out_of_range=out_of_range,
+        malformed_token=False,
     )
     
     return {
