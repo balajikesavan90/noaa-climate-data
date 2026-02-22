@@ -413,6 +413,16 @@ class TestSentinelsInCleanedOutput:
         assert result["IA2__part2"] == pytest.approx(10.0)
         assert result["IA2__part3"] == pytest.approx(1.0)
 
+    def test_ia2_token_width_accepts_fixed_width_tokens(self):
+        result = clean_value_quality("001,+0100,1", "IA2", strict_mode=True)
+        assert result["IA2__part1"] == pytest.approx(0.1)
+        assert result["IA2__part2"] == pytest.approx(10.0)
+        assert result["IA2__part3"] == pytest.approx(1.0)
+
+    def test_ia2_token_width_rejects_wide_quality_token(self):
+        result = clean_value_quality("001,+0100,11", "IA2", strict_mode=True)
+        assert result["IA2__part3"] is None
+
     def test_ka_invalid_extreme_code(self):
         result = clean_value_quality("005,X,0123,1", "KA1")
         assert result["KA1__part2"] is None
@@ -928,6 +938,15 @@ class TestScaleFactors:
         assert result["IB2__part1"] is None
         result = clean_value_quality("0000,1,0,9999,1,0", "IB2")
         assert result["IB2__part4"] is None
+
+    def test_ib2_token_width_accepts_fixed_width_tokens(self):
+        result = clean_value_quality("0000,1,0,0000,1,0", "IB2", strict_mode=True)
+        assert result["IB2__part1"] == pytest.approx(0.0)
+        assert result["IB2__part4"] == pytest.approx(0.0)
+
+    def test_ib2_token_width_rejects_short_first_numeric_token(self):
+        result = clean_value_quality("000,1,0,0000,1,0", "IB2", strict_mode=True)
+        assert result["IB2__part1"] is None
 
     def test_ic1_range_enforced(self):
         result = clean_value_quality("00,0100,1,4,050,1,4,+050,1,4,+040,1,4", "IC1")
@@ -1868,6 +1887,17 @@ class TestQualityNullsCorrectPart:
 
     def test_gp1_invalid_uncertainty(self):
         result = clean_value_quality("0060,0100,01,101,0100,01,010,0100,01,010", "GP1")
+        assert result["GP1__part4"] is None
+
+    def test_gp1_range_accepts_boundary_values(self):
+        result = clean_value_quality("0001,9998,01,100,9998,02,100,9998,03,100", "GP1")
+        assert result["GP1__part1"] == pytest.approx(1.0)
+        assert result["GP1__part4"] == pytest.approx(100.0)
+        assert result["GP1__part10"] == pytest.approx(100.0)
+
+    def test_gp1_range_rejects_out_of_bounds_values(self):
+        result = clean_value_quality("0000,0100,01,101,0100,01,010,0100,01,010", "GP1")
+        assert result["GP1__part1"] is None
         assert result["GP1__part4"] is None
 
     def test_gq1_missing_parts(self):
