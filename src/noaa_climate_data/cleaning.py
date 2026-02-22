@@ -932,12 +932,19 @@ def clean_noaa_dataframe(
         if column in processed_columns:
             continue
 
-        # A1: Strict mode allowlist gate - only expand known NOAA identifiers
-        # Use get_field_rule() to leverage prefix matching logic (e.g., KA1 via KA prefix)
-        if strict_mode and get_field_rule(column) is None:
+        # A1: Strict mode allowlist gate - only expand known NOAA identifiers.
+        # Avoid broad prefix matching here so metadata columns like STATION/DATE
+        # are never parsed as additional-data families.
+        if strict_mode:
+            known_identifier = (
+                column in KNOWN_IDENTIFIERS
+                or is_valid_eqd_identifier(column) is True
+                or is_valid_repeated_identifier(column) is True
+            )
+            if not known_identifier:
             # Skip expansion for unknown identifiers, keep raw column
-            logger.warning(f"[PARSE_STRICT] Skipping unknown identifier: {column}")
-            continue
+                logger.warning(f"[PARSE_STRICT] Skipping unknown identifier: {column}")
+                continue
 
         series = cleaned[column]
         if not pd.api.types.is_object_dtype(series) and not pd.api.types.is_string_dtype(series):

@@ -29,9 +29,9 @@ def main() -> None:
     raw_path = repo_root / "reproducibility" / "sample_station_raw.txt"
     cleaned_path = args.out or (repo_root / "reproducibility" / "sample_station_cleaned.csv")
 
-    raw = pd.read_csv(raw_path)
+    raw = pd.read_csv(raw_path, dtype=str)
     cleaned = clean_noaa_dataframe(raw, keep_raw=False, strict_mode=True)
-    cleaned.to_csv(cleaned_path, index=False)
+    cleaned.to_csv(cleaned_path, index=False, float_format="%.1f")
 
 
 if __name__ == "__main__":

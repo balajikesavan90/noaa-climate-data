@@ -242,6 +242,8 @@ EQD_ELEMENT_UNITS_TABLE = {
     "I": "MT",
     "J": "NA",
     "K": "N1",
+    # TODO(spec-coverage): `N2` maps from EQD unit code `L`, but strict parser accepts
+    # only `N01`/`N99` for repeated IDs today; closing top `N2` gap needs identifier-model redesign.
     "L": "N2",
     "M": "P",
     "O": "TC",
@@ -436,6 +438,7 @@ EQD_REASON_RULE = FieldRule(
             kind="categorical",
             agg="drop",
             allowed_values=EQD_REASON_CODES,
+            token_width=1,
         ),
         3: FieldPartRule(kind="categorical", agg="drop", missing_values={"__none__"}),
     },
@@ -449,6 +452,7 @@ EQD_UNIT_RULE = FieldRule(
             kind="categorical",
             agg="drop",
             allowed_values=EQD_UNIT_CODES,
+            token_width=1,
         ),
         3: FieldPartRule(kind="categorical", agg="drop", missing_values={"__none__"}),
     },
@@ -589,7 +593,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 kind="categorical",
                 agg="drop",
                 allowed_values=QC_PROCESS_CODES,
-                token_width=4,
+                token_width=3,
                 token_pattern=re.compile(r"^V0[1-3]$"),
             )
         },
@@ -858,22 +862,26 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"9"},
                 quality_part=4,
                 allowed_values={"M", "I"},
+                token_width=1,
             ),  # method code
             2: FieldPartRule(
                 missing_values={"99"},
                 quality_part=4,
                 allowed_values={f"{value:02d}" for value in range(0, 31)},
+                token_width=2,
             ),  # wave period (seconds)
             3: FieldPartRule(
                 scale=0.1,
                 missing_values={"999"},
                 quality_part=4,
                 allowed_values={f"{value:03d}" for value in range(0, 501)},
+                token_width=3,
             ),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "9"},
+                token_width=1,
             ),  # wave height quality
             5: FieldPartRule(
                 kind="categorical",
@@ -881,11 +889,13 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 quality_part=6,
                 allowed_values={f"{value:02d}" for value in range(0, 10)},
+                token_width=2,
             ),  # sea state code
             6: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "9"},
+                token_width=1,
             ),  # sea state quality
         },
     ),
@@ -898,12 +908,14 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"9"},
                 quality_part=4,
                 allowed_values={"1", "2", "3", "4", "5"},
+                token_width=1,
             ),  # source code
             2: FieldPartRule(
                 scale=0.1,
                 missing_values={"999"},
                 quality_part=4,
                 allowed_values={f"{value:03d}" for value in range(0, 999)},
+                token_width=3,
             ),  # thickness cm
             3: FieldPartRule(
                 kind="categorical",
@@ -911,11 +923,13 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"9"},
                 quality_part=4,
                 allowed_values={"0", "1", "2", "3", "4"},
+                token_width=1,
             ),  # tendency code
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "9"},
+                token_width=1,
             ),  # quality code
         },
     ),
@@ -928,11 +942,13 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 quality_part=11,
                 allowed_values={f"{value:02d}" for value in range(0, 11)},
+                token_width=2,
             ),
             2: FieldPartRule(
                 missing_values={"999"},
                 quality_part=11,
                 allowed_values={f"{value:03d}" for value in range(0, 101)},
+                token_width=3,
             ),
             3: FieldPartRule(
                 kind="categorical",
@@ -940,6 +956,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 quality_part=11,
                 allowed_values={"06", "07", "08", "09"},
+                token_width=2,
             ),
             4: FieldPartRule(
                 kind="categorical",
@@ -947,6 +964,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"9"},
                 quality_part=11,
                 allowed_values={"0", "1", "2"},
+                token_width=1,
             ),
             5: FieldPartRule(
                 kind="categorical",
@@ -954,6 +972,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"9"},
                 quality_part=11,
                 allowed_values={"1", "2", "3"},
+                token_width=1,
             ),
             6: FieldPartRule(
                 kind="categorical",
@@ -961,6 +980,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"9"},
                 quality_part=11,
                 allowed_values={"1", "2", "3", "4", "5", "6"},
+                token_width=1,
             ),
             7: FieldPartRule(
                 kind="categorical",
@@ -968,6 +988,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 quality_part=11,
                 allowed_values={f"{value:02d}" for value in range(0, 10)},
+                token_width=2,
             ),
             8: FieldPartRule(
                 kind="categorical",
@@ -975,21 +996,25 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"9"},
                 quality_part=11,
                 allowed_values={"0", "1", "2"},
+                token_width=1,
             ),
             9: FieldPartRule(
                 missing_values={"999"},
                 quality_part=11,
                 allowed_values={f"{value:03d}" for value in range(0, 999)},
+                token_width=3,
             ),
             10: FieldPartRule(
                 missing_values={"999"},
                 quality_part=11,
                 allowed_values={f"{value:03d}" for value in range(0, 999)},
+                token_width=3,
             ),
             11: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "9"},
+                token_width=1,
             ),
         },
     ),
@@ -1002,12 +1027,14 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 quality_part=6,
                 allowed_values={f"{value:02d}" for value in range(0, 11)},
+                token_width=2,
             ),
             2: FieldPartRule(
                 missing_values={"99"},
                 agg="drop",
                 quality_part=6,
                 allowed_values={f"{value:02d}" for value in range(0, 99)},
+                token_width=2,
             ),
             3: FieldPartRule(
                 kind="categorical",
@@ -1015,6 +1042,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 quality_part=6,
                 allowed_values={f"{value:02d}" for value in range(0, 10)},
+                token_width=2,
             ),
             4: FieldPartRule(
                 kind="categorical",
@@ -1022,6 +1050,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 quality_part=6,
                 allowed_values={f"{value:02d}" for value in range(0, 10)},
+                token_width=2,
             ),
             5: FieldPartRule(
                 kind="categorical",
@@ -1029,11 +1058,13 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 quality_part=6,
                 allowed_values={f"{value:02d}" for value in range(0, 10)},
+                token_width=2,
             ),
             6: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "9"},
+                token_width=1,
             ),
         },
     ),
@@ -1043,10 +1074,12 @@ FIELD_RULES: dict[str, FieldRule] = {
             1: FieldPartRule(
                 missing_values={"999"},
                 allowed_values={f"{value:03d}" for value in range(0, 999)},
+                token_width=3,
             ),
             2: FieldPartRule(
                 missing_values={"99999"},
                 allowed_values={f"{value:05d}" for value in range(0, 99999)},
+                token_width=5,
             ),
             3: FieldPartRule(
                 kind="categorical",
@@ -1062,6 +1095,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                     + list(range(60, 66))
                     + list(range(70, 74)))
                 },
+                token_width=2,
             ),
             4: FieldPartRule(
                 kind="categorical",
@@ -1077,6 +1111,7 @@ FIELD_RULES: dict[str, FieldRule] = {
                     + list(range(60, 66))
                     + list(range(70, 74)))
                 },
+                token_width=2,
             ),
             5: FieldPartRule(
                 missing_values={"9999"},
@@ -1085,18 +1120,21 @@ FIELD_RULES: dict[str, FieldRule] = {
                 }
                 | {f"+{value:04d}" for value in range(0, 9999)}
                 | {f"-{value:04d}" for value in range(0, 1000)},
+                token_width=4,
             ),
             6: FieldPartRule(
                 kind="categorical",
                 agg="drop",
                 missing_values={"9"},
                 allowed_values={"0", "1", "2", "3"},
+                token_width=1,
             ),
             7: FieldPartRule(
                 kind="categorical",
                 agg="drop",
                 missing_values={"9"},
                 allowed_values={"B", "H", "N", "O"},
+                token_width=1,
             ),
         },
     ),
@@ -1107,23 +1145,27 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 quality_part=4,
                 allowed_values={f"{value:02d}" for value in range(0, 15)},
+                token_width=2,
             ),  # primary swell period (seconds)
             2: FieldPartRule(
                 scale=0.1,
                 missing_values={"999"},
                 quality_part=4,
                 allowed_values={f"{value:03d}" for value in range(0, 501)},
+                token_width=3,
             ),
             3: FieldPartRule(
                 missing_values={"999"},
                 agg="circular_mean",
                 quality_part=4,
                 allowed_values={f"{value:03d}" for value in range(1, 361)},
+                token_width=3,
             ),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "9"},
+                token_width=1,
             ),  # swell height quality
         },
     ),
@@ -4138,23 +4180,27 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 kind="categorical",
                 agg="drop",
                 allowed_values={"1", "2", "3", "4", "5"},
+                token_width=1,
             ),  # summary type code
             2: FieldPartRule(
                 missing_values={"99"},
                 agg="drop",
                 allowed_values={"24"},
+                token_width=2,
             ),  # period hours
             3: FieldPartRule(
                 scale=0.01,
                 missing_values={"99999"},
                 quality_part=6,
                 allowed_values={f"{value:05d}" for value in range(0, 20001)},
+                token_width=5,
             ),
             4: FieldPartRule(
                 missing_values={"999"},
                 agg="circular_mean",
                 quality_part=6,
                 allowed_values={f"{value:03d}" for value in range(1, 361)},
+                token_width=3,
             ),
             5: FieldPartRule(
                 kind="categorical",
@@ -4163,11 +4209,13 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 quality_part=6,
                 allowed_values={f"{value:04d}" for value in range(0, 2360)},
                 allowed_pattern=HHMM_PATTERN,
+                token_width=4,
             ),
             6: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"4", "5", "6", "7", "9", "M"},
+                token_width=1,
             ),
         },
     ),
@@ -4179,29 +4227,34 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="drop",
                 min_value=1,
                 max_value=744,
+                token_width=3,
             ),  # period hours
             2: FieldPartRule(
                 kind="categorical",
                 agg="drop",
                 missing_values={"9"},
                 allowed_values={"M", "N", "X"},
+                token_width=1,
             ),  # relative humidity code
             3: FieldPartRule(
                 missing_values={"999"},
                 quality_part=5,
                 min_value=0,
                 max_value=100,
+                token_width=3,
             ),  # relative humidity percent
             4: FieldPartRule(
                 kind="categorical",
                 agg="drop",
                 missing_values={"9"},
                 allowed_values={"D"},
+                token_width=1,
             ),  # derived code
             5: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "4", "5", "6", "7", "9"},
+                token_width=1,
             ),  # quality code
         },
     ),
@@ -4399,6 +4452,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 quality_part=2,
                 min_value=-9999,
                 max_value=9999,
+                token_width=5,
             ),
             2: FieldPartRule(kind="quality", agg="drop", allowed_quality={"1", "3", "9"}),
             3: FieldPartRule(
