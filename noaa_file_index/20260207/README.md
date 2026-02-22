@@ -41,7 +41,7 @@ This folder contains the NOAA Global Hourly file index and year-counts used by t
 #### Notes
 - Creation started on 2026-02-07.
 - Metadata collection for all 27k stations completed on 2026-02-12.
-- **2026-02-21**: Internet outage on 2026-02-20 caused data loss during a `location-ids` run. The resume logic loaded 23,738 stations but failed to fetch metadata for the remaining 3,748 stations (stations with IDs in the 725xxxxx range). The process wrote Stations.csv with only the successfully loaded rows, losing 13.6% of station metadata. Recovery performed on 2026-02-21 using `recover_missing_stations.py` to fetch and append the missing station metadata.
+- **2026-02-21 Recovery**: Internet outage on 2026-02-20 interrupted the `location-ids` metadata fetch process mid-recovery, causing loss of 3,748 station records from Stations.csv. All 27,486 stations have been recovered and restored. Full recovery log preserved in `recovery_log_20260221_194705.csv`.
 
 ### Raw data pulls (cron)
 
