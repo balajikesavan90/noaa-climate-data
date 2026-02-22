@@ -2101,8 +2101,8 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 scale=0.1,
                 missing_values={"9999"},
                 quality_part=4,
-                min_value=-1100,
-                max_value=6300,
+                min_value=-932,
+                max_value=618,
             ),
             4: FieldPartRule(
                 kind="quality",
@@ -2346,7 +2346,7 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 missing_values={"9"},
                 allowed_values={"1", "2", "3", "4", "5"},
             ),
-            2: FieldPartRule(missing_values={"9999"}, quality_part=3),
+            2: FieldPartRule(missing_values={"9999"}, quality_part=3, min_value=0, max_value=9998),
             3: FieldPartRule(
                 kind="quality",
                 agg="drop",

@@ -347,17 +347,17 @@ class TestSentinelsInCleanedOutput:
         assert result["KA1__part1"] is None
         result = clean_value_quality("481,N,0123,1", "KA1")
         assert result["KA1__part1"] is None
-        result = clean_value_quality("005,N,-1101,1", "KA1")
+        result = clean_value_quality("005,N,-0933,1", "KA1")
         assert result["KA1__part3"] is None
-        result = clean_value_quality("005,N,+6301,1", "KA1")
+        result = clean_value_quality("005,N,+0619,1", "KA1")
         assert result["KA1__part3"] is None
 
     def test_ka_boundary_pass(self):
-        result = clean_value_quality("001,N,-1100,1", "KA1")
-        assert result["KA1__part3"] == pytest.approx(-110.0)
+        result = clean_value_quality("001,N,-0932,1", "KA1")
+        assert result["KA1__part3"] == pytest.approx(-93.2)
         assert result["KA1__part3__qc_pass"] is True
-        result = clean_value_quality("001,N,+6300,1", "KA1")
-        assert result["KA1__part3"] == pytest.approx(630.0)
+        result = clean_value_quality("001,N,+0618,1", "KA1")
+        assert result["KA1__part3"] == pytest.approx(61.8)
         assert result["KA1__part3__qc_pass"] is True
 
     def test_kb_missing_parts(self):
@@ -544,6 +544,20 @@ class TestCrnRanges:
         result = clean_value_quality("6,0123,1", "ME1")
         assert result["ME1__part1"] is None
         assert result["ME1__part2"] == pytest.approx(123.0)
+
+    def test_me1_range_enforced(self):
+        result = clean_value_quality("1,-0001,1", "ME1")
+        assert result["ME1__part2"] is None
+        result = clean_value_quality("1,9999,1", "ME1")
+        assert result["ME1__part2"] is None
+
+    def test_me1_boundary_pass(self):
+        result = clean_value_quality("1,0000,1", "ME1")
+        assert result["ME1__part2"] == pytest.approx(0.0)
+        assert result["ME1__part2__qc_pass"] is True
+        result = clean_value_quality("1,9998,1", "ME1")
+        assert result["ME1__part2"] == pytest.approx(9998.0)
+        assert result["ME1__part2__qc_pass"] is True
 
     def test_mf1_missing_parts(self):
         result = clean_value_quality("99999,1,99999,1", "MF1")
@@ -2878,4 +2892,3 @@ class TestQCSignalsRegressions:
         # Check for at least one QC column (renamed to friendly name)
         qc_columns = [col for col in result.columns if "__qc_" in col]
         assert len(qc_columns) > 0
-

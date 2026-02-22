@@ -73,6 +73,10 @@ UP_TO_RE = re.compile(r"up\s+to\s+(\d+)", re.IGNORECASE)
 PART_FROM_FILE_RE = re.compile(r"part-(\d{2})-")
 PART_FROM_TEXT_RE = re.compile(r"\bPart\s+(\d{1,2})\b", re.IGNORECASE)
 NUMERIC_TOKEN_RE = re.compile(r"(?<![A-Z0-9_])([+\-]?\d+(?:\.\d+)?)(?![A-Z0-9_])")
+DDHHMM_PATTERN_TEXT = r"^(0[1-9]|[12][0-9]|3[01])([01][0-9]|2[0-3])[0-5][0-9]$"
+HHMM_PATTERN_TEXT = r"^([01][0-9]|2[0-3])[0-5][0-9]$"
+DAY_PAIR_PATTERN_TEXT = r"^(0[1-9]|[12][0-9]|3[01]){2}$"
+DAY_PAIR_TRIPLE_PATTERN_TEXT = r"^(?:0[1-9]|[12][0-9]|3[01]|99){3}$"
 
 CONTROL_CONTEXT_MAP = {
     "date of observation": "DATE",
@@ -321,6 +325,63 @@ def normalize_num_token(token: str) -> str:
     return token
 
 
+def float_to_int_token(value: float | None) -> int | None:
+    if value is None:
+        return None
+    rounded = int(round(value))
+    if abs(value - float(rounded)) > 1e-9:
+        return None
+    return rounded
+
+
+def parse_int_token(token: str) -> int | None:
+    normalized = normalize_num_token(token)
+    if not normalized:
+        return None
+    if not re.fullmatch(r"[+-]?\d+", normalized):
+        return None
+    try:
+        return int(normalized)
+    except ValueError:
+        return None
+
+
+def contiguous_numeric_bounds(values: Iterable[str]) -> tuple[int, int, bool] | None:
+    numbers: list[int] = []
+    for raw in values:
+        parsed = parse_int_token(raw)
+        if parsed is None:
+            return None
+        numbers.append(parsed)
+    if not numbers:
+        return None
+    uniq = sorted(set(numbers))
+    contiguous = all((b - a) == 1 for a, b in zip(uniq, uniq[1:]))
+    return uniq[0], uniq[-1], contiguous
+
+
+def pattern_supports_range(
+    allowed_pattern: re.Pattern[str] | None,
+    spec_min: float | None,
+    spec_max: float | None,
+) -> bool:
+    if allowed_pattern is None:
+        return False
+    spec_min_int = float_to_int_token(spec_min)
+    spec_max_int = float_to_int_token(spec_max)
+    if spec_min_int is None or spec_max_int is None:
+        return False
+
+    pattern_text = allowed_pattern.pattern
+    if pattern_text == DDHHMM_PATTERN_TEXT:
+        return spec_min_int == 10000 and spec_max_int == 312359
+    if pattern_text == HHMM_PATTERN_TEXT:
+        return spec_min_int == 0 and spec_max_int == 2359
+    if pattern_text in {DAY_PAIR_PATTERN_TEXT, DAY_PAIR_TRIPLE_PATTERN_TEXT}:
+        return spec_min_int == 1 and spec_max_int == 31
+    return False
+
+
 def normalize_text_line(value: str) -> str:
     return " ".join(value.replace("\u2013", "-").replace("\u2014", "-").split())
 
@@ -504,8 +565,13 @@ def extract_identifiers_from_line(
             if item in known_identifiers or identifier_family(item) in known_families:
                 found.append(item)
 
-    for token in IDENTIFIER_RE.findall(normalized):
+    for match in IDENTIFIER_RE.finditer(normalized):
+        token = match.group(0)
         if token in known_identifiers or token in known_families:
+            found.append(token)
+            continue
+        token_match = IDENTIFIER_WITH_DIGIT_RE.fullmatch(token)
+        if token_match and token_match.group(1) in known_families:
             found.append(token)
 
     dedup = sorted(set(found), key=natural_key)
@@ -707,11 +773,22 @@ def infer_context_from_line(
     known_identifiers: set[str],
     known_families: set[str],
 ) -> list[str]:
+    lower = line.lower().strip()
+
+    # Avoid replacing active context with enum-value lines (e.g., "ST: Spring tide").
+    if current_identifiers:
+        enum_like = re.match(r"^[A-Z0-9]{1,6}\s*[:=]\s+.+$", line)
+        if enum_like and "identifier" not in lower and "indicator" not in lower:
+            return current_identifiers
+
     ids = extract_identifiers_from_line(line, known_identifiers, known_families)
     if ids:
+        explicit_ids = [value for value in ids if IDENTIFIER_WITH_DIGIT_RE.fullmatch(value)]
+        if explicit_ids:
+            ids = explicit_ids
+        elif current_identifiers and "identifier" not in lower and "indicator" not in lower:
+            return current_identifiers
         return ids
-
-    lower = line.lower().strip()
 
     # Keep previously inferred context unless a strongly anchored phrase identifies a new section.
     if current_identifiers:
@@ -1375,17 +1452,46 @@ def coverage_for_row(
                 min_value = getattr(part_rule, "min_value", None)
                 max_value = getattr(part_rule, "max_value", None)
                 if min_value is None or max_value is None:
-                    continue
-                exact_match = True
-                if spec_min is not None:
-                    exact_match = exact_match and abs(float(min_value) - spec_min) < 1e-9
-                if spec_max is not None:
-                    exact_match = exact_match and abs(float(max_value) - spec_max) < 1e-9
-                if exact_match or (spec_min is None and spec_max is None):
-                    line = constants_ast.part_keyword_lines.get((key_prefix, int(part_idx), "min_value"))
-                    if line is None:
-                        line = constants_ast.part_lines.get((key_prefix, int(part_idx)))
-                    return True, (f"src/noaa_climate_data/constants.py:{line}" if line else ""), "field_rule_minmax"
+                    pass
+                else:
+                    exact_match = True
+                    if spec_min is not None:
+                        exact_match = exact_match and abs(float(min_value) - spec_min) < 1e-9
+                    if spec_max is not None:
+                        exact_match = exact_match and abs(float(max_value) - spec_max) < 1e-9
+                    if exact_match or (spec_min is None and spec_max is None):
+                        line = constants_ast.part_keyword_lines.get((key_prefix, int(part_idx), "min_value"))
+                        if line is None:
+                            line = constants_ast.part_lines.get((key_prefix, int(part_idx)))
+                        return True, (f"src/noaa_climate_data/constants.py:{line}" if line else ""), "field_rule_minmax"
+
+                if spec_min is not None and spec_max is not None:
+                    allowed_values = set(getattr(part_rule, "allowed_values", None) or [])
+                    spec_min_int = float_to_int_token(spec_min)
+                    spec_max_int = float_to_int_token(spec_max)
+                    bounds = contiguous_numeric_bounds(allowed_values)
+                    if bounds is not None and spec_min_int is not None and spec_max_int is not None:
+                        low, high, contiguous = bounds
+                        if contiguous and low == spec_min_int and high == spec_max_int:
+                            line = constants_ast.part_keyword_lines.get((key_prefix, int(part_idx), "allowed_values"))
+                            if line is None:
+                                line = constants_ast.part_lines.get((key_prefix, int(part_idx)))
+                            return (
+                                True,
+                                (f"src/noaa_climate_data/constants.py:{line}" if line else ""),
+                                "field_rule_allowed_values_range",
+                            )
+
+                    allowed_pattern = getattr(part_rule, "allowed_pattern", None)
+                    if pattern_supports_range(allowed_pattern, spec_min, spec_max):
+                        line = constants_ast.part_keyword_lines.get((key_prefix, int(part_idx), "allowed_pattern"))
+                        if line is None:
+                            line = constants_ast.part_lines.get((key_prefix, int(part_idx)))
+                        return (
+                            True,
+                            (f"src/noaa_climate_data/constants.py:{line}" if line else ""),
+                            "field_rule_pattern_range",
+                        )
 
             if row.rule_type == "sentinel":
                 missing_values = set(getattr(part_rule, "missing_values", None) or [])
