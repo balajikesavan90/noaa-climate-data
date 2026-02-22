@@ -3868,6 +3868,18 @@ class TestTopStrictCoverageGapFixes:
         result = clean_value_quality("01,4,24 ,4", prefix, strict_mode=True)
         assert result[f"{prefix}__part3"] is None
 
+    @pytest.mark.parametrize("prefix", ["AX1", "AX2", "AX3", "AX4", "AX5", "AX6"])
+    def test_ax_repeated_sentinel_rejects_missing_tokens(self, prefix: str):
+        result = clean_value_quality("99,4,99,4", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AX1", "AX2", "AX3", "AX4", "AX5", "AX6"])
+    def test_ax_repeated_sentinel_accepts_non_sentinel_tokens(self, prefix: str):
+        result = clean_value_quality("01,4,24,4", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part3"] == pytest.approx(24.0)
+
     @pytest.mark.parametrize("prefix", ["AY1", "AY2"])
     def test_ay_repeated_width_accepts_expected_part_widths(self, prefix: str):
         result = clean_value_quality("1,1,24,1", prefix, strict_mode=True)
@@ -3881,6 +3893,16 @@ class TestTopStrictCoverageGapFixes:
         result = clean_value_quality("1,1,24 ,1", prefix, strict_mode=True)
         assert result[f"{prefix}__part3"] is None
 
+    @pytest.mark.parametrize("prefix", ["AY1", "AY2"])
+    def test_ay_repeated_sentinel_rejects_missing_period_token(self, prefix: str):
+        result = clean_value_quality("1,1,99,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AY1", "AY2"])
+    def test_ay_repeated_sentinel_accepts_non_sentinel_period_token(self, prefix: str):
+        result = clean_value_quality("1,1,24,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] == pytest.approx(24.0)
+
     @pytest.mark.parametrize("prefix", ["AZ1", "AZ2"])
     def test_az_repeated_width_accepts_expected_part_widths(self, prefix: str):
         result = clean_value_quality("1,1,24,1", prefix, strict_mode=True)
@@ -3893,6 +3915,16 @@ class TestTopStrictCoverageGapFixes:
     def test_az_repeated_width_rejects_malformed_part_widths(self, prefix: str):
         result = clean_value_quality("1,1,24 ,1", prefix, strict_mode=True)
         assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AZ1", "AZ2"])
+    def test_az_repeated_sentinel_rejects_missing_period_token(self, prefix: str):
+        result = clean_value_quality("1,1,99,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AZ1", "AZ2"])
+    def test_az_repeated_sentinel_accepts_non_sentinel_period_token(self, prefix: str):
+        result = clean_value_quality("1,1,24,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] == pytest.approx(24.0)
 
     @pytest.mark.parametrize("prefix", ["CB1", "CB2"])
     def test_cb_repeated_width_accepts_expected_part_widths(self, prefix: str):
