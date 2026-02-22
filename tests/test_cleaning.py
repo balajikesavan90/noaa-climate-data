@@ -4639,6 +4639,16 @@ class TestA4TokenWidthValidation:
         result = clean_value_quality("05,1,0100,1,01,1", prefix, strict_mode=True)
         assert result[f"{prefix}__part3"] is None
 
+    @pytest.mark.parametrize("prefix", ["GA2", "GA3", "GA4", "GA5"])
+    def test_ga_repeated_domain_rejects_invalid_layer_type_code(self, prefix: str):
+        result = clean_value_quality("05,1,+01000,1,ZZ,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part5"] is None
+
+    @pytest.mark.parametrize("prefix", ["GA2", "GA3", "GA4", "GA5"])
+    def test_ga_repeated_domain_accepts_valid_layer_type_code(self, prefix: str):
+        result = clean_value_quality("05,1,+01000,1,01,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part5"] == pytest.approx(1.0)
+
     @pytest.mark.parametrize("prefix", ["GD1", "GD2", "GD3", "GD4", "GD5", "GD6"])
     def test_gd_token_width_accepts_signed_height(self, prefix: str):
         """GD1-GD6 accepts signed 6-char height token."""
@@ -4650,6 +4660,22 @@ class TestA4TokenWidthValidation:
         """GD1-GD6 rejects unsigned height token in strict mode."""
         result = clean_value_quality("1,01,1,0100,1,1", prefix, strict_mode=True)
         assert result[f"{prefix}__part4"] is None
+
+    @pytest.mark.parametrize("prefix", ["GD1", "GD2", "GD3", "GD4", "GD5", "GD6"])
+    def test_gd_repeated_sentinel_rejects_missing_tokens(self, prefix: str):
+        result = clean_value_quality("9,99,1,99999,1,9", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part2"] is None
+        assert result[f"{prefix}__part4"] is None
+        assert result[f"{prefix}__part6"] is None
+
+    @pytest.mark.parametrize("prefix", ["GD1", "GD2", "GD3", "GD4", "GD5", "GD6"])
+    def test_gd_repeated_sentinel_accepts_non_sentinel_tokens(self, prefix: str):
+        result = clean_value_quality("1,01,1,+01000,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part2"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part4"] == pytest.approx(1000.0)
+        assert result[f"{prefix}__part6"] == pytest.approx(1.0)
 
     def test_co1_token_width_accepts_signed_utc_offset(self):
         """CO1 UTC offset accepts signed 3-char token."""
@@ -4753,6 +4779,22 @@ class TestA4TokenWidthValidation:
         assert result[f"{prefix}__part3"] is None
         assert result[f"{prefix}__part3__qc_reason"] == "MALFORMED_TOKEN"
 
+    @pytest.mark.parametrize("prefix", ["GG2", "GG3", "GG4", "GG5", "GG6"])
+    def test_gg_repeated_sentinel_rejects_missing_tokens(self, prefix: str):
+        result = clean_value_quality("99,1,99999,1,99,1,99,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part3"] is None
+        assert result[f"{prefix}__part5"] is None
+        assert result[f"{prefix}__part7"] is None
+
+    @pytest.mark.parametrize("prefix", ["GG2", "GG3", "GG4", "GG5", "GG6"])
+    def test_gg_repeated_sentinel_accepts_non_sentinel_tokens(self, prefix: str):
+        result = clean_value_quality("01,1,01000,1,01,1,01,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part3"] == pytest.approx(1000.0)
+        assert result[f"{prefix}__part5"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part7"] == pytest.approx(1.0)
+
     def test_gj1_token_width_accepts_exact_tokens(self):
         """GJ1 accepts canonical 4/1 token widths."""
         result = clean_value_quality("0100,1", "GJ1", strict_mode=True)
@@ -4764,6 +4806,14 @@ class TestA4TokenWidthValidation:
         result = clean_value_quality("100,1", "GJ1", strict_mode=True)
         assert result["GJ1__part1"] is None
         assert result["GJ1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_gj1_sentinel_rejects_missing_duration_token(self):
+        result = clean_value_quality("9999,1", "GJ1", strict_mode=True)
+        assert result["GJ1__part1"] is None
+
+    def test_gj1_sentinel_accepts_non_sentinel_duration_token(self):
+        result = clean_value_quality("0100,1", "GJ1", strict_mode=True)
+        assert result["GJ1__part1"] == pytest.approx(100.0)
 
     def test_gk1_token_width_accepts_exact_tokens(self):
         """GK1 accepts canonical 3/1 token widths."""
@@ -4777,6 +4827,14 @@ class TestA4TokenWidthValidation:
         assert result["GK1__part1"] is None
         assert result["GK1__part1__qc_reason"] == "MALFORMED_TOKEN"
 
+    def test_gk1_sentinel_rejects_missing_percent_token(self):
+        result = clean_value_quality("999,4", "GK1", strict_mode=True)
+        assert result["GK1__part1"] is None
+
+    def test_gk1_sentinel_accepts_non_sentinel_percent_token(self):
+        result = clean_value_quality("100,4", "GK1", strict_mode=True)
+        assert result["GK1__part1"] == pytest.approx(100.0)
+
     def test_gl1_token_width_accepts_exact_tokens(self):
         """GL1 accepts canonical 5/1 token widths."""
         result = clean_value_quality("12000,1", "GL1", strict_mode=True)
@@ -4788,6 +4846,14 @@ class TestA4TokenWidthValidation:
         result = clean_value_quality("1200,1", "GL1", strict_mode=True)
         assert result["GL1__part1"] is None
         assert result["GL1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_gl1_sentinel_rejects_missing_duration_token(self):
+        result = clean_value_quality("99999,1", "GL1", strict_mode=True)
+        assert result["GL1__part1"] is None
+
+    def test_gl1_sentinel_accepts_non_sentinel_duration_token(self):
+        result = clean_value_quality("12000,1", "GL1", strict_mode=True)
+        assert result["GL1__part1"] == pytest.approx(12000.0)
 
     def test_gm1_token_width_accepts_exact_tokens(self):
         """GM1 accepts canonical widths across all 12 parts."""
@@ -4811,6 +4877,30 @@ class TestA4TokenWidthValidation:
         assert result["GM1__part2"] is None
         assert result["GM1__part2__qc_reason"] == "MALFORMED_TOKEN"
 
+    def test_gm1_sentinel_rejects_missing_radiation_tokens(self):
+        result = clean_value_quality(
+            "9999,9999,99,1,9999,99,1,9999,99,1,9999,1",
+            "GM1",
+            strict_mode=True,
+        )
+        assert result["GM1__part1"] is None
+        assert result["GM1__part2"] is None
+        assert result["GM1__part5"] is None
+        assert result["GM1__part8"] is None
+        assert result["GM1__part11"] is None
+
+    def test_gm1_sentinel_accepts_non_sentinel_radiation_tokens(self):
+        result = clean_value_quality(
+            "0060,0123,00,1,0456,00,1,0789,00,1,0123,1",
+            "GM1",
+            strict_mode=True,
+        )
+        assert result["GM1__part1"] == pytest.approx(60.0)
+        assert result["GM1__part2"] == pytest.approx(123.0)
+        assert result["GM1__part5"] == pytest.approx(456.0)
+        assert result["GM1__part8"] == pytest.approx(789.0)
+        assert result["GM1__part11"] == pytest.approx(123.0)
+
     def test_gn1_token_width_accepts_exact_tokens(self):
         """GN1 accepts canonical widths across all 11 parts."""
         result = clean_value_quality(
@@ -4831,6 +4921,32 @@ class TestA4TokenWidthValidation:
         )
         assert result["GN1__part2"] is None
         assert result["GN1__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_gn1_sentinel_rejects_missing_radiation_tokens(self):
+        result = clean_value_quality(
+            "9999,9999,1,9999,1,9999,1,9999,1,999,1",
+            "GN1",
+            strict_mode=True,
+        )
+        assert result["GN1__part1"] is None
+        assert result["GN1__part2"] is None
+        assert result["GN1__part4"] is None
+        assert result["GN1__part6"] is None
+        assert result["GN1__part8"] is None
+        assert result["GN1__part10"] is None
+
+    def test_gn1_sentinel_accepts_non_sentinel_radiation_tokens(self):
+        result = clean_value_quality(
+            "0060,0123,1,0456,1,0789,1,0123,1,090,1",
+            "GN1",
+            strict_mode=True,
+        )
+        assert result["GN1__part1"] == pytest.approx(60.0)
+        assert result["GN1__part2"] == pytest.approx(123.0)
+        assert result["GN1__part4"] == pytest.approx(456.0)
+        assert result["GN1__part6"] == pytest.approx(789.0)
+        assert result["GN1__part8"] == pytest.approx(123.0)
+        assert result["GN1__part10"] == pytest.approx(90.0)
 
     def test_go1_token_width_accepts_exact_tokens(self):
         """GO1 accepts canonical widths across all 7 parts."""

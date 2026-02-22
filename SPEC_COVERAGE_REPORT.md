@@ -15,9 +15,9 @@ python3 tools/spec_coverage/generate_spec_coverage.py
 - Metric-eligible rules (excluding `unknown`): **3524**
 - Unknown/noisy rows excluded from %: **0**
 - Rules implemented in code: **3488** (99.0%)
-- Progress KPI (`tested_strict`): **3165** (89.8%)
-- Weak coverage (`tested_any`, includes wildcard): **3165** (89.8%)
-- tested_any from non-wild matches only: **3165** (89.8%)
+- Progress KPI (`tested_strict`): **3257** (92.4%)
+- Weak coverage (`tested_any`, includes wildcard): **3257** (92.4%)
+- tested_any from non-wild matches only: **3257** (92.4%)
 - Wildcard-only tested_any (not counted toward progress): **0** (0.0%)
 - Coverage progress is measured with `tested_strict` only.
 - `test_covered` in CSV mirrors `test_covered_any` for backward compatibility.
@@ -32,56 +32,56 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 | rank | spec_part | identifier | rule_type | enforcement_layer | implemented | test_strict | test_any | match_strength | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 15 | GA2 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_values;test_match=none;unresolved_in_next_steps |
-| 2 | 15 | GA3 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_values;test_match=none;unresolved_in_next_steps |
-| 3 | 15 | GA4 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_values;test_match=none;unresolved_in_next_steps |
-| 4 | 15 | GA5 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_values;test_match=none;unresolved_in_next_steps |
-| 5 | 15 | GD1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 6 | 15 | GD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 7 | 15 | GD3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 8 | 15 | GD4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 9 | 15 | GD5 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 10 | 15 | GD6 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 11 | 15 | GD1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 12 | 15 | GD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 13 | 15 | GD3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 14 | 15 | GD4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 15 | 15 | GD5 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 16 | 15 | GD6 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 17 | 15 | GD1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 18 | 15 | GD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 19 | 15 | GD3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 20 | 15 | GD4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 21 | 15 | GD5 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 22 | 15 | GD6 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 23 | 15 | GD1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 24 | 15 | GD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 25 | 15 | GD3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 26 | 15 | GD4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 27 | 15 | GD5 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 28 | 15 | GD6 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 29 | 15 | GD1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 30 | 15 | GD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 31 | 15 | GD3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 32 | 15 | GD4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 33 | 15 | GD5 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 34 | 15 | GD6 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 35 | 15 | GD1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 36 | 15 | GD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 37 | 15 | GD3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 38 | 15 | GD4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 39 | 15 | GD5 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 40 | 15 | GD6 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 41 | 15 | GD1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 42 | 15 | GD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 43 | 15 | GD3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 44 | 15 | GD4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 45 | 15 | GD5 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 46 | 15 | GD6 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 47 | 15 | GG2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 48 | 15 | GG3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 49 | 15 | GG4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 50 | 15 | GG5 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 1 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 2 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 3 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 4 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 5 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 6 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 7 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 8 | 23 | IB2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 9 | 23 | IB2 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_quality;test_match=none;unresolved_in_next_steps |
+| 10 | 23 | IB2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 11 | 23 | IB2 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_missing;test_match=none;unresolved_in_next_steps |
+| 12 | 23 | IB2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 13 | 23 | IB2 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_quality;test_match=none;unresolved_in_next_steps |
+| 14 | 23 | IB2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 15 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 16 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 17 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 18 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 19 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 20 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 21 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 22 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 23 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 24 | 24 | KA2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 25 | 24 | KA3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 26 | 24 | KA4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 27 | 24 | KA2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 28 | 24 | KA3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 29 | 24 | KA4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 30 | 24 | KA2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 31 | 24 | KA3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 32 | 24 | KA4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 33 | 24 | KB2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 34 | 24 | KB3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 35 | 24 | KB2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 36 | 24 | KB3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 37 | 24 | KB2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 38 | 24 | KB3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 39 | 24 | KC2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 40 | 24 | KC2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 41 | 24 | KC2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 42 | 24 | KC2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 43 | 24 | KD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 44 | 24 | KD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 45 | 24 | KG2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 46 | 24 | KG2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 47 | 24 | KG2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 48 | 24 | KG2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 49 | 24 | KG2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 50 | 25 | SA1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
 
 ### Implementation gaps (strict): Not implemented + not tested_strict
 
@@ -93,31 +93,31 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 | rank | spec_part | identifier | rule_type | enforcement_layer | implemented | test_strict | test_any | match_strength | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 15 | GA2 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_values;test_match=none;unresolved_in_next_steps |
-| 2 | 15 | GA3 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_values;test_match=none;unresolved_in_next_steps |
-| 3 | 15 | GA4 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_values;test_match=none;unresolved_in_next_steps |
-| 4 | 15 | GA5 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_values;test_match=none;unresolved_in_next_steps |
-| 5 | 15 | GD1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 6 | 15 | GD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 7 | 15 | GD3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 8 | 15 | GD4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 9 | 15 | GD5 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 10 | 15 | GD6 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 11 | 15 | GD1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 12 | 15 | GD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 13 | 15 | GD3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 14 | 15 | GD4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 15 | 15 | GD5 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 16 | 15 | GD6 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 17 | 15 | GD1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 18 | 15 | GD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 19 | 15 | GD3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 20 | 15 | GD4 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 21 | 15 | GD5 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 22 | 15 | GD6 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 23 | 15 | GD1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 24 | 15 | GD2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
-| 25 | 15 | GD3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 1 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 2 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 3 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 4 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 5 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 6 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 7 | 18 | GO1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 8 | 23 | IB2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 9 | 23 | IB2 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_quality;test_match=none;unresolved_in_next_steps |
+| 10 | 23 | IB2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 11 | 23 | IB2 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_missing;test_match=none;unresolved_in_next_steps |
+| 12 | 23 | IB2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 13 | 23 | IB2 | domain | both | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=global_domain_gate;coverage_reason_constants=field_rule_domain_quality;test_match=none;unresolved_in_next_steps |
+| 14 | 23 | IB2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 15 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 16 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 17 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 18 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 19 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 20 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 21 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 22 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 23 | 23 | IC1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel_repeated_pattern;test_match=none;unresolved_in_next_steps |
+| 24 | 24 | KA2 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
+| 25 | 24 | KA3 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;test_match=none;unresolved_in_next_steps |
 
 ## Rule Identity & Provenance
 
@@ -143,18 +143,18 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 | Match strength | Count | % of metric rules |
 | --- | --- | --- |
-| exact_signature | 1131 | 32.1% |
-| exact_assertion | 2022 | 57.4% |
-| family_assertion | 12 | 0.3% |
+| exact_signature | 1214 | 34.4% |
+| exact_assertion | 2035 | 57.7% |
+| family_assertion | 8 | 0.2% |
 | wildcard_assertion | 0 | 0.0% |
-| none | 359 | 10.2% |
+| none | 267 | 7.6% |
 
 ## Precision warnings
 
 - Wildcard policy: `wildcard_assertion` counts as tested-any only; it never counts as strict.
-- Tested-any rows matched by `exact_signature`: **1131** (35.7%)
-- Tested-any rows matched by `exact_assertion`: **2022** (63.9%)
-- Tested-any rows matched by `family_assertion`: **12** (0.4%)
+- Tested-any rows matched by `exact_signature`: **1214** (37.3%)
+- Tested-any rows matched by `exact_assertion`: **2035** (62.5%)
+- Tested-any rows matched by `family_assertion`: **8** (0.2%)
 - Tested-any rows matched by `wildcard_assertion`: **0** (0.0%)
 - Synthetic rows in CSV: **28**
 - Synthetic gap rows in CSV: **28**
@@ -193,9 +193,9 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | 12 | 20 | 20 | 19 | 19 | 19 | 95.0% | 95.0% | 95.0% |
 | 13 | 109 | 109 | 108 | 106 | 106 | 99.1% | 97.2% | 97.2% |
 | 14 | 15 | 15 | 14 | 13 | 13 | 93.3% | 86.7% | 86.7% |
-| 15 | 472 | 472 | 471 | 391 | 391 | 99.8% | 82.8% | 82.8% |
-| 16 | 24 | 24 | 23 | 20 | 20 | 95.8% | 83.3% | 83.3% |
-| 17 | 84 | 84 | 83 | 60 | 60 | 98.8% | 71.4% | 71.4% |
+| 15 | 472 | 472 | 471 | 457 | 457 | 99.8% | 96.8% | 96.8% |
+| 16 | 24 | 24 | 23 | 23 | 23 | 95.8% | 95.8% | 95.8% |
+| 17 | 84 | 84 | 83 | 83 | 83 | 98.8% | 98.8% | 98.8% |
 | 18 | 27 | 27 | 26 | 19 | 19 | 96.3% | 70.4% | 70.4% |
 | 19 | 38 | 38 | 37 | 36 | 36 | 97.4% | 94.7% | 94.7% |
 | 20 | 20 | 20 | 19 | 18 | 18 | 95.0% | 90.0% | 90.0% |
@@ -254,17 +254,17 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | DEW | 5 | 5 | 5 | 5 | 5 | 100.0% | 100.0% | 100.0% |
 | ED | 14 | 14 | 14 | 13 | 13 | 100.0% | 92.9% | 92.9% |
 | ELEVATION | 3 | 3 | 3 | 3 | 3 | 100.0% | 100.0% | 100.0% |
-| GA | 24 | 24 | 24 | 15 | 15 | 100.0% | 62.5% | 62.5% |
-| GD | 216 | 216 | 216 | 170 | 170 | 100.0% | 78.7% | 78.7% |
+| GA | 24 | 24 | 24 | 19 | 19 | 100.0% | 79.2% | 79.2% |
+| GD | 216 | 216 | 216 | 212 | 212 | 100.0% | 98.1% | 98.1% |
 | GE | 11 | 11 | 11 | 11 | 11 | 100.0% | 100.0% | 100.0% |
 | GF | 39 | 39 | 39 | 39 | 39 | 100.0% | 100.0% | 100.0% |
-| GG | 144 | 144 | 144 | 119 | 119 | 100.0% | 82.6% | 82.6% |
+| GG | 144 | 144 | 144 | 139 | 139 | 100.0% | 96.5% | 96.5% |
 | GH | 37 | 37 | 37 | 37 | 37 | 100.0% | 100.0% | 100.0% |
-| GJ | 8 | 8 | 8 | 7 | 7 | 100.0% | 87.5% | 87.5% |
-| GK | 8 | 8 | 8 | 7 | 7 | 100.0% | 87.5% | 87.5% |
-| GL | 7 | 7 | 7 | 6 | 6 | 100.0% | 85.7% | 85.7% |
-| GM | 43 | 43 | 43 | 31 | 31 | 100.0% | 72.1% | 72.1% |
-| GN | 40 | 40 | 40 | 29 | 29 | 100.0% | 72.5% | 72.5% |
+| GJ | 8 | 8 | 8 | 8 | 8 | 100.0% | 100.0% | 100.0% |
+| GK | 8 | 8 | 8 | 8 | 8 | 100.0% | 100.0% | 100.0% |
+| GL | 7 | 7 | 7 | 7 | 7 | 100.0% | 100.0% | 100.0% |
+| GM | 43 | 43 | 43 | 43 | 43 | 100.0% | 100.0% | 100.0% |
+| GN | 40 | 40 | 40 | 40 | 40 | 100.0% | 100.0% | 100.0% |
 | GO | 26 | 26 | 26 | 19 | 19 | 100.0% | 73.1% | 73.1% |
 | GP | 37 | 37 | 37 | 36 | 36 | 100.0% | 97.3% | 97.3% |
 | GQ | 19 | 19 | 19 | 18 | 18 | 100.0% | 94.7% | 94.7% |
@@ -320,9 +320,9 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | Rule type | Rules | Implemented | Tested strict | Tested any (weak) | Implemented % | Tested strict % | Tested any (weak) % |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | range | 362 | 360 | 360 | 360 | 99.4% | 99.4% | 99.4% |
-| sentinel | 688 | 687 | 496 | 496 | 99.9% | 72.1% | 72.1% |
+| sentinel | 688 | 687 | 584 | 584 | 99.9% | 84.9% | 84.9% |
 | allowed_quality | 80 | 80 | 77 | 77 | 100.0% | 96.2% | 96.2% |
-| domain | 888 | 888 | 881 | 881 | 100.0% | 99.2% | 99.2% |
+| domain | 888 | 888 | 885 | 885 | 100.0% | 99.7% | 99.7% |
 | cardinality | 128 | 128 | 128 | 128 | 100.0% | 100.0% | 100.0% |
 | width | 1207 | 1174 | 1174 | 1174 | 97.3% | 97.3% | 97.3% |
 | arity | 171 | 171 | 49 | 49 | 100.0% | 28.7% | 28.7% |
