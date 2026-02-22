@@ -3732,6 +3732,71 @@ class TestA4TokenWidthValidation:
         assert result["GQ1__part2"] is None
         assert result["GQ1__part2__qc_reason"] == "MALFORMED_TOKEN"
 
+    def test_gr1_token_width_accepts_exact_tokens(self):
+        """GR1 accepts canonical widths across all 5 parts."""
+        result = clean_value_quality(
+            "0060,0800,1,0900,1",
+            "GR1",
+            strict_mode=True,
+        )
+        assert result["GR1__part1"] == pytest.approx(60.0)
+        assert result["GR1__part2"] == pytest.approx(800.0)
+        assert result["GR1__part4"] == pytest.approx(900.0)
+
+    def test_gr1_token_width_rejects_short_horizontal_radiation(self):
+        """GR1 rejects short horizontal-radiation token in strict mode."""
+        result = clean_value_quality(
+            "0060,800,1,0900,1",
+            "GR1",
+            strict_mode=True,
+        )
+        assert result["GR1__part2"] is None
+        assert result["GR1__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_hail_token_width_accepts_exact_tokens(self):
+        """HAIL accepts canonical 3/1 token widths."""
+        result = clean_value_quality("100,1", "HAIL", strict_mode=True)
+        assert result["HAIL__value"] == pytest.approx(10.0)
+        assert result["HAIL__quality"] == "1"
+
+    def test_hail_token_width_rejects_short_hail_size(self):
+        """HAIL rejects short hail-size token in strict mode."""
+        result = clean_value_quality("10,1", "HAIL", strict_mode=True)
+        assert result["HAIL__value"] is None
+        assert result["HAIL__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_ia1_token_width_accepts_exact_tokens(self):
+        """IA1 accepts canonical 2/1 token widths."""
+        result = clean_value_quality("10,1", "IA1", strict_mode=True)
+        assert result["IA1__part1"] == pytest.approx(10.0)
+        assert result["IA1__part2"] == pytest.approx(1.0)
+
+    def test_ia1_token_width_rejects_space_padded_code(self):
+        """IA1 rejects space-padded ground-surface code in strict mode."""
+        result = clean_value_quality("10 ,1", "IA1", strict_mode=True)
+        assert result["IA1__part1"] is None
+
+    def test_ib1_token_width_accepts_exact_tokens(self):
+        """IB1 accepts canonical widths across all 12 parts."""
+        result = clean_value_quality(
+            "+0100,1,0,+0050,1,0,+0150,1,0,0010,1,0",
+            "IB1",
+            strict_mode=True,
+        )
+        assert result["IB1__part1"] == pytest.approx(10.0)
+        assert result["IB1__part7"] == pytest.approx(15.0)
+        assert result["IB1__part10"] == pytest.approx(1.0)
+
+    def test_ib1_token_width_rejects_short_std_token(self):
+        """IB1 rejects short surface-temperature-std token in strict mode."""
+        result = clean_value_quality(
+            "+0100,1,0,+0050,1,0,+0150,1,0,010,1,0",
+            "IB1",
+            strict_mode=True,
+        )
+        assert result["IB1__part10"] is None
+        assert result["IB1__part10__qc_reason"] == "MALFORMED_TOKEN"
+
     def test_token_width_permissive_mode(self):
         """Invalid token widths allowed in permissive mode."""
         df = pd.DataFrame({
