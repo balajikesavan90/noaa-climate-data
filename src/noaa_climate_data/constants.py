@@ -868,6 +868,8 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 quality_part=4,
                 allowed_values={f"{value:02d}" for value in range(0, 31)},
+                min_value=0,
+                max_value=30,
                 token_width=2,
             ),  # wave period (seconds)
             3: FieldPartRule(
@@ -875,6 +877,8 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"999"},
                 quality_part=4,
                 allowed_values={f"{value:03d}" for value in range(0, 501)},
+                min_value=0,
+                max_value=500,
                 token_width=3,
             ),
             4: FieldPartRule(
@@ -1176,23 +1180,27 @@ FIELD_RULES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 quality_part=4,
                 allowed_values={f"{value:02d}" for value in range(0, 15)},
+                token_width=2,
             ),  # secondary swell period (seconds)
             2: FieldPartRule(
                 scale=0.1,
                 missing_values={"999"},
                 quality_part=4,
                 allowed_values={f"{value:03d}" for value in range(0, 501)},
+                token_width=3,
             ),
             3: FieldPartRule(
                 missing_values={"999"},
                 agg="circular_mean",
                 quality_part=4,
                 allowed_values={f"{value:03d}" for value in range(1, 361)},
+                token_width=3,
             ),
             4: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality={"0", "1", "2", "3", "9"},
+                token_width=1,
             ),  # swell height quality
         },
     ),
@@ -4049,10 +4057,11 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 token_width=1,
             ),
             2: FieldPartRule(
-                kind="categorical",
                 agg="drop",
                 missing_values={"99"},
                 allowed_values={f"{value:02d}" for value in range(1, 49)},
+                min_value=1,
+                max_value=48,
                 token_width=2,
             ),
             3: FieldPartRule(
@@ -4060,6 +4069,8 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 missing_values={"9999"},
                 quality_part=4,
                 allowed_values={f"{value:04d}" for value in range(0, 2001)},
+                min_value=0,
+                max_value=2000,
                 token_width=4,
                 token_pattern=re.compile(r"^\d{4}$"),
             ),
@@ -4083,15 +4094,18 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
             ),
             2: FieldPartRule(
                 missing_values={"99"},
-                kind="categorical",
                 agg="drop",
                 allowed_values={f"{value:02d}" for value in range(1, 49)},
+                min_value=1,
+                max_value=48,
                 token_width=2,
             ),
             3: FieldPartRule(
                 missing_values={"999"},
                 agg="circular_mean",
                 allowed_values={f"{value:03d}" for value in range(1, 361)},
+                min_value=1,
+                max_value=360,
                 token_width=3,
             ),
             4: FieldPartRule(
@@ -4099,6 +4113,8 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 missing_values={"9999"},
                 quality_part=5,
                 allowed_values={f"{value:04d}" for value in range(0, 2001)},
+                min_value=0,
+                max_value=2000,
                 token_width=4,
             ),
             5: FieldPartRule(
@@ -4215,6 +4231,8 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 missing_values={"99"},
                 agg="drop",
                 allowed_values={"24"},
+                min_value=24,
+                max_value=24,
                 token_width=2,
             ),  # period hours
             3: FieldPartRule(
@@ -4222,6 +4240,8 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 missing_values={"99999"},
                 quality_part=6,
                 allowed_values={f"{value:05d}" for value in range(0, 20001)},
+                min_value=0,
+                max_value=20000,
                 token_width=5,
             ),
             4: FieldPartRule(
@@ -4229,15 +4249,18 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 agg="circular_mean",
                 quality_part=6,
                 allowed_values={f"{value:03d}" for value in range(1, 361)},
+                min_value=1,
+                max_value=360,
                 token_width=3,
             ),
             5: FieldPartRule(
-                kind="categorical",
                 agg="drop",
                 missing_values={"9999"},
                 quality_part=6,
                 allowed_values={f"{value:04d}" for value in range(0, 2360)},
                 allowed_pattern=HHMM_PATTERN,
+                min_value=0,
+                max_value=2359,
                 token_width=4,
             ),
             6: FieldPartRule(
@@ -4803,6 +4826,7 @@ _REPEATED_IDENTIFIER_RANGES: dict[str, range] = {
 
 _IDENTIFIER_ALIASES: dict[str, str] = {
     "N2": "N02",
+    "WND2": "WND",
 }
 
 

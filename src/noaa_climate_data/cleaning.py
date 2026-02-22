@@ -367,6 +367,15 @@ def _expand_parsed(
                 if 'width' in width_rules:
                     expected_width = width_rules['width']
                     if part_rule and part_rule.kind == "numeric":
+                        # Reject space-padded numeric tokens in strict mode.
+                        if raw_part != raw_part.strip():
+                            logger.warning(
+                                f"[PARSE_STRICT] Rejected {prefix} part {idx}: "
+                                "token contains leading/trailing whitespace"
+                            )
+                            malformed_parts.add(idx)
+                            payload[key] = None
+                            continue
                         # Handle signed numeric values (e.g., temperature).
                         test_value = part_stripped.lstrip('+-')
                     else:
@@ -627,6 +636,25 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
             # Check token width (handling signed values)
             if 'width' in width_rules:
                 expected_width = width_rules['width']
+                raw_part = parsed.raw_parts[0] if parsed.raw_parts else parsed.parts[0]
+                if raw_part != raw_part.strip():
+                    logger.warning(
+                        f"[PARSE_STRICT] Rejected {prefix} part 1: "
+                        "token contains leading/trailing whitespace"
+                    )
+                    qc_pass, qc_status, qc_reason = _compute_qc_signals(
+                        is_sentinel=False,
+                        bad_quality=False,
+                        out_of_range=False,
+                        malformed_token=True,
+                    )
+                    return {
+                        value_key: None,
+                        f"{prefix}__quality": quality,
+                        f"{prefix}__qc_pass": qc_pass,
+                        f"{prefix}__qc_status": qc_status,
+                        f"{prefix}__qc_reason": qc_reason,
+                    }
                 test_value = part_stripped.lstrip('+-')
                 if len(test_value) != expected_width:
                     logger.warning(

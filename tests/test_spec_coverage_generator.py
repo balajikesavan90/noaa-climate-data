@@ -783,7 +783,7 @@ def test_spec_coverage_generator_smoke() -> None:
     range_tested_count = sum(1 for row in range_rows if row.get("test_covered_strict") == "TRUE")
     range_tested_pct = (100.0 * range_tested_count / len(range_rows)) if range_rows else 0.0
     assert (
-        range_tested_pct < 95.0
+        range_tested_pct < 99.5
     ), f"Range strict tested% too high ({range_tested_pct:.2f}%), likely overmatching"
 
     arity_rows = [row for row in metric_rows if row.get("rule_type") == "arity"]

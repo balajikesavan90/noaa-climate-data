@@ -2133,13 +2133,226 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("1,01,2001,1", "OA1")
         assert result["OA1__part3"] is None
 
-    def test_od_invalid_direction_range(self):
+    def test_od_invalid_direction(self):
         result = clean_value_quality("1,01,361,0005,1", "OD1")
         assert result["OD1__part3"] is None
 
     def test_od_invalid_speed_rate(self):
         result = clean_value_quality("1,01,090,2001,1", "OD1")
         assert result["OD1__part4"] is None
+
+    @pytest.mark.parametrize("prefix", ["OA1", "OA2", "OA3"])
+    def test_oa_range_period_quantity_boundary_values(self, prefix: str):
+        low = clean_value_quality("1,01,0005,1", prefix, strict_mode=True)
+        high = clean_value_quality("1,48,0005,1", prefix, strict_mode=True)
+        assert low[f"{prefix}__part2"] == pytest.approx(1.0)
+        assert high[f"{prefix}__part2"] == pytest.approx(48.0)
+        assert low[f"{prefix}__part2__qc_reason"] is None
+        assert high[f"{prefix}__part2__qc_reason"] is None
+
+    @pytest.mark.parametrize("prefix", ["OA1", "OA2", "OA3"])
+    def test_oa_range_period_quantity_out_of_range(self, prefix: str):
+        result = clean_value_quality("1,49,0005,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] is None
+        assert result[f"{prefix}__part2__qc_reason"] == "OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("prefix", ["OA1", "OA2", "OA3"])
+    def test_oa_range_speed_rate_boundary_values(self, prefix: str):
+        low = clean_value_quality("1,01,0000,1", prefix, strict_mode=True)
+        high = clean_value_quality("1,01,2000,1", prefix, strict_mode=True)
+        assert low[f"{prefix}__part3"] == pytest.approx(0.0)
+        assert high[f"{prefix}__part3"] == pytest.approx(200.0)
+        assert low[f"{prefix}__part3__qc_reason"] is None
+        assert high[f"{prefix}__part3__qc_reason"] is None
+
+    @pytest.mark.parametrize("prefix", ["OA1", "OA2", "OA3"])
+    def test_oa_range_speed_rate_out_of_range(self, prefix: str):
+        result = clean_value_quality("1,01,2001,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+        assert result[f"{prefix}__part3__qc_reason"] == "OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("prefix", ["OD1", "OD2", "OD3"])
+    def test_od_range_period_quantity_boundary_values(self, prefix: str):
+        low = clean_value_quality("1,01,090,0005,1", prefix, strict_mode=True)
+        high = clean_value_quality("1,48,090,0005,1", prefix, strict_mode=True)
+        assert low[f"{prefix}__part2"] == pytest.approx(1.0)
+        assert high[f"{prefix}__part2"] == pytest.approx(48.0)
+        assert low[f"{prefix}__part2__qc_reason"] is None
+        assert high[f"{prefix}__part2__qc_reason"] is None
+
+    @pytest.mark.parametrize("prefix", ["OD1", "OD2", "OD3"])
+    def test_od_range_period_quantity_out_of_range(self, prefix: str):
+        result = clean_value_quality("1,49,090,0005,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] is None
+        assert result[f"{prefix}__part2__qc_reason"] == "OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("prefix", ["OD1", "OD2", "OD3"])
+    def test_od_range_direction_boundary_values(self, prefix: str):
+        low = clean_value_quality("1,01,001,0005,1", prefix, strict_mode=True)
+        high = clean_value_quality("1,01,360,0005,1", prefix, strict_mode=True)
+        assert low[f"{prefix}__part3"] == pytest.approx(1.0)
+        assert high[f"{prefix}__part3"] == pytest.approx(360.0)
+        assert low[f"{prefix}__part3__qc_reason"] is None
+        assert high[f"{prefix}__part3__qc_reason"] is None
+
+    @pytest.mark.parametrize("prefix", ["OD1", "OD2", "OD3"])
+    def test_od_range_direction_out_of_range(self, prefix: str):
+        result = clean_value_quality("1,01,361,0005,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+        assert result[f"{prefix}__part3__qc_reason"] == "OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("prefix", ["OD1", "OD2", "OD3"])
+    def test_od_range_speed_rate_boundary_values(self, prefix: str):
+        low = clean_value_quality("1,01,090,0000,1", prefix, strict_mode=True)
+        high = clean_value_quality("1,01,090,2000,1", prefix, strict_mode=True)
+        assert low[f"{prefix}__part4"] == pytest.approx(0.0)
+        assert high[f"{prefix}__part4"] == pytest.approx(200.0)
+        assert low[f"{prefix}__part4__qc_reason"] is None
+        assert high[f"{prefix}__part4__qc_reason"] is None
+
+    @pytest.mark.parametrize("prefix", ["OD1", "OD2", "OD3"])
+    def test_od_range_speed_rate_out_of_range(self, prefix: str):
+        result = clean_value_quality("1,01,090,2001,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part4"] is None
+        assert result[f"{prefix}__part4__qc_reason"] == "OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("prefix", ["OE2", "OE3"])
+    def test_oe_range_period_hours_boundary_values(self, prefix: str):
+        result = clean_value_quality("1,24,00010,180,1200,4", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] == pytest.approx(24.0)
+        assert result[f"{prefix}__part2__qc_reason"] is None
+
+    @pytest.mark.parametrize("prefix", ["OE2", "OE3"])
+    def test_oe_range_period_hours_out_of_range(self, prefix: str):
+        result = clean_value_quality("1,23,00010,180,1200,4", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] is None
+        assert result[f"{prefix}__part2__qc_reason"] == "OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("prefix", ["OE2", "OE3"])
+    def test_oe_range_speed_rate_boundary_values(self, prefix: str):
+        low = clean_value_quality("1,24,00000,180,1200,4", prefix, strict_mode=True)
+        high = clean_value_quality("1,24,20000,180,1200,4", prefix, strict_mode=True)
+        assert low[f"{prefix}__part3"] == pytest.approx(0.0)
+        assert high[f"{prefix}__part3"] == pytest.approx(200.0)
+        assert low[f"{prefix}__part3__qc_reason"] is None
+        assert high[f"{prefix}__part3__qc_reason"] is None
+
+    @pytest.mark.parametrize("prefix", ["OE2", "OE3"])
+    def test_oe_range_speed_rate_out_of_range(self, prefix: str):
+        result = clean_value_quality("1,24,20001,180,1200,4", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+        assert result[f"{prefix}__part3__qc_reason"] == "OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("prefix", ["OE2", "OE3"])
+    def test_oe_range_direction_boundary_values(self, prefix: str):
+        low = clean_value_quality("1,24,00010,001,1200,4", prefix, strict_mode=True)
+        high = clean_value_quality("1,24,00010,360,1200,4", prefix, strict_mode=True)
+        assert low[f"{prefix}__part4"] == pytest.approx(1.0)
+        assert high[f"{prefix}__part4"] == pytest.approx(360.0)
+        assert low[f"{prefix}__part4__qc_reason"] is None
+        assert high[f"{prefix}__part4__qc_reason"] is None
+
+    @pytest.mark.parametrize("prefix", ["OE2", "OE3"])
+    def test_oe_range_direction_out_of_range(self, prefix: str):
+        result = clean_value_quality("1,24,00010,361,1200,4", prefix, strict_mode=True)
+        assert result[f"{prefix}__part4"] is None
+        assert result[f"{prefix}__part4__qc_reason"] == "OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("prefix", ["OE2", "OE3"])
+    def test_oe_range_peak_time_boundary_values(self, prefix: str):
+        low = clean_value_quality("1,24,00010,180,0000,4", prefix, strict_mode=True)
+        high = clean_value_quality("1,24,00010,180,2359,4", prefix, strict_mode=True)
+        assert low[f"{prefix}__part5"] == pytest.approx(0.0)
+        assert high[f"{prefix}__part5"] == pytest.approx(2359.0)
+        assert low[f"{prefix}__part5__qc_reason"] is None
+        assert high[f"{prefix}__part5__qc_reason"] is None
+
+    @pytest.mark.parametrize("prefix", ["OE2", "OE3"])
+    def test_oe_range_peak_time_out_of_range(self, prefix: str):
+        result = clean_value_quality("1,24,00010,180,2360,4", prefix, strict_mode=True)
+        assert result[f"{prefix}__part5"] is None
+        assert result[f"{prefix}__part5__qc_reason"] == "OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("prefix", ["RH2", "RH3"])
+    def test_rh_range_period_hours_boundary_values(self, prefix: str):
+        low = clean_value_quality("001,M,085,D,1", prefix, strict_mode=True)
+        high = clean_value_quality("744,M,085,D,1", prefix, strict_mode=True)
+        assert low[f"{prefix}__part1"] == pytest.approx(1.0)
+        assert high[f"{prefix}__part1"] == pytest.approx(744.0)
+        assert low[f"{prefix}__part1__qc_reason"] is None
+        assert high[f"{prefix}__part1__qc_reason"] is None
+
+    @pytest.mark.parametrize("prefix", ["RH2", "RH3"])
+    def test_rh_range_period_hours_out_of_range(self, prefix: str):
+        result = clean_value_quality("745,M,085,D,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part1__qc_reason"] == "OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("prefix", ["RH2", "RH3"])
+    def test_rh_range_humidity_boundary_values(self, prefix: str):
+        low = clean_value_quality("024,M,000,D,1", prefix, strict_mode=True)
+        high = clean_value_quality("024,M,100,D,1", prefix, strict_mode=True)
+        assert low[f"{prefix}__part3"] == pytest.approx(0.0)
+        assert high[f"{prefix}__part3"] == pytest.approx(100.0)
+        assert low[f"{prefix}__part3__qc_reason"] is None
+        assert high[f"{prefix}__part3__qc_reason"] is None
+
+    @pytest.mark.parametrize("prefix", ["RH2", "RH3"])
+    def test_rh_range_humidity_out_of_range(self, prefix: str):
+        result = clean_value_quality("024,M,101,D,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+        assert result[f"{prefix}__part3__qc_reason"] == "OUT_OF_RANGE"
+
+    def test_ua1_range_wave_period_boundary_values(self):
+        low = clean_value_quality("I,00,120,1,03,1", "UA1", strict_mode=True)
+        high = clean_value_quality("I,30,120,1,03,1", "UA1", strict_mode=True)
+        assert low["UA1__part2"] == pytest.approx(0.0)
+        assert high["UA1__part2"] == pytest.approx(30.0)
+        assert low["UA1__part2__qc_reason"] is None
+        assert high["UA1__part2__qc_reason"] is None
+
+    def test_ua1_range_wave_period_out_of_range(self):
+        result = clean_value_quality("I,31,120,1,03,1", "UA1", strict_mode=True)
+        assert result["UA1__part2"] is None
+        assert result["UA1__part2__qc_reason"] == "OUT_OF_RANGE"
+
+    def test_ua1_range_wave_height_boundary_values(self):
+        low = clean_value_quality("I,05,000,1,03,1", "UA1", strict_mode=True)
+        high = clean_value_quality("I,05,500,1,03,1", "UA1", strict_mode=True)
+        assert low["UA1__part3"] == pytest.approx(0.0)
+        assert high["UA1__part3"] == pytest.approx(50.0)
+        assert low["UA1__part3__qc_reason"] is None
+        assert high["UA1__part3__qc_reason"] is None
+
+    def test_ua1_range_wave_height_out_of_range(self):
+        result = clean_value_quality("I,05,501,1,03,1", "UA1", strict_mode=True)
+        assert result["UA1__part3"] is None
+        assert result["UA1__part3__qc_reason"] == "OUT_OF_RANGE"
+
+    def test_ug2_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("10,050,180,1", "UG2", strict_mode=True)
+        assert result["UG2__part1"] is not None
+        assert result["UG2__part2"] is not None
+        assert result["UG2__part3"] is not None
+        assert result["UG2__part4"] is not None
+
+    def test_ug2_width_rejects_short_primary_period_token(self):
+        result = clean_value_quality("1,050,180,1", "UG2", strict_mode=True)
+        assert result["UG2__part1"] is None
+        assert result["UG2__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_wnd2_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("090,1,N,0005,1", "WND2", strict_mode=True)
+        assert result["WND2__part1"] is not None
+        assert result["WND2__part2"] is not None
+        assert result["WND2__part3"] is not None
+        assert result["WND2__part4"] is not None
+        assert result["WND2__part5"] is not None
+
+    def test_wnd2_width_rejects_short_direction_token(self):
+        result = clean_value_quality("90,1,N,0005,1", "WND2", strict_mode=True)
+        assert result["WND2__part1"] is None
+        assert result["WND2__part1__qc_reason"] == "MALFORMED_TOKEN"
 
     def test_wa1_width_accepts_expected_part_widths(self):
         result = clean_value_quality("1,050,1,1", "WA1", strict_mode=True)
@@ -3089,6 +3302,58 @@ class TestTopStrictCoverageGapFixes:
         result = clean_value_quality("08599,1", "SLP")
         assert result["SLP__value"] is None
 
+    @pytest.mark.parametrize(
+        ("column", "sentinel_token", "valid_token"),
+        [
+            ("LATITUDE", "99999", "+45000"),
+            ("LONGITUDE", "999999", "-120000"),
+            ("REPORT_TYPE", "99999", "FM-12"),
+            ("ELEVATION", "9999", "+0100"),
+            ("CALL_SIGN", "99999", "KJFK0"),
+        ],
+    )
+    def test_control_field_sentinel_rejects_missing_marker(
+        self,
+        column: str,
+        sentinel_token: str,
+        valid_token: str,
+    ):
+        cleaned_missing = clean_noaa_dataframe(pd.DataFrame({column: [sentinel_token]}), keep_raw=True)
+        cleaned_valid = clean_noaa_dataframe(pd.DataFrame({column: [valid_token]}), keep_raw=True)
+        assert pd.isna(cleaned_missing.loc[0, column])
+        assert not pd.isna(cleaned_valid.loc[0, column])
+
+    @pytest.mark.parametrize(
+        ("column", "valid_token", "expected"),
+        [
+            ("LATITUDE", "+45000", 45.0),
+            ("LONGITUDE", "-120000", -120.0),
+            ("REPORT_TYPE", "FM-12", "FM-12"),
+            ("ELEVATION", "+0100", 100.0),
+            ("CALL_SIGN", "KJFK0", "KJFK0"),
+        ],
+    )
+    def test_control_field_sentinel_accepts_non_sentinel_value(
+        self,
+        column: str,
+        valid_token: str,
+        expected: float | str,
+    ):
+        cleaned = clean_noaa_dataframe(pd.DataFrame({column: [valid_token]}), keep_raw=True)
+        value = cleaned.loc[0, column]
+        if isinstance(expected, float):
+            assert value == pytest.approx(expected)
+        else:
+            assert value == expected
+
+    def test_dew_sentinel_rejects_9999(self):
+        result = clean_value_quality("9999,1", "DEW")
+        assert result["DEW__value"] is None
+
+    def test_dew_sentinel_accepts_non_sentinel_value(self):
+        result = clean_value_quality("+0200,1", "DEW")
+        assert result["DEW__value"] == pytest.approx(20.0)
+
     @pytest.mark.parametrize("prefix", ["AA1", "AA2", "AA3", "AA4"])
     def test_aa_cardinality_accepts_valid_suffixes(self, prefix: str):
         assert get_field_rule(prefix) is not None
@@ -3132,6 +3397,54 @@ class TestTopStrictCoverageGapFixes:
         assert rule.parts[2].max_value == 9998
         assert rule.parts[1].max_value != 99
         assert rule.parts[2].max_value != 10000
+
+    @pytest.mark.parametrize("prefix", ["AA1", "AA2", "AA3", "AA4"])
+    def test_aa_sentinel_rejects_missing_period_token(self, prefix: str):
+        result = clean_value_quality("99,0100,1,1", prefix)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["AA1", "AA2", "AA3", "AA4"])
+    def test_aa_sentinel_accepts_non_sentinel_period_token(self, prefix: str):
+        result = clean_value_quality("01,0100,1,1", prefix)
+        assert result[f"{prefix}__part1"] == pytest.approx(1.0)
+
+    @pytest.mark.parametrize("prefix", ["AA2", "AA3", "AA4"])
+    def test_aa_domain_rejects_invalid_condition_code(self, prefix: str):
+        result = clean_value_quality("01,0100,Z,1", prefix)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AA2", "AA3", "AA4"])
+    def test_aa_domain_accepts_valid_condition_code(self, prefix: str):
+        result = clean_value_quality("01,0100,E,1", prefix)
+        assert result[f"{prefix}__part3"] == "E"
+
+    def test_ab1_sentinel_rejects_missing_accumulated_amount(self):
+        result = clean_value_quality("99999,1,1", "AB1")
+        assert result["AB1__part1"] is None
+
+    def test_ab1_sentinel_accepts_non_sentinel_accumulated_amount(self):
+        result = clean_value_quality("01000,1,1", "AB1")
+        assert result["AB1__part1"] == pytest.approx(100.0)
+
+    @pytest.mark.parametrize("prefix", ["AH2", "AH3", "AH4", "AH5", "AH6"])
+    def test_ah_repeated_domain_rejects_invalid_condition_code(self, prefix: str):
+        result = clean_value_quality("010,0123,3,011200,1", prefix)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AH2", "AH3", "AH4", "AH5", "AH6"])
+    def test_ah_repeated_domain_accepts_valid_condition_code(self, prefix: str):
+        result = clean_value_quality("010,0123,1,011200,1", prefix)
+        assert result[f"{prefix}__part3"] is not None
+
+    @pytest.mark.parametrize("prefix", ["AH2", "AH3", "AH4", "AH5", "AH6"])
+    def test_ah_repeated_sentinel_rejects_missing_period_token(self, prefix: str):
+        result = clean_value_quality("999,0123,1,011200,1", prefix)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["AH2", "AH3", "AH4", "AH5", "AH6"])
+    def test_ah_repeated_sentinel_accepts_non_sentinel_period_token(self, prefix: str):
+        result = clean_value_quality("010,0123,1,011200,1", prefix)
+        assert result[f"{prefix}__part1"] == pytest.approx(10.0)
 
     def test_ab1_width_accepts_expected_part_widths(self):
         result = clean_value_quality("01000,1,1", "AB1")
