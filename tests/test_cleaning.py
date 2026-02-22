@@ -29,7 +29,6 @@ from noaa_climate_data.constants import (
     to_internal_column,
 )
 
-
 # ── 1. Missing-value sentinels ───────────────────────────────────────────
 
 
@@ -3194,6 +3193,55 @@ class TestTopStrictCoverageGapFixes:
         rule = get_field_rule("IB1").parts[2]
         assert enforce_domain("2", rule) is None
 
+    def test_ib2_sentinel_rejects_missing_temperature_tokens(self):
+        result = clean_value_quality(
+            "9999,1,9,9999,3,9",
+            "IB2",
+            strict_mode=True,
+        )
+        assert result["IB2__part1"] is None
+        assert result["IB2__part4"] is None
+
+    def test_ib2_sentinel_accepts_non_sentinel_temperature_tokens(self):
+        result = clean_value_quality(
+            "0000,1,9,0000,3,9",
+            "IB2",
+            strict_mode=True,
+        )
+        assert result["IB2__part1"] == pytest.approx(0.0)
+        assert result["IB2__part3"] == pytest.approx(9.0)
+        assert result["IB2__part4"] == pytest.approx(0.0)
+        assert result["IB2__part6"] == pytest.approx(9.0)
+
+    def test_ib2_domain_rejects_invalid_quality_code_4(self):
+        result = clean_value_quality(
+            "0000,4,0,0000,1,0",
+            "IB2",
+            strict_mode=True,
+        )
+        assert result["IB2__part1"] is None
+        assert result["IB2__part2"] is None
+
+    def test_ib2_domain_handles_missing_std_token_9999(self):
+        result = clean_value_quality(
+            "0000,1,0,9999,1,0",
+            "IB2",
+            strict_mode=True,
+        )
+        assert result["IB2__part1"] == pytest.approx(0.0)
+        assert result["IB2__part4"] is None
+
+    def test_ib2_domain_accepts_valid_quality_codes_9_and_3(self):
+        result = clean_value_quality(
+            "0000,9,0,0000,3,0",
+            "IB2",
+            strict_mode=True,
+        )
+        assert result["IB2__part1"] == pytest.approx(0.0)
+        assert result["IB2__part2"] == pytest.approx(9.0)
+        assert result["IB2__part4"] == pytest.approx(0.0)
+        assert result["IB2__part5"] == pytest.approx(3.0)
+
     def test_st1_domain_allows_four_digit_part4(self):
         rule = get_field_rule("ST1").parts[4]
         assert enforce_domain("0050", rule) == "0050"
@@ -3879,6 +3927,116 @@ class TestTopStrictCoverageGapFixes:
         result = clean_value_quality("1,1,01,1,1,1,1", prefix, strict_mode=True)
         assert result[f"{prefix}__part1"] == pytest.approx(1.0)
         assert result[f"{prefix}__part7"] == pytest.approx(1.0)
+
+    @pytest.mark.parametrize(
+        "prefix",
+        [
+            "AB1",
+            "AC1",
+            "AE1",
+            "AH2",
+            "AH3",
+            "AH4",
+            "AH5",
+            "AH6",
+            "AI1",
+            "AI2",
+            "AI3",
+            "AI4",
+            "AI5",
+            "AJ1",
+            "AK1",
+            "AL1",
+            "AL2",
+            "AL3",
+            "AM1",
+            "AN1",
+            "AT1",
+            "AT2",
+            "AT3",
+            "AT4",
+            "AT5",
+            "AT6",
+            "AT7",
+            "AU1",
+            "AX1",
+            "AX2",
+            "AX3",
+            "AX4",
+            "AX5",
+            "AY2",
+            "AZ1",
+            "CB1",
+        ],
+    )
+    def test_top12_arity_rejects_truncated_payload(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        mismatched_count = expected_parts - 1 if expected_parts > 1 else (
+            3 if is_value_quality_two_part else 0
+        )
+        mismatched_raw = ",".join(["1"] * mismatched_count)
+        result = clean_value_quality(mismatched_raw, prefix, strict_mode=True)
+        assert result == {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        [
+            "AB1",
+            "AC1",
+            "AE1",
+            "AH2",
+            "AH3",
+            "AH4",
+            "AH5",
+            "AH6",
+            "AI1",
+            "AI2",
+            "AI3",
+            "AI4",
+            "AI5",
+            "AJ1",
+            "AK1",
+            "AL1",
+            "AL2",
+            "AL3",
+            "AM1",
+            "AN1",
+            "AT1",
+            "AT2",
+            "AT3",
+            "AT4",
+            "AT5",
+            "AT6",
+            "AT7",
+            "AU1",
+            "AX1",
+            "AX2",
+            "AX3",
+            "AX4",
+            "AX5",
+            "AY2",
+            "AZ1",
+            "CB1",
+        ],
+    )
+    def test_top12_arity_accepts_expected_part_count(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        valid_count = 2 if is_value_quality_two_part else expected_parts
+        valid_raw = ",".join(["1"] * valid_count)
+        result = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        assert result != {}
 
     def test_aw4_width_accepts_expected_part_widths(self):
         result = clean_value_quality("89,1", "AW4", strict_mode=True)
@@ -4969,6 +5127,31 @@ class TestA4TokenWidthValidation:
         assert result["GO1__part2"] is None
         assert result["GO1__part2__qc_reason"] == "MALFORMED_TOKEN"
 
+    def test_go1_sentinel_rejects_missing_radiation_tokens(self):
+        result = clean_value_quality(
+            "9999,9999,9,9999,9,9999,9",
+            "GO1",
+            strict_mode=True,
+        )
+        assert result["GO1__part1"] is None
+        assert result["GO1__part2"] is None
+        assert result["GO1__part4"] is None
+        assert result["GO1__part6"] is None
+
+    def test_go1_sentinel_accepts_non_sentinel_radiation_tokens(self):
+        result = clean_value_quality(
+            "0060,0123,9,0456,9,0789,9",
+            "GO1",
+            strict_mode=True,
+        )
+        assert result["GO1__part1"] == pytest.approx(60.0)
+        assert result["GO1__part2"] == pytest.approx(123.0)
+        assert result["GO1__part3"] == pytest.approx(9.0)
+        assert result["GO1__part4"] == pytest.approx(456.0)
+        assert result["GO1__part5"] == pytest.approx(9.0)
+        assert result["GO1__part6"] == pytest.approx(789.0)
+        assert result["GO1__part7"] == pytest.approx(9.0)
+
     def test_gp1_token_width_accepts_exact_tokens(self):
         """GP1 accepts canonical widths across all 10 parts."""
         result = clean_value_quality(
@@ -5100,6 +5283,38 @@ class TestA4TokenWidthValidation:
         assert result["IC1__part2"] is None
         assert result["IC1__part2__qc_reason"] == "MALFORMED_TOKEN"
 
+    def test_ic1_sentinel_rejects_missing_measurement_tokens(self):
+        result = clean_value_quality(
+            "99,9999,9,4,999,9,4,999,9,4,999,9,4",
+            "IC1",
+            strict_mode=True,
+        )
+        assert result["IC1__part1"] is None
+        assert result["IC1__part2"] is None
+        assert result["IC1__part3"] is None
+        assert result["IC1__part5"] is None
+        assert result["IC1__part6"] is None
+        assert result["IC1__part8"] is None
+        assert result["IC1__part9"] is None
+        assert result["IC1__part11"] is None
+        assert result["IC1__part12"] is None
+
+    def test_ic1_sentinel_accepts_non_sentinel_measurement_tokens(self):
+        result = clean_value_quality(
+            "24,0100,1,4,050,1,4,+050,1,4,+040,1,4",
+            "IC1",
+            strict_mode=True,
+        )
+        assert result["IC1__part1"] == pytest.approx(24.0)
+        assert result["IC1__part2"] == pytest.approx(100.0)
+        assert result["IC1__part3"] == pytest.approx(1.0)
+        assert result["IC1__part5"] == pytest.approx(0.5)
+        assert result["IC1__part6"] == pytest.approx(1.0)
+        assert result["IC1__part8"] == pytest.approx(5.0)
+        assert result["IC1__part9"] == pytest.approx(1.0)
+        assert result["IC1__part11"] == pytest.approx(4.0)
+        assert result["IC1__part12"] == pytest.approx(1.0)
+
     @pytest.mark.parametrize("prefix", ["KA1", "KA2", "KA3", "KA4"])
     def test_ka_token_width_accepts_exact_tokens(self, prefix: str):
         """KA1-KA4 accept canonical 3/1/4/1 token widths."""
@@ -5122,6 +5337,29 @@ class TestA4TokenWidthValidation:
         )
         assert result[f"{prefix}__part1"] is None
         assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["KA2", "KA3", "KA4"])
+    def test_ka_repeated_sentinel_rejects_missing_tokens(self, prefix: str):
+        result = clean_value_quality(
+            "999,9,9999,1",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part2"] is None
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["KA2", "KA3", "KA4"])
+    def test_ka_repeated_sentinel_accepts_non_sentinel_tokens(self, prefix: str):
+        result = clean_value_quality(
+            "005,N,0123,9",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part1"] == pytest.approx(0.5)
+        assert result[f"{prefix}__part2"] == "N"
+        assert result[f"{prefix}__part3"] == pytest.approx(12.3)
+        assert result[f"{prefix}__part4"] == pytest.approx(9.0)
 
     @pytest.mark.parametrize("prefix", ["KB1", "KB2", "KB3"])
     def test_kb_token_width_accepts_exact_tokens(self, prefix: str):

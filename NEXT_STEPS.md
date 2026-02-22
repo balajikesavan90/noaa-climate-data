@@ -183,8 +183,11 @@
 - [ ] Consider enforcing record/section length constraints (control=60, mandatory=45, max record 2844, max block 8192) if parser validates structure.
 - [ ] Parse and validate REM remark length quantity (Part 30) instead of only splitting type/text.
 - [ ] Parse repeated REM remark entries in a single REM section (typed remark + length + text blocks), not just a single prefix/text split.
-- [ ] Add targeted tests for newly identified gaps: OE period/time range enforcement, AP condition code fixed-to-9 behavior, AW sparse domain validation, and Q/P/R/C/D EQD parameter-code acceptance rules.
-- [ ] Add regression tests for new parser edge cases: remaining Part 4 range/date validation (`AB/AD/AE/AJ/AK/AL/AM/AN`), `AH`/`AI` friendly-column collision detection, `QNN` ASCII-preservation/token-boundary handling, and protection against blanket all-9 nulling of valid REM/QNN text payloads.
+- [x] Add targeted tests for newly identified gaps: OE period/time range enforcement, AP condition code fixed-to-9 behavior, AW sparse domain validation, and Q/P/R/C/D EQD parameter-code acceptance rules.
+- [x] Add regression tests for remaining Part 4 range/date validation (`AB/AD/AE/AJ/AK/AL/AM/AN`).
+- [ ] Add regression tests for `AH`/`AI` friendly-column collision detection.
+- [ ] Add regression tests for `QNN` ASCII-preservation/token-boundary handling.
+- [ ] Add regression tests for protection against blanket all-9 nulling of valid REM/QNN text payloads.
 - [x] Add regression tests for malformed identifier rejection in currently-gated families (`CO02`/`OA01`/`Q100`/`Q01A`/`N001`) and for Part 2 split `DATE`+`TIME` hour extraction behavior.
 - [ ] Add regression tests for sixth-pass Part 2 control gaps: longitude lower-bound edge handling (`-180.000` vs `-179.999`), `CALL_SIGN` width/domain enforcement, and pipeline-level rejection of non-`YYYYMMDD` dates despite `DATE_PARSED` fallback.
 - [x] Add regression tests for parser strictness on field structure: unknown comma-bearing metadata columns should not be expanded, malformed/truncated part-count payloads should be rejected, and non-conformant token widths should not be coerced into valid values. **Gate A validation tests added:** [TestA1UnknownIdentifierAllowlist](tests/test_cleaning.py), [TestA2MalformedIdentifierFormat](tests/test_cleaning.py), [TestA3ArityValidation](tests/test_cleaning.py), [TestA4TokenWidthValidation](tests/test_cleaning.py) with 27 comprehensive tests covering allowlist, format, arity, and token width validation.
