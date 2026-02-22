@@ -2652,6 +2652,36 @@ class TestQualityNullsCorrectPart:
         assert result["AL4__part1"] == pytest.approx(0.0)
         assert result["AL4__part2"] == pytest.approx(0.0)
 
+    @pytest.mark.parametrize("prefix", ["AL2", "AL3", "AL4"])
+    def test_al_repeated_sentinel_rejects_missing_period_token(self, prefix: str):
+        result = clean_value_quality("99,100,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["AL2", "AL3", "AL4"])
+    def test_al_repeated_sentinel_accepts_non_sentinel_period_token(self, prefix: str):
+        result = clean_value_quality("72,100,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(72.0)
+
+    @pytest.mark.parametrize("prefix", ["AL2", "AL3", "AL4"])
+    def test_al_repeated_sentinel_rejects_missing_depth_token(self, prefix: str):
+        result = clean_value_quality("72,999,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] is None
+
+    @pytest.mark.parametrize("prefix", ["AL2", "AL3", "AL4"])
+    def test_al_repeated_sentinel_accepts_non_sentinel_depth_token(self, prefix: str):
+        result = clean_value_quality("72,500,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] == pytest.approx(500.0)
+
+    @pytest.mark.parametrize("prefix", ["AL2", "AL3", "AL4"])
+    def test_al_repeated_sentinel_rejects_missing_condition_token(self, prefix: str):
+        result = clean_value_quality("72,100,9,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AL2", "AL3", "AL4"])
+    def test_al_repeated_sentinel_accepts_non_sentinel_condition_token(self, prefix: str):
+        result = clean_value_quality("72,100,E,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] == "E"
+
     @pytest.mark.parametrize("prefix", ["AL1", "AL2", "AL3", "AL4"])
     def test_al_repeated_width_accepts_expected_part_widths(self, prefix: str):
         result = clean_value_quality("72,500,1,9", prefix, strict_mode=True)
@@ -2735,6 +2765,36 @@ class TestQualityNullsCorrectPart:
     def test_ao_quality_rejects_8(self):
         result = clean_value_quality("15,0010,1,8", "AO1")
         assert result["AO1__part2"] is None
+
+    @pytest.mark.parametrize("prefix", ["AO2", "AO3", "AO4"])
+    def test_ao_repeated_sentinel_rejects_missing_period_token(self, prefix: str):
+        result = clean_value_quality("99,1000,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["AO2", "AO3", "AO4"])
+    def test_ao_repeated_sentinel_accepts_non_sentinel_period_token(self, prefix: str):
+        result = clean_value_quality("98,1000,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(98.0)
+
+    @pytest.mark.parametrize("prefix", ["AO2", "AO3", "AO4"])
+    def test_ao_repeated_sentinel_rejects_missing_depth_token(self, prefix: str):
+        result = clean_value_quality("98,9999,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] is None
+
+    @pytest.mark.parametrize("prefix", ["AO2", "AO3", "AO4"])
+    def test_ao_repeated_sentinel_accepts_non_sentinel_depth_token(self, prefix: str):
+        result = clean_value_quality("98,9998,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] == pytest.approx(999.8)
+
+    @pytest.mark.parametrize("prefix", ["AO2", "AO3", "AO4"])
+    def test_ao_repeated_sentinel_rejects_missing_condition_token(self, prefix: str):
+        result = clean_value_quality("98,1000,9,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AO2", "AO3", "AO4"])
+    def test_ao_repeated_sentinel_accepts_non_sentinel_condition_token(self, prefix: str):
+        result = clean_value_quality("98,1000,E,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] == "E"
 
     @pytest.mark.parametrize("prefix", ["AO1", "AO2", "AO3", "AO4"])
     def test_ao_repeated_width_accepts_expected_part_widths(self, prefix: str):
