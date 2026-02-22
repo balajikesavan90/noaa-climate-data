@@ -3930,6 +3930,150 @@ class TestTopStrictCoverageGapFixes:
 
     @pytest.mark.parametrize(
         "prefix",
+        ["CB2", "CF1", "CF2", "CF3", "CG1", "CG2", "CG3", "CH1", "CH2", "CN1", "CN2", "CN3"],
+    )
+    def test_part06_top12_arity_rejects_truncated_payload(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        mismatched_count = expected_parts - 1 if expected_parts > 1 else (
+            3 if is_value_quality_two_part else 0
+        )
+        mismatched_raw = ",".join(["1"] * mismatched_count)
+        result = clean_value_quality(mismatched_raw, prefix, strict_mode=True)
+        assert result == {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["CB2", "CF1", "CF2", "CF3", "CG1", "CG2", "CG3", "CH1", "CH2", "CN1", "CN2", "CN3"],
+    )
+    def test_part06_top12_arity_accepts_expected_part_count(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        valid_count = 2 if is_value_quality_two_part else expected_parts
+        valid_raw = ",".join(["1"] * valid_count)
+        result = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        assert result != {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["CN4", "CO1", "CO3", "CO4", "CO5", "CO6", "CO7", "CO8", "CO9", "CR1", "CT1", "CT2"],
+    )
+    def test_part07_09_top12_arity_rejects_truncated_payload(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        mismatched_count = expected_parts - 1 if expected_parts > 1 else (
+            3 if is_value_quality_two_part else 0
+        )
+        mismatched_raw = ",".join(["1"] * mismatched_count)
+        result = clean_value_quality(mismatched_raw, prefix, strict_mode=True)
+        assert result == {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["CN4", "CO1", "CO3", "CO4", "CO5", "CO6", "CO7", "CO8", "CO9", "CR1", "CT1", "CT2"],
+    )
+    def test_part07_09_top12_arity_accepts_expected_part_count(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        valid_count = 2 if is_value_quality_two_part else expected_parts
+        valid_raw = ",".join(["1"] * valid_count)
+        result = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        assert result != {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["CU1", "CU3", "CV2", "CV3", "CX1", "CX2", "ED1", "GA1", "GA2", "GA3", "GA4", "GA5"],
+    )
+    def test_part10_15_top12_arity_rejects_truncated_payload(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        mismatched_count = expected_parts - 1 if expected_parts > 1 else (
+            3 if is_value_quality_two_part else 0
+        )
+        mismatched_raw = ",".join(["1"] * mismatched_count)
+        result = clean_value_quality(mismatched_raw, prefix, strict_mode=True)
+        assert result == {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["CU1", "CU3", "CV2", "CV3", "CX1", "CX2", "ED1", "GA1", "GA2", "GA3", "GA4", "GA5"],
+    )
+    def test_part10_15_top12_arity_accepts_expected_part_count(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        valid_count = 2 if is_value_quality_two_part else expected_parts
+        valid_raw = ",".join(["1"] * valid_count)
+        result = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        assert result != {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["GD2", "GD3", "GD4", "GD5", "GG1", "GG2", "GG3", "GG4", "GG5", "GP1", "GQ1", "GR1"],
+    )
+    def test_part15_21_top12_arity_rejects_truncated_payload(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        mismatched_count = expected_parts - 1 if expected_parts > 1 else (
+            3 if is_value_quality_two_part else 0
+        )
+        mismatched_raw = ",".join(["1"] * mismatched_count)
+        result = clean_value_quality(mismatched_raw, prefix, strict_mode=True)
+        assert result == {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["GD2", "GD3", "GD4", "GD5", "GG1", "GG2", "GG3", "GG4", "GG5", "GP1", "GQ1", "GR1"],
+    )
+    def test_part15_21_top12_arity_accepts_expected_part_count(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        valid_count = 2 if is_value_quality_two_part else expected_parts
+        valid_raw = ",".join(["1"] * valid_count)
+        result = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        assert result != {}
+
+    @pytest.mark.parametrize(
+        "prefix",
         [
             "AB1",
             "AC1",
