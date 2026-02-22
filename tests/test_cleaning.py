@@ -1503,6 +1503,18 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("9999,1,0,0456,1,0,0789,1,0", "CN1")
         assert result["CN1__part1"] is None
 
+    def test_cn1_sentinel_rejects_missing_voltage_tokens(self):
+        result = clean_value_quality("9999,1,0,9999,1,0,9999,1,0", "CN1", strict_mode=True)
+        assert result["CN1__part1"] is None
+        assert result["CN1__part4"] is None
+        assert result["CN1__part7"] is None
+
+    def test_cn1_sentinel_accepts_non_sentinel_voltage_tokens(self):
+        result = clean_value_quality("0123,1,0,0456,1,0,0789,1,0", "CN1", strict_mode=True)
+        assert result["CN1__part1"] == pytest.approx(12.3)
+        assert result["CN1__part4"] == pytest.approx(45.6)
+        assert result["CN1__part7"] == pytest.approx(78.9)
+
     def test_cn2_door_open_missing(self):
         result = clean_value_quality("0001,1,0,0002,1,0,99,1,0", "CN2")
         assert result["CN2__part7"] is None
@@ -1518,6 +1530,16 @@ class TestQualityNullsCorrectPart:
     def test_cn3_range_enforced(self):
         result = clean_value_quality("999999,1,0,000200,1,0", "CN3")
         assert result["CN3__part1"] is None
+
+    def test_cn3_sentinel_rejects_missing_signature_tokens(self):
+        result = clean_value_quality("999999,1,0,999999,1,0", "CN3", strict_mode=True)
+        assert result["CN3__part1"] is None
+        assert result["CN3__part4"] is None
+
+    def test_cn3_sentinel_accepts_non_sentinel_signature_tokens(self):
+        result = clean_value_quality("000100,1,0,000200,1,0", "CN3", strict_mode=True)
+        assert result["CN3__part1"] == pytest.approx(10.0)
+        assert result["CN3__part4"] == pytest.approx(20.0)
 
     def test_cn4_flag_missing_and_quality_rejects_2(self):
         result = clean_value_quality("9,1,0,0001,1,0,100,2,0,100,1,0", "CN4")
@@ -3142,6 +3164,18 @@ class TestTopStrictCoverageGapFixes:
         result = clean_value_quality("TMP,+9999", prefix)
         assert result[f"{prefix}__part2"] is None
 
+    @pytest.mark.parametrize("prefix", ["CO3", "CO4", "CO5", "CO6", "CO7", "CO8", "CO9"])
+    def test_co_repeated_sentinel_rejects_missing_tokens(self, prefix: str):
+        result = clean_value_quality("999,+9999", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part2"] is None
+
+    @pytest.mark.parametrize("prefix", ["CO3", "CO4", "CO5", "CO6", "CO7", "CO8", "CO9"])
+    def test_co_repeated_sentinel_accepts_non_sentinel_tokens(self, prefix: str):
+        result = clean_value_quality("TMP,+0010", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == "TMP"
+        assert result[f"{prefix}__part2"] == pytest.approx(1.0)
+
     def test_gq1_sentinel_quality_9_is_missing(self):
         result = clean_value_quality("0060,0123,9,0456,9", "GQ1")
         assert result["GQ1__part3"] is None
@@ -3940,6 +3974,18 @@ class TestTopStrictCoverageGapFixes:
         assert result[f"{prefix}__part2"] is None
         assert result[f"{prefix}__part2__qc_reason"] == "MALFORMED_TOKEN"
 
+    @pytest.mark.parametrize("prefix", ["CB1", "CB2"])
+    def test_cb_repeated_sentinel_rejects_missing_tokens(self, prefix: str):
+        result = clean_value_quality("99,99999,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part2"] is None
+
+    @pytest.mark.parametrize("prefix", ["CB1", "CB2"])
+    def test_cb_repeated_sentinel_accepts_non_sentinel_tokens(self, prefix: str):
+        result = clean_value_quality("05,+00123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(5.0)
+        assert result[f"{prefix}__part2"] == pytest.approx(12.3)
+
     @pytest.mark.parametrize("prefix", ["CF1", "CF2", "CF3"])
     def test_cf_repeated_width_accepts_expected_part_widths(self, prefix: str):
         result = clean_value_quality("0123,1,0", prefix, strict_mode=True)
@@ -3953,6 +3999,16 @@ class TestTopStrictCoverageGapFixes:
         assert result[f"{prefix}__part1"] is None
         assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
 
+    @pytest.mark.parametrize("prefix", ["CF1", "CF2", "CF3"])
+    def test_cf_repeated_sentinel_rejects_missing_numeric_token(self, prefix: str):
+        result = clean_value_quality("9999,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["CF1", "CF2", "CF3"])
+    def test_cf_repeated_sentinel_accepts_non_sentinel_numeric_token(self, prefix: str):
+        result = clean_value_quality("0123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(12.3)
+
     @pytest.mark.parametrize("prefix", ["CG1", "CG2", "CG3"])
     def test_cg_repeated_width_accepts_expected_part_widths(self, prefix: str):
         result = clean_value_quality("+00123,1,0", prefix, strict_mode=True)
@@ -3965,6 +4021,16 @@ class TestTopStrictCoverageGapFixes:
         result = clean_value_quality("+0123,1,0", prefix, strict_mode=True)
         assert result[f"{prefix}__part1"] is None
         assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["CG1", "CG2", "CG3"])
+    def test_cg_repeated_sentinel_rejects_missing_numeric_token(self, prefix: str):
+        result = clean_value_quality("99999,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["CG1", "CG2", "CG3"])
+    def test_cg_repeated_sentinel_accepts_non_sentinel_numeric_token(self, prefix: str):
+        result = clean_value_quality("+00123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(12.3)
 
     @pytest.mark.parametrize("prefix", ["CH1", "CH2"])
     def test_ch_repeated_width_accepts_expected_part_widths(self, prefix: str):
@@ -3982,6 +4048,20 @@ class TestTopStrictCoverageGapFixes:
         result = clean_value_quality("30,+1234,1,0,0456,1,0", prefix, strict_mode=True)
         assert result[f"{prefix}__part2"] is None
         assert result[f"{prefix}__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["CH1", "CH2"])
+    def test_ch_repeated_sentinel_rejects_missing_tokens(self, prefix: str):
+        result = clean_value_quality("99,9999,1,0,9999,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part2"] is None
+        assert result[f"{prefix}__part5"] is None
+
+    @pytest.mark.parametrize("prefix", ["CH1", "CH2"])
+    def test_ch_repeated_sentinel_accepts_non_sentinel_tokens(self, prefix: str):
+        result = clean_value_quality("30,+01234,1,0,0456,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(30.0)
+        assert result[f"{prefix}__part2"] == pytest.approx(123.4)
+        assert result[f"{prefix}__part5"] == pytest.approx(45.6)
 
     def test_cn1_width_accepts_expected_part_widths(self):
         result = clean_value_quality("0123,1,0,0456,1,0,0789,1,0", "CN1", strict_mode=True)
