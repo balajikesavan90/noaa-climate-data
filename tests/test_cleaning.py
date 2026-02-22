@@ -3527,6 +3527,168 @@ class TestA4TokenWidthValidation:
         result = clean_value_quality("TMP,0010", prefix, strict_mode=True)
         assert result[f"{prefix}__part2"] is None
 
+    def test_ed1_token_width_accepts_exact_tokens(self):
+        """ED1 accepts canonical 2/1/4/1 token widths."""
+        result = clean_value_quality("18,L,0800,1", "ED1", strict_mode=True)
+        assert result["ED1__part1"] == pytest.approx(180.0)
+        assert result["ED1__part2"] == "L"
+        assert result["ED1__part3"] == pytest.approx(800.0)
+
+    def test_ed1_token_width_rejects_short_visibility_distance(self):
+        """ED1 rejects short visibility-distance token in strict mode."""
+        result = clean_value_quality("18,L,800,1", "ED1", strict_mode=True)
+        assert result["ED1__part3"] is None
+        assert result["ED1__part3__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_ge1_token_width_accepts_exact_tokens(self):
+        """GE1 accepts canonical convective and base-height token widths."""
+        result = clean_value_quality("1,AGL,01000,00500", "GE1", strict_mode=True)
+        assert result["GE1__part1"] == pytest.approx(1.0)
+        assert result["GE1__part2"] == "AGL"
+        assert result["GE1__part3"] == pytest.approx(1000.0)
+        assert result["GE1__part4"] == pytest.approx(500.0)
+
+    def test_ge1_token_width_rejects_short_base_height(self):
+        """GE1 rejects short base-height token in strict mode."""
+        result = clean_value_quality("1,AGL,1000,00500", "GE1", strict_mode=True)
+        assert result["GE1__part3"] is None
+        assert result["GE1__part3__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_gf1_token_width_accepts_exact_tokens(self):
+        """GF1 accepts canonical widths across cloud-code and height parts."""
+        result = clean_value_quality(
+            "05,05,1,05,1,01,1,05000,1,01,1,01,1",
+            "GF1",
+            strict_mode=True,
+        )
+        assert result["GF1__part1"] == pytest.approx(5.0)
+        assert result["GF1__part8"] == pytest.approx(5000.0)
+        assert result["GF1__part10"] == pytest.approx(1.0)
+
+    def test_gf1_token_width_rejects_short_lowest_base_height(self):
+        """GF1 rejects short base-height token in strict mode."""
+        result = clean_value_quality(
+            "05,05,1,05,1,01,1,5000,1,01,1,01,1",
+            "GF1",
+            strict_mode=True,
+        )
+        assert result["GF1__part8"] is None
+        assert result["GF1__part8__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_gg1_token_width_accepts_exact_tokens(self):
+        """GG1 accepts canonical 2/1/5/1/2/1/2/1 token widths."""
+        result = clean_value_quality("01,1,01000,1,01,1,01,1", "GG1", strict_mode=True)
+        assert result["GG1__part1"] == pytest.approx(1.0)
+        assert result["GG1__part3"] == pytest.approx(1000.0)
+        assert result["GG1__part5"] == pytest.approx(1.0)
+        assert result["GG1__part7"] == pytest.approx(1.0)
+
+    def test_gg1_token_width_rejects_short_layer_height(self):
+        """GG1 rejects short top-height token in strict mode."""
+        result = clean_value_quality("01,1,1000,1,01,1,01,1", "GG1", strict_mode=True)
+        assert result["GG1__part3"] is None
+        assert result["GG1__part3__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_gj1_token_width_accepts_exact_tokens(self):
+        """GJ1 accepts canonical 4/1 token widths."""
+        result = clean_value_quality("0100,1", "GJ1", strict_mode=True)
+        assert result["GJ1__part1"] == pytest.approx(100.0)
+        assert result["GJ1__part2"] == pytest.approx(1.0)
+
+    def test_gj1_token_width_rejects_short_duration(self):
+        """GJ1 rejects short sunshine-duration token in strict mode."""
+        result = clean_value_quality("100,1", "GJ1", strict_mode=True)
+        assert result["GJ1__part1"] is None
+        assert result["GJ1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_gk1_token_width_accepts_exact_tokens(self):
+        """GK1 accepts canonical 3/1 token widths."""
+        result = clean_value_quality("100,4", "GK1", strict_mode=True)
+        assert result["GK1__part1"] == pytest.approx(100.0)
+        assert result["GK1__part2"] == pytest.approx(4.0)
+
+    def test_gk1_token_width_rejects_short_percent(self):
+        """GK1 rejects short sunshine-percent token in strict mode."""
+        result = clean_value_quality("10,4", "GK1", strict_mode=True)
+        assert result["GK1__part1"] is None
+        assert result["GK1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_gl1_token_width_accepts_exact_tokens(self):
+        """GL1 accepts canonical 5/1 token widths."""
+        result = clean_value_quality("12000,1", "GL1", strict_mode=True)
+        assert result["GL1__part1"] == pytest.approx(12000.0)
+        assert result["GL1__part2"] == pytest.approx(1.0)
+
+    def test_gl1_token_width_rejects_short_duration(self):
+        """GL1 rejects short monthly-duration token in strict mode."""
+        result = clean_value_quality("1200,1", "GL1", strict_mode=True)
+        assert result["GL1__part1"] is None
+        assert result["GL1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_gm1_token_width_accepts_exact_tokens(self):
+        """GM1 accepts canonical widths across all 12 parts."""
+        result = clean_value_quality(
+            "0060,0123,00,1,0456,00,1,0789,00,1,0123,1",
+            "GM1",
+            strict_mode=True,
+        )
+        assert result["GM1__part1"] == pytest.approx(60.0)
+        assert result["GM1__part2"] == pytest.approx(123.0)
+        assert result["GM1__part3"] == pytest.approx(0.0)
+        assert result["GM1__part11"] == pytest.approx(123.0)
+
+    def test_gm1_token_width_rejects_short_global_irradiance(self):
+        """GM1 rejects short global-irradiance token in strict mode."""
+        result = clean_value_quality(
+            "0060,123,00,1,0456,00,1,0789,00,1,0123,1",
+            "GM1",
+            strict_mode=True,
+        )
+        assert result["GM1__part2"] is None
+        assert result["GM1__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_gn1_token_width_accepts_exact_tokens(self):
+        """GN1 accepts canonical widths across all 11 parts."""
+        result = clean_value_quality(
+            "0060,0123,1,0456,1,0789,1,0123,1,090,1",
+            "GN1",
+            strict_mode=True,
+        )
+        assert result["GN1__part1"] == pytest.approx(60.0)
+        assert result["GN1__part2"] == pytest.approx(123.0)
+        assert result["GN1__part10"] == pytest.approx(90.0)
+
+    def test_gn1_token_width_rejects_short_upwelling_global(self):
+        """GN1 rejects short upwelling-global token in strict mode."""
+        result = clean_value_quality(
+            "0060,123,1,0456,1,0789,1,0123,1,090,1",
+            "GN1",
+            strict_mode=True,
+        )
+        assert result["GN1__part2"] is None
+        assert result["GN1__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_go1_token_width_accepts_exact_tokens(self):
+        """GO1 accepts canonical widths across all 7 parts."""
+        result = clean_value_quality(
+            "0060,0123,1,0456,1,0789,1",
+            "GO1",
+            strict_mode=True,
+        )
+        assert result["GO1__part1"] == pytest.approx(60.0)
+        assert result["GO1__part2"] == pytest.approx(123.0)
+        assert result["GO1__part4"] == pytest.approx(456.0)
+
+    def test_go1_token_width_rejects_short_net_solar(self):
+        """GO1 rejects short net-solar token in strict mode."""
+        result = clean_value_quality(
+            "0060,123,1,0456,1,0789,1",
+            "GO1",
+            strict_mode=True,
+        )
+        assert result["GO1__part2"] is None
+        assert result["GO1__part2__qc_reason"] == "MALFORMED_TOKEN"
+
     def test_token_width_permissive_mode(self):
         """Invalid token widths allowed in permissive mode."""
         df = pd.DataFrame({
