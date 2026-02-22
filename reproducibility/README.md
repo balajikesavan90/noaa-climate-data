@@ -10,6 +10,12 @@ poetry run python reproducibility/run_pipeline_example.py
 
 This reads reproducibility/sample_station_raw.txt and overwrites reproducibility/sample_station_cleaned.csv.
 
+Optional: write the cleaned CSV to a custom path instead of overwriting the repo file:
+
+```bash
+poetry run python reproducibility/run_pipeline_example.py --out /tmp/sample_station_cleaned.csv
+```
+
 ## Run coverage generator
 
 ```bash
