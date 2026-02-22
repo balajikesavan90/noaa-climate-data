@@ -720,12 +720,54 @@ def _should_parse_column(values: Iterable[str]) -> bool:
 def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
     work = df.copy()
 
-    def _normalize_numeric(series: pd.Series) -> pd.Series:
-        return pd.to_numeric(series, errors="coerce")
+    def _normalize_text(series: pd.Series) -> pd.Series:
+        text = series.astype(str).str.strip()
+        return text.where(~text.isin({"", "nan", "None"}))
+
+    def _normalize_numeric_with_fixed_width(
+        series: pd.Series,
+        *,
+        width: int,
+        scale: float,
+        min_value: float,
+        max_value: float,
+        missing_tokens: set[str],
+    ) -> pd.Series:
+        text = _normalize_text(series)
+        text = text.where(~text.isin(missing_tokens))
+        signed = text.str.startswith(("+", "-"), na=False)
+        unsigned = text.str.replace(r"^[+-]", "", regex=True)
+        integer_mask = text.str.fullmatch(r"[+-]?\d+", na=False)
+        fixed_width_mask = integer_mask & (
+            (signed & unsigned.str.len().eq(width - 1))
+            | (~signed & unsigned.str.len().eq(width))
+        )
+        fixed_width_values = pd.to_numeric(text.where(fixed_width_mask), errors="coerce") / scale
+        decimal_mask = text.str.contains(r"\.", regex=True, na=False)
+        decimal_values = pd.to_numeric(text.where(decimal_mask), errors="coerce")
+        normalized = fixed_width_values.where(fixed_width_values.notna(), decimal_values)
+        return normalized.where(normalized.between(min_value, max_value))
+
+    def _normalize_fixed_width_text(
+        series: pd.Series,
+        *,
+        width: int,
+        upper: bool = False,
+        allowed_values: set[str] | None = None,
+        missing_tokens: set[str] | None = None,
+    ) -> pd.Series:
+        text = _normalize_text(series)
+        if upper:
+            text = text.str.upper()
+        text = text.where(text.str.len().eq(width))
+        if missing_tokens:
+            text = text.where(~text.isin(missing_tokens))
+        if allowed_values is not None:
+            text = text.where(text.isin(allowed_values))
+        return text
 
     def _normalize_date(series: pd.Series) -> pd.Series:
-        text = series.astype(str).str.strip()
-        text = text.where(~text.isin({"", "nan", "None"}))
+        text = _normalize_text(series)
         match = text.str.fullmatch(r"\d{8}")
         year = pd.to_numeric(text.str.slice(0, 4), errors="coerce")
         month = pd.to_numeric(text.str.slice(4, 6), errors="coerce")
@@ -752,8 +794,7 @@ def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
         return text.where(valid_calendar)
 
     def _normalize_time(series: pd.Series) -> pd.Series:
-        text = series.astype(str).str.strip()
-        text = text.where(~text.isin({"", "nan", "None"}))
+        text = _normalize_text(series)
         match = text.str.fullmatch(r"\d{4}")
         hour = pd.to_numeric(text.str.slice(0, 2), errors="coerce")
         minute = pd.to_numeric(text.str.slice(2, 4), errors="coerce")
@@ -761,14 +802,24 @@ def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
         return text.where(valid)
 
     if "LATITUDE" in work.columns:
-        series = _normalize_numeric(work["LATITUDE"])
-        series = series.where(series.between(-90.0, 90.0))
-        work["LATITUDE"] = series
+        work["LATITUDE"] = _normalize_numeric_with_fixed_width(
+            work["LATITUDE"],
+            width=6,
+            scale=1000.0,
+            min_value=-90.0,
+            max_value=90.0,
+            missing_tokens={"99999"},
+        )
 
     if "LONGITUDE" in work.columns:
-        series = _normalize_numeric(work["LONGITUDE"])
-        series = series.where(series.between(-180.0, 180.0))
-        work["LONGITUDE"] = series
+        work["LONGITUDE"] = _normalize_numeric_with_fixed_width(
+            work["LONGITUDE"],
+            width=7,
+            scale=1000.0,
+            min_value=-180.0,
+            max_value=180.0,
+            missing_tokens={"999999"},
+        )
 
     if "DATE" in work.columns:
         work["DATE"] = _normalize_date(work["DATE"])
@@ -777,9 +828,14 @@ def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
         work["TIME"] = _normalize_time(work["TIME"])
 
     if "ELEVATION" in work.columns:
-        series = _normalize_numeric(work["ELEVATION"])
-        series = series.where(series.between(-400.0, 8850.0))
-        work["ELEVATION"] = series
+        work["ELEVATION"] = _normalize_numeric_with_fixed_width(
+            work["ELEVATION"],
+            width=5,
+            scale=1.0,
+            min_value=-400.0,
+            max_value=8850.0,
+            missing_tokens={"9999"},
+        )
 
     if "CALL_SIGN" in work.columns:
         series = work["CALL_SIGN"].astype(str).str.strip()
@@ -793,10 +849,13 @@ def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
         work["SOURCE"] = series.where(series.notna())
 
     if "REPORT_TYPE" in work.columns:
-        series = work["REPORT_TYPE"].astype(str).str.strip().str.upper()
-        series = series.where(series.isin(REPORT_TYPE_CODES))
-        series = series.where(series != "99999")
-        work["REPORT_TYPE"] = series.where(series.notna())
+        work["REPORT_TYPE"] = _normalize_fixed_width_text(
+            work["REPORT_TYPE"],
+            width=5,
+            upper=True,
+            allowed_values=REPORT_TYPE_CODES,
+            missing_tokens={"99999"},
+        )
 
     if "QUALITY_CONTROL" in work.columns:
         series = work["QUALITY_CONTROL"].astype(str).str.strip().str.upper()

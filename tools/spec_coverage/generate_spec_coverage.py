@@ -139,6 +139,7 @@ MANDATORY_CONTEXT_MAP = {
     "visibility-observation": "VIS",
     "air-temperature-observation air temperature": "TMP",
     "air-temperature-observation dew point": "DEW",
+    "atmospheric-pressure-observation sea level pressure": "SLP",
     "sea level pressure": "SLP",
 }
 
@@ -1244,12 +1245,25 @@ def extract_test_identifiers(
     for token in IDENTIFIER_RE.findall(text):
         if token not in known_identifiers and token not in known_families:
             continue
-        if IDENTIFIER_WITH_DIGIT_RE.match(token) or token in EXACT_NON_DIGIT_IDENTIFIERS:
+        is_static_identifier = (
+            token in known_identifiers
+            and token == token.upper()
+            and not IDENTIFIER_WITH_DIGIT_RE.match(token)
+            and len(token) >= 3
+        )
+        if IDENTIFIER_WITH_DIGIT_RE.match(token) or token in EXACT_NON_DIGIT_IDENTIFIERS or is_static_identifier:
             identifiers.add(token)
             families.add(identifier_family(token))
             continue
         if token in known_families:
             families.add(token)
+
+    for token in EXACT_NON_DIGIT_IDENTIFIERS:
+        if token not in known_identifiers:
+            continue
+        if re.search(rf"(?<![A-Z0-9_]){re.escape(token)}(?![A-Z0-9_])", text):
+            identifiers.add(token)
+            families.add(identifier_family(token))
     return identifiers, families
 
 
@@ -1349,6 +1363,15 @@ def infer_context_from_line(
 ) -> list[str]:
     lower = line.lower().strip()
 
+    def strongly_anchored(phrase: str) -> bool:
+        return (
+            lower.startswith(phrase)
+            or lower.startswith(f"identifier: {phrase}")
+            or lower.startswith(f"- {phrase}")
+            or lower.startswith(f"| {phrase}")
+            or lower == phrase
+        )
+
     # Avoid replacing active context with enum-value lines (e.g., "ST: Spring tide").
     if current_identifiers:
         enum_like = re.match(r"^[A-Z0-9][A-Z0-9-]{0,11}\s*[:=]\s+.+$", line)
@@ -1364,19 +1387,6 @@ def infer_context_from_line(
             return current_identifiers
         return ids
 
-    # Keep previously inferred context unless a strongly anchored phrase identifies a new section.
-    if current_identifiers:
-        return current_identifiers
-
-    def strongly_anchored(phrase: str) -> bool:
-        return (
-            lower.startswith(phrase)
-            or lower.startswith(f"identifier: {phrase}")
-            or lower.startswith(f"- {phrase}")
-            or lower.startswith(f"| {phrase}")
-            or lower == phrase
-        )
-
     if part == "02":
         for phrase, ident in CONTROL_CONTEXT_MAP.items():
             if strongly_anchored(phrase):
@@ -1386,6 +1396,10 @@ def infer_context_from_line(
         for phrase, ident in MANDATORY_CONTEXT_MAP.items():
             if strongly_anchored(phrase):
                 return [ident]
+
+    # Keep previously inferred context unless a strongly anchored phrase identifies a new section.
+    if current_identifiers:
+        return current_identifiers
 
     return current_identifiers
 
@@ -2295,6 +2309,27 @@ def normalize_test_match_strength(match_strength: str) -> str:
     return match_strength if match_strength in TEST_MATCH_STRENGTH_SET else "none"
 
 
+def augment_known_test_identifiers(
+    known_identifiers: set[str],
+    known_families: set[str],
+    rows: Iterable[SpecRuleRow],
+) -> tuple[set[str], set[str]]:
+    identifiers = set(known_identifiers)
+    families = set(known_families)
+
+    for row in rows:
+        if row.row_kind != "spec_rule":
+            continue
+        identifier = (row.identifier or "").strip()
+        if not identifier or identifier == "UNSPECIFIED":
+            continue
+        identifiers.add(identifier)
+        families.add(identifier_family(identifier))
+
+    identifiers.update(families)
+    return identifiers, families
+
+
 def apply_test_match_result(
     row: SpecRuleRow,
     match_strength: str,
@@ -3029,7 +3064,12 @@ def main() -> None:
     rows = normalize_and_assign_rule_ids(rows)
     rows = merge_duplicate_rows(rows)
 
-    test_index = parse_tests_evidence(tests_path, known_identifiers, known_families)
+    test_known_identifiers, test_known_families = augment_known_test_identifiers(
+        known_identifiers,
+        known_families,
+        rows,
+    )
+    test_index = parse_tests_evidence(tests_path, test_known_identifiers, test_known_families)
     rows = apply_coverage(rows, constants_module, constants_ast, cleaning_index, test_index)
 
     rows = sorted(rows, key=lambda r: r.sort_key())

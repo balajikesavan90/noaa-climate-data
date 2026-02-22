@@ -460,6 +460,203 @@ def test_parse_spec_docs_part02_backfills_pos_identifier_and_keeps_unknowns(tmp_
     assert all(r.identifier == "UNSPECIFIED" for r in unknown_width_rows)
 
 
+def test_parse_spec_docs_part03_reanchors_context_between_mandatory_sections(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    spec_dir = tmp_path / "spec"
+    spec_dir.mkdir()
+    fixture_path = spec_dir / "part-03-mandatory-fixture.md"
+    fixture_path.write_text(
+        "\n".join(
+            [
+                "POS: 60-63",
+                "WIND-OBSERVATION direction angle",
+                "MIN: 001 MAX: 360",
+                "999 = Missing.",
+                "",
+                "POS: 71-75",
+                "SKY-CONDITION-OBSERVATION ceiling height dimension",
+                "MIN: 00000 MAX: 22000",
+                "99999 = Missing.",
+                "",
+                "POS: 79-84",
+                "VISIBILITY-OBSERVATION distance dimension",
+                "MIN: 000000 MAX: 160000",
+                "Missing = 999999",
+                "",
+                "POS: 88-92",
+                "AIR-TEMPERATURE-OBSERVATION air temperature",
+                "MIN: -0932 MAX: +0618",
+                "+9999 = Missing.",
+                "",
+                "POS: 94-98",
+                "AIR-TEMPERATURE-OBSERVATION dew point temperature",
+                "MIN: -0982 MAX: +0368",
+                "+9999 = Missing.",
+                "",
+                "POS: 100-104",
+                "ATMOSPHERIC-PRESSURE-OBSERVATION sea level pressure",
+                "MIN: 08600 MAX: 10900",
+                "99999 = Missing.",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    known_identifiers = {"WND", "CIG", "VIS", "TMP", "DEW", "SLP"}
+    known_families = {module.identifier_family(value) for value in known_identifiers}
+
+    rows = module.parse_spec_docs(spec_dir, known_identifiers, known_families)
+
+    def _range_rows(min_value: str, max_value: str):
+        return [
+            r
+            for r in rows
+            if r.rule_type == "range" and r.min_value == min_value and r.max_value == max_value
+        ]
+
+    cigs = _range_rows("00000", "22000")
+    viss = _range_rows("000000", "160000")
+    tmps = _range_rows("-0932", "0618")
+    dews = _range_rows("-0982", "0368")
+    slps = _range_rows("08600", "10900")
+
+    assert cigs and all(r.identifier == "CIG" for r in cigs)
+    assert viss and all(r.identifier == "VIS" for r in viss)
+    assert tmps and all(r.identifier == "TMP" for r in tmps)
+    assert dews and all(r.identifier == "DEW" for r in dews)
+    assert slps and all(r.identifier == "SLP" for r in slps)
+    assert not any(
+        r.identifier == "WND"
+        for r in cigs + viss + tmps + dews + slps
+    )
+
+
+def test_parse_tests_evidence_detects_control_identifiers_with_long_names(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    tests_path = tests_dir / "test_control_identifiers.py"
+    tests_path.write_text(
+        "\n".join(
+            [
+                "def test_latitude_width_positive():",
+                "    field = 'LATITUDE'",
+                "    assert field == 'LATITUDE'",
+                "    assert len('+12345') == 6",
+                "",
+                "def test_report_type_width_positive():",
+                "    field = 'REPORT_TYPE'",
+                "    assert field == 'REPORT_TYPE'",
+                "    assert len('FM-12') == 5",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    known_identifiers = {"LATITUDE", "REPORT_TYPE"}
+    known_families = {module.identifier_family(value) for value in known_identifiers}
+    index = module.parse_tests_evidence(tests_path, known_identifiers, known_families)
+
+    assert ("LATITUDE", "width") in index.exact_assertions
+    assert ("REPORT_TYPE", "width") in index.exact_assertions
+    assert "width" not in index.wildcard_assertions
+
+
+def test_parse_tests_evidence_detects_static_short_identifiers_as_exact(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    tests_path = tests_dir / "test_static_identifiers.py"
+    tests_path.write_text(
+        "\n".join(
+            [
+                "def test_cig_width_rejects_bad_token():",
+                "    field = 'CIG'",
+                "    result = {'CIG__part1': None}",
+                "    assert field == 'CIG'",
+                "    assert result['CIG__part1'] is None",
+                "",
+                "def test_tmp_range_rejects_out_of_range_value():",
+                "    field = 'TMP'",
+                "    result = {'TMP__value': None}",
+                "    assert field == 'TMP'",
+                "    assert result['TMP__value'] is None",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    known_identifiers = {"CIG", "TMP"}
+    known_families = {module.identifier_family(value) for value in known_identifiers}
+    index = module.parse_tests_evidence(tests_path, known_identifiers, known_families)
+
+    assert ("CIG", "width") in index.exact_assertions
+    assert ("TMP", "range") in index.exact_assertions
+    assert "width" not in index.wildcard_assertions
+    assert "range" not in index.wildcard_assertions
+
+
+def test_augment_known_test_identifiers_includes_spec_only_identifiers() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    known_identifiers = {"WND"}
+    known_families = {"WND"}
+
+    row_ab1 = _fixture_row(module, "AB1", "width")
+    row_unspecified = _fixture_row(module, "UNSPECIFIED", "width")
+    row_synthetic = _fixture_row(module, "AB2", "width")
+    row_synthetic.row_kind = "synthetic"
+
+    identifiers, families = module.augment_known_test_identifiers(
+        known_identifiers,
+        known_families,
+        [row_ab1, row_unspecified, row_synthetic],
+    )
+
+    assert "AB1" in identifiers
+    assert "AB" in families
+    assert "AB" in identifiers
+    assert "UNSPECIFIED" not in identifiers
+    assert "AB2" not in identifiers
+
+
+def test_augmented_identifier_set_enables_exact_test_evidence_for_ab1(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    tests_path = tests_dir / "test_ab1_width.py"
+    tests_path.write_text(
+        "\n".join(
+            [
+                "def test_ab1_width_rejects_bad_part1_token():",
+                "    prefix = 'AB1'",
+                "    assert prefix == 'AB1'",
+                "    assert True",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    rows = [_fixture_row(module, "AB1", "width")]
+    identifiers, families = module.augment_known_test_identifiers({"WND"}, {"WND"}, rows)
+    index = module.parse_tests_evidence(tests_path, identifiers, families)
+
+    assert ("AB1", "width") in index.exact_assertions
+
+
 def test_spec_coverage_generator_smoke() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     module = _load_generator_module(repo_root)

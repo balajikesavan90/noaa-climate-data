@@ -289,7 +289,7 @@ class TestSentinelsInCleanedOutput:
 
     def test_tmp_negative_all_9_kept(self):
         result = clean_value_quality("-9999,1", "TMP")
-        assert result["TMP__value"] == pytest.approx(-999.9)
+        assert result["TMP__value"] is None
 
     def test_slp_sentinel_becomes_none(self):
         result = clean_value_quality("99999,1", "SLP")
@@ -2392,6 +2392,350 @@ class TestControlAndMandatoryNormalization:
         assert pd.isna(cleaned.loc[0, "ceiling_determination_code"])
         assert pd.isna(cleaned.loc[0, "ceiling_cavok_code"])
         assert pd.isna(cleaned.loc[0, "visibility_variability_code"])
+
+
+class TestTopStrictCoverageGapFixes:
+    def test_ci1_range_prefers_specific_rule_for_part10(self):
+        rule = get_field_rule("CI1")
+        assert rule.parts[10].max_value == 99998
+
+    def test_ci2_range_falls_back_to_family_rule(self):
+        rule = get_field_rule("CI2")
+        assert rule.parts[10].max_value == 1000
+
+    def test_ci1_range_allows_part10_max_99998(self):
+        result = clean_value_quality("00010,1,0,00020,1,0,00030,1,0,99998,1,0", "CI1")
+        assert result["CI1__part10"] == pytest.approx(9999.8)
+
+    def test_ci1_range_rejects_part10_sentinel_99999(self):
+        result = clean_value_quality("00010,1,0,00020,1,0,00030,1,0,99999,1,0", "CI1")
+        assert result["CI1__part10"] is None
+
+    def test_co1_domain_allows_sentinel_code_99(self):
+        rule = get_field_rule("CO1").parts[1]
+        assert enforce_domain("99", rule) == "99"
+
+    def test_co1_domain_rejects_code_10(self):
+        rule = get_field_rule("CO1").parts[1]
+        assert enforce_domain("10", rule) is None
+
+    def test_gq1_sentinel_quality_9_is_missing(self):
+        result = clean_value_quality("0060,0123,9,0456,9", "GQ1")
+        assert result["GQ1__part3"] is None
+        assert result["GQ1__part5"] is None
+
+    def test_gq1_non_sentinel_quality_1_is_retained(self):
+        result = clean_value_quality("0060,0123,1,0456,1", "GQ1")
+        assert result["GQ1__part3"] == pytest.approx(1.0)
+        assert result["GQ1__part5"] == pytest.approx(1.0)
+
+    def test_ib1_domain_allows_quality_code_1(self):
+        rule = get_field_rule("IB1").parts[2]
+        assert enforce_domain("1", rule) == "1"
+
+    def test_ib1_domain_rejects_quality_code_2(self):
+        rule = get_field_rule("IB1").parts[2]
+        assert enforce_domain("2", rule) is None
+
+    def test_st1_domain_allows_four_digit_part4(self):
+        rule = get_field_rule("ST1").parts[4]
+        assert enforce_domain("0050", rule) == "0050"
+
+    def test_st1_domain_rejects_non_numeric_part4(self):
+        rule = get_field_rule("ST1").parts[4]
+        assert enforce_domain("ABCD", rule) is None
+
+    def test_latitude_width_6_accepts_fixed_width_token(self):
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LATITUDE": ["+12345"]}), keep_raw=True)
+        assert len("+12345") == 6
+        assert cleaned.loc[0, "LATITUDE"] == pytest.approx(12.345)
+
+    def test_latitude_width_6_rejects_short_integer_token(self):
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LATITUDE": ["45"]}), keep_raw=True)
+        assert len("45") != 6
+        assert pd.isna(cleaned.loc[0, "LATITUDE"])
+
+    def test_longitude_width_7_accepts_fixed_width_token(self):
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LONGITUDE": ["-123456"]}), keep_raw=True)
+        assert len("-123456") == 7
+        assert cleaned.loc[0, "LONGITUDE"] == pytest.approx(-123.456)
+
+    def test_longitude_width_7_rejects_short_integer_token(self):
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LONGITUDE": ["-120"]}), keep_raw=True)
+        assert len("-120") != 7
+        assert pd.isna(cleaned.loc[0, "LONGITUDE"])
+
+    def test_report_type_width_5_accepts_standard_code(self):
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"REPORT_TYPE": ["FM-12"]}), keep_raw=True)
+        assert len("FM-12") == 5
+        assert cleaned.loc[0, "REPORT_TYPE"] == "FM-12"
+
+    def test_report_type_width_5_rejects_short_code(self):
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"REPORT_TYPE": ["FM-1"]}), keep_raw=True)
+        assert len("FM-1") != 5
+        assert pd.isna(cleaned.loc[0, "REPORT_TYPE"])
+
+    def test_elevation_width_5_accepts_fixed_width_token(self):
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"ELEVATION": ["-0400"]}), keep_raw=True)
+        assert len("-0400") == 5
+        assert cleaned.loc[0, "ELEVATION"] == pytest.approx(-400.0)
+
+    def test_elevation_width_5_rejects_short_integer_token(self):
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"ELEVATION": ["-400"]}), keep_raw=True)
+        assert len("-400") != 5
+        assert pd.isna(cleaned.loc[0, "ELEVATION"])
+
+    @pytest.mark.parametrize(
+        ("raw", "part_key"),
+        [
+            ("01000,1,A,N", "CIG__part1"),
+            ("01000,1,A,N", "CIG__part2"),
+            ("01000,1,A,N", "CIG__part3"),
+            ("01000,1,A,N", "CIG__part4"),
+        ],
+    )
+    def test_cig_width_accepts_expected_part_widths(self, raw: str, part_key: str):
+        result = clean_value_quality(raw, "CIG")
+        assert result[part_key] is not None
+
+    @pytest.mark.parametrize(
+        ("raw", "part_key"),
+        [
+            ("1000,1,A,N", "CIG__part1"),
+            ("01000,11,A,N", "CIG__part2"),
+            ("01000,1,AA,N", "CIG__part3"),
+            ("01000,1,A,NN", "CIG__part4"),
+        ],
+    )
+    def test_cig_width_rejects_malformed_part_widths(self, raw: str, part_key: str):
+        result = clean_value_quality(raw, "CIG")
+        assert result[part_key] is None
+
+    @pytest.mark.parametrize(
+        ("raw", "part_key"),
+        [
+            ("010000,1,N,1", "VIS__part1"),
+            ("010000,1,N,1", "VIS__part2"),
+            ("010000,1,N,1", "VIS__part3"),
+            ("010000,1,N,1", "VIS__part4"),
+        ],
+    )
+    def test_vis_width_accepts_expected_part_widths(self, raw: str, part_key: str):
+        result = clean_value_quality(raw, "VIS")
+        assert result[part_key] is not None
+
+    @pytest.mark.parametrize(
+        ("raw", "part_key"),
+        [
+            ("10000,1,N,1", "VIS__part1"),
+            ("010000,11,N,1", "VIS__part2"),
+            ("010000,1,NN,1", "VIS__part3"),
+            ("010000,1,N,11", "VIS__part4"),
+        ],
+    )
+    def test_vis_width_rejects_malformed_part_widths(self, raw: str, part_key: str):
+        result = clean_value_quality(raw, "VIS")
+        assert result[part_key] is None
+
+    def test_tmp_range_accepts_upper_bound(self):
+        result = clean_value_quality("+0618,1", "TMP")
+        assert result["TMP__value"] == pytest.approx(61.8)
+
+    def test_tmp_range_rejects_above_upper_bound(self):
+        result = clean_value_quality("+0619,1", "TMP")
+        assert result["TMP__value"] is None
+
+    def test_dew_range_accepts_upper_bound(self):
+        result = clean_value_quality("+0368,1", "DEW")
+        assert result["DEW__value"] == pytest.approx(36.8)
+
+    def test_dew_range_rejects_above_upper_bound(self):
+        result = clean_value_quality("+0369,1", "DEW")
+        assert result["DEW__value"] is None
+
+    def test_slp_range_accepts_lower_bound(self):
+        result = clean_value_quality("08600,1", "SLP")
+        assert result["SLP__value"] == pytest.approx(860.0)
+
+    def test_slp_range_rejects_below_lower_bound(self):
+        result = clean_value_quality("08599,1", "SLP")
+        assert result["SLP__value"] is None
+
+    @pytest.mark.parametrize("prefix", ["AA1", "AA2", "AA3", "AA4"])
+    def test_aa_cardinality_accepts_valid_suffixes(self, prefix: str):
+        assert get_field_rule(prefix) is not None
+
+    @pytest.mark.parametrize("prefix", ["AA0", "AA5"])
+    def test_aa_cardinality_rejects_out_of_spec_suffixes(self, prefix: str):
+        assert get_field_rule(prefix) is None
+
+    @pytest.mark.parametrize("prefix", ["AA1", "AA2", "AA3", "AA4"])
+    def test_aa_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("01,0100,1,1", prefix)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+        assert result[f"{prefix}__part4"] is not None
+
+    @pytest.mark.parametrize(
+        ("prefix", "raw", "part_suffix"),
+        [
+            ("AA1", "1,0100,1,1", "__part1"),
+            ("AA2", "01,10000,1,1", "__part2"),
+            ("AA3", "01,0100,EE,1", "__part3"),
+            ("AA4", "01,0100,1,11", "__part4"),
+        ],
+    )
+    def test_aa_width_rejects_malformed_part_widths(self, prefix: str, raw: str, part_suffix: str):
+        result = clean_value_quality(raw, prefix)
+        assert result[f"{prefix}{part_suffix}"] is None
+
+    @pytest.mark.parametrize("prefix", ["AA1", "AA2", "AA3", "AA4"])
+    def test_aa_range_accepts_upper_bounds(self, prefix: str):
+        result = clean_value_quality("98,9998,1,1", prefix)
+        assert result[f"{prefix}__part1"] == pytest.approx(98.0)
+        assert result[f"{prefix}__part2"] == pytest.approx(999.8)
+
+    @pytest.mark.parametrize("prefix", ["AA1", "AA2", "AA3", "AA4"])
+    def test_aa_range_rule_bounds_are_not_open_ended(self, prefix: str):
+        rule = get_field_rule(prefix)
+        assert rule is not None
+        assert rule.parts[1].max_value == 98
+        assert rule.parts[2].max_value == 9998
+        assert rule.parts[1].max_value != 99
+        assert rule.parts[2].max_value != 10000
+
+    def test_ab1_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("01000,1,1", "AB1")
+        assert result["AB1__part1"] is not None
+        assert result["AB1__part2"] is not None
+        assert result["AB1__part3"] is not None
+
+    def test_ab1_width_rejects_malformed_part_widths(self):
+        result = clean_value_quality("1000,1,1", "AB1")
+        assert result["AB1__part1"] is None
+        result = clean_value_quality("01000,11,1", "AB1")
+        assert result["AB1__part2"] is None
+        result = clean_value_quality("01000,1,11", "AB1")
+        assert result["AB1__part3"] is None
+
+    def test_ac1_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("1,C,1", "AC1")
+        assert result["AC1__part1"] is not None
+        assert result["AC1__part2"] is not None
+        assert result["AC1__part3"] is not None
+
+    def test_ac1_width_rejects_malformed_part_widths(self):
+        result = clean_value_quality("01,C,1", "AC1")
+        assert result["AC1__part1"] is None
+        result = clean_value_quality("1,CC,1", "AC1")
+        assert result["AC1__part2"] is None
+        result = clean_value_quality("1,C,11", "AC1")
+        assert result["AC1__part3"] is None
+
+    def test_ad1_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("01000,1,0101,0202,0303,1", "AD1")
+        assert result["AD1__part1"] is not None
+        assert result["AD1__part2"] is not None
+        assert result["AD1__part3"] is not None
+        assert result["AD1__part4"] is not None
+        assert result["AD1__part5"] is not None
+        assert result["AD1__part6"] is not None
+
+    def test_ad1_width_rejects_malformed_part_widths(self):
+        result = clean_value_quality("1000,1,0101,0202,0303,1", "AD1")
+        assert result["AD1__part1"] is None
+        result = clean_value_quality("01000,11,0101,0202,0303,1", "AD1")
+        assert result["AD1__part2"] is None
+        result = clean_value_quality("01000,1,101,0202,0303,1", "AD1")
+        assert result["AD1__part3"] is None
+        result = clean_value_quality("01000,1,0101,202,0303,1", "AD1")
+        assert result["AD1__part4"] is None
+        result = clean_value_quality("01000,1,0101,0202,303,1", "AD1")
+        assert result["AD1__part5"] is None
+        result = clean_value_quality("01000,1,0101,0202,0303,11", "AD1")
+        assert result["AD1__part6"] is None
+
+    def test_ad1_range_accepts_boundary_dates(self):
+        result = clean_value_quality("01000,1,0101,3131,0202,1", "AD1")
+        assert result["AD1__part3"] is not None
+        assert result["AD1__part4"] is not None
+
+    def test_ad1_range_rule_bounds_are_not_open_ended(self):
+        rule = get_field_rule("AD1")
+        assert rule is not None
+        assert rule.parts[3].min_value == 101
+        assert rule.parts[3].max_value == 3131
+        assert rule.parts[4].min_value == 101
+        assert rule.parts[4].max_value == 3131
+        assert rule.parts[5].min_value == 101
+        assert rule.parts[5].max_value == 3131
+
+    def test_ae1_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("01,1,02,1,03,1,04,1", "AE1")
+        assert result["AE1__part1"] is not None
+        assert result["AE1__part2"] is not None
+        assert result["AE1__part3"] is not None
+        assert result["AE1__part4"] is not None
+        assert result["AE1__part5"] is not None
+        assert result["AE1__part6"] is not None
+        assert result["AE1__part7"] is not None
+        assert result["AE1__part8"] is not None
+
+    def test_ae1_width_rejects_malformed_part_widths(self):
+        result = clean_value_quality("1,1,02,1,03,1,04,1", "AE1")
+        assert result["AE1__part1"] is None
+        result = clean_value_quality("01,11,02,1,03,1,04,1", "AE1")
+        assert result["AE1__part2"] is None
+
+    def test_ag1_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("1,998", "AG1")
+        assert result["AG1__part1"] is not None
+        assert result["AG1__part2"] is not None
+
+    def test_ag1_width_rejects_malformed_part_widths(self):
+        result = clean_value_quality("11,998", "AG1")
+        assert result["AG1__part1"] is None
+        result = clean_value_quality("1,98", "AG1")
+        assert result["AG1__part2"] is None
+
+    def test_ag1_range_accepts_upper_bound(self):
+        result = clean_value_quality("1,998", "AG1")
+        assert result["AG1__part2"] == pytest.approx(998.0)
+
+    def test_ag1_range_rule_bounds_are_not_open_ended(self):
+        rule = get_field_rule("AG1")
+        assert rule is not None
+        assert rule.parts[2].min_value == 0
+        assert rule.parts[2].max_value == 998
+        assert rule.parts[2].max_value != 999
+
+    @pytest.mark.parametrize("prefix", ["AH1", "AH2", "AH3", "AH4", "AH5", "AH6"])
+    def test_ah_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("005,3000,1,010100,1", prefix)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+        assert result[f"{prefix}__part4"] is not None
+        assert result[f"{prefix}__part5"] is not None
+
+    @pytest.mark.parametrize("prefix", ["AH1", "AH2", "AH3", "AH4", "AH5", "AH6"])
+    def test_ah_repeated_width_rejects_malformed_part_widths(self, prefix: str):
+        result = clean_value_quality("05,3000,1,010100,1", prefix)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["AH1", "AH2", "AH3", "AH4", "AH5", "AH6"])
+    def test_ah_repeated_range_accepts_upper_bounds(self, prefix: str):
+        result = clean_value_quality("045,3000,1,010100,1", prefix)
+        assert result[f"{prefix}__part1"] == pytest.approx(45.0)
+        assert result[f"{prefix}__part2"] == pytest.approx(300.0)
+
+    @pytest.mark.parametrize("prefix", ["AH1", "AH2", "AH3", "AH4", "AH5", "AH6"])
+    def test_ah_repeated_range_rejects_out_of_range_values(self, prefix: str):
+        result = clean_value_quality("046,3000,1,010100,1", prefix)
+        assert result[f"{prefix}__part1"] is None
+        result = clean_value_quality("045,3001,1,010100,1", prefix)
+        assert result[f"{prefix}__part2"] is None
 
 
 # ── Gate A: Parser Strictness ───────────────────────────────────────────
