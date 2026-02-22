@@ -15,9 +15,9 @@ python3 tools/spec_coverage/generate_spec_coverage.py
 - Metric-eligible rules (excluding `unknown`): **3524**
 - Unknown/noisy rows excluded from %: **0**
 - Rules implemented in code: **3384** (96.0%)
-- Progress KPI (`tested_strict`): **2367** (67.2%)
-- Weak coverage (`tested_any`, includes wildcard): **2367** (67.2%)
-- tested_any from non-wild matches only: **2367** (67.2%)
+- Progress KPI (`tested_strict`): **2371** (67.3%)
+- Weak coverage (`tested_any`, includes wildcard): **2371** (67.3%)
+- tested_any from non-wild matches only: **2371** (67.3%)
 - Wildcard-only tested_any (not counted toward progress): **0** (0.0%)
 - Coverage progress is measured with `tested_strict` only.
 - `test_covered` in CSV mirrors `test_covered_any` for backward compatibility.
@@ -129,19 +129,19 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | 10 | 13 | CX3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax_overlap;expected_gap_from_alignment_report;test_match=none;unre... |
 | 11 | 13 | CX2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax_overlap;expected_gap_from_alignment_report;test_match=none;unre... |
 | 12 | 13 | CX3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax_overlap;expected_gap_from_alignment_report;test_match=none;unre... |
-| 13 | 02 | LATITUDE | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;test_match=none;unresolved_in_next_steps |
-| 14 | 02 | LONGITUDE | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;test_match=none;unresolved_in_next_steps |
-| 15 | 02 | ELEVATION | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;test_match=none;unresolved_in_next_steps |
-| 16 | 02 | CALL_SIGN | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
-| 17 | 02 | QC_PROCESS | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
-| 18 | 04 | AL2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;test_match=none;unresolved_in_next_steps |
-| 19 | 04 | AL3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;test_match=none;unresolved_in_next_steps |
-| 20 | 04 | AL4 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;test_match=none;unresolved_in_next_steps |
-| 21 | 04 | AL2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax_overlap;test_match=none;unresolved_in_next_steps |
-| 22 | 04 | AL3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax_overlap;test_match=none;unresolved_in_next_steps |
-| 23 | 04 | AL4 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax_overlap;test_match=none;unresolved_in_next_steps |
-| 24 | 05 | AX1 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_allowed_values_range;test_match=none;unresolved_in_next_steps |
-| 25 | 05 | AX2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_allowed_values_range;test_match=none;unresolved_in_next_steps |
+| 13 | 02 | QC_PROCESS | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
+| 14 | 04 | AL2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;test_match=none;unresolved_in_next_steps |
+| 15 | 04 | AL3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;test_match=none;unresolved_in_next_steps |
+| 16 | 04 | AL4 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;test_match=none;unresolved_in_next_steps |
+| 17 | 04 | AL2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax_overlap;test_match=none;unresolved_in_next_steps |
+| 18 | 04 | AL3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax_overlap;test_match=none;unresolved_in_next_steps |
+| 19 | 04 | AL4 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax_overlap;test_match=none;unresolved_in_next_steps |
+| 20 | 05 | AX1 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_allowed_values_range;test_match=none;unresolved_in_next_steps |
+| 21 | 05 | AX2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_allowed_values_range;test_match=none;unresolved_in_next_steps |
+| 22 | 05 | AX3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_allowed_values_range;test_match=none;unresolved_in_next_steps |
+| 23 | 05 | AX4 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_allowed_values_range;test_match=none;unresolved_in_next_steps |
+| 24 | 05 | AX5 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_allowed_values_range;test_match=none;unresolved_in_next_steps |
+| 25 | 05 | AX6 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_allowed_values_range;test_match=none;unresolved_in_next_steps |
 
 ## Rule Identity & Provenance
 
@@ -167,17 +167,17 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 | Match strength | Count | % of metric rules |
 | --- | --- | --- |
-| exact_signature | 678 | 19.2% |
-| exact_assertion | 1661 | 47.1% |
+| exact_signature | 681 | 19.3% |
+| exact_assertion | 1662 | 47.2% |
 | family_assertion | 28 | 0.8% |
 | wildcard_assertion | 0 | 0.0% |
-| none | 1157 | 32.8% |
+| none | 1153 | 32.7% |
 
 ## Precision warnings
 
 - Wildcard policy: `wildcard_assertion` counts as tested-any only; it never counts as strict.
-- Tested-any rows matched by `exact_signature`: **678** (28.6%)
-- Tested-any rows matched by `exact_assertion`: **1661** (70.2%)
+- Tested-any rows matched by `exact_signature`: **681** (28.7%)
+- Tested-any rows matched by `exact_assertion`: **1662** (70.1%)
 - Tested-any rows matched by `family_assertion`: **28** (1.2%)
 - Tested-any rows matched by `wildcard_assertion`: **0** (0.0%)
 - Synthetic rows in CSV: **28**
@@ -204,7 +204,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | Part | Rules | Metric rules | Implemented | Tested strict | Tested any (weak) | Implemented % | Tested strict % | Tested any (weak) % |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 01 | 0 | 0 | 0 | 0 | 0 | 0.0% | 0.0% | 0.0% |
-| 02 | 29 | 29 | 22 | 11 | 11 | 75.9% | 37.9% | 37.9% |
+| 02 | 29 | 29 | 22 | 15 | 15 | 75.9% | 51.7% | 51.7% |
 | 03 | 53 | 53 | 52 | 51 | 51 | 98.1% | 96.2% | 96.2% |
 | 04 | 603 | 603 | 601 | 461 | 461 | 99.7% | 76.5% | 76.5% |
 | 05 | 450 | 450 | 449 | 260 | 260 | 99.8% | 57.8% | 57.8% |
@@ -259,7 +259,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | AX | 84 | 84 | 84 | 45 | 45 | 100.0% | 53.6% | 53.6% |
 | AY | 26 | 26 | 26 | 17 | 17 | 100.0% | 65.4% | 65.4% |
 | AZ | 26 | 26 | 26 | 21 | 21 | 100.0% | 80.8% | 80.8% |
-| CALL_SIGN | 3 | 3 | 3 | 1 | 1 | 100.0% | 33.3% | 33.3% |
+| CALL_SIGN | 3 | 3 | 3 | 2 | 2 | 100.0% | 66.7% | 66.7% |
 | CB | 28 | 28 | 28 | 18 | 18 | 100.0% | 64.3% | 64.3% |
 | CF | 33 | 33 | 33 | 22 | 22 | 100.0% | 66.7% | 66.7% |
 | CG | 30 | 30 | 30 | 19 | 19 | 100.0% | 63.3% | 63.3% |
@@ -277,7 +277,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | DATE | 2 | 2 | 2 | 2 | 2 | 100.0% | 100.0% | 100.0% |
 | DEW | 5 | 5 | 5 | 4 | 4 | 100.0% | 80.0% | 80.0% |
 | ED | 14 | 14 | 14 | 11 | 11 | 100.0% | 78.6% | 78.6% |
-| ELEVATION | 3 | 3 | 3 | 1 | 1 | 100.0% | 33.3% | 33.3% |
+| ELEVATION | 3 | 3 | 3 | 2 | 2 | 100.0% | 66.7% | 66.7% |
 | GA | 24 | 24 | 24 | 15 | 15 | 100.0% | 62.5% | 62.5% |
 | GD | 216 | 216 | 216 | 116 | 116 | 100.0% | 53.7% | 53.7% |
 | GE | 11 | 11 | 11 | 11 | 11 | 100.0% | 100.0% | 100.0% |
@@ -304,8 +304,8 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | KE | 26 | 26 | 26 | 25 | 25 | 100.0% | 96.2% | 96.2% |
 | KF | 8 | 8 | 8 | 7 | 7 | 100.0% | 87.5% | 87.5% |
 | KG | 36 | 36 | 36 | 29 | 29 | 100.0% | 80.6% | 80.6% |
-| LATITUDE | 3 | 3 | 3 | 1 | 1 | 100.0% | 33.3% | 33.3% |
-| LONGITUDE | 3 | 3 | 3 | 1 | 1 | 100.0% | 33.3% | 33.3% |
+| LATITUDE | 3 | 3 | 3 | 2 | 2 | 100.0% | 66.7% | 66.7% |
+| LONGITUDE | 3 | 3 | 3 | 2 | 2 | 100.0% | 66.7% | 66.7% |
 | MA | 13 | 13 | 13 | 11 | 11 | 100.0% | 84.6% | 84.6% |
 | MD | 18 | 18 | 18 | 14 | 14 | 100.0% | 77.8% | 77.8% |
 | ME | 10 | 10 | 10 | 10 | 10 | 100.0% | 100.0% | 100.0% |
@@ -343,12 +343,12 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 | Rule type | Rules | Implemented | Tested strict | Tested any (weak) | Implemented % | Tested strict % | Tested any (weak) % |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| range | 362 | 360 | 260 | 260 | 99.4% | 71.8% | 71.8% |
+| range | 362 | 360 | 263 | 263 | 99.4% | 72.7% | 72.7% |
 | sentinel | 688 | 687 | 240 | 240 | 99.9% | 34.9% | 34.9% |
 | allowed_quality | 80 | 80 | 70 | 70 | 100.0% | 87.5% | 87.5% |
 | domain | 888 | 888 | 643 | 643 | 100.0% | 72.4% | 72.4% |
 | cardinality | 128 | 128 | 128 | 128 | 100.0% | 100.0% | 100.0% |
-| width | 1207 | 1070 | 984 | 984 | 88.6% | 81.5% | 81.5% |
+| width | 1207 | 1070 | 985 | 985 | 88.6% | 81.6% | 81.6% |
 | arity | 171 | 171 | 42 | 42 | 100.0% | 24.6% | 24.6% |
 | unknown | 0 | 0 | 0 | 0 | excluded | excluded | excluded |
 

@@ -2610,6 +2610,27 @@ class TestTopStrictCoverageGapFixes:
         assert len("FM-1") != 5
         assert pd.isna(cleaned.loc[0, "REPORT_TYPE"])
 
+    def test_call_sign_width_5_accepts_fixed_width_token(self):
+        """CALL_SIGN width must enforce exactly 5 characters."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"CALL_SIGN": ["KJFK0"]}), keep_raw=True)
+        assert len("KJFK0") == 5
+        assert cleaned.loc[0, "CALL_SIGN"] == "KJFK0"
+
+    def test_call_sign_valid_domain(self):
+        """CALL_SIGN must follow alphanumeric pattern."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"CALL_SIGN": ["99999"]}), keep_raw=True)
+        assert pd.isna(cleaned.loc[0, "CALL_SIGN"])
+
+    def test_qc_process_valid_values_enforced(self):
+        """QC_PROCESS must be one of V01, V02, V03."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"QC_PROCESS": ["V01"]}), keep_raw=True)
+        assert cleaned.loc[0, "QC_PROCESS"] == "V01"
+        # Test another valid code
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"QC_PROCESS": ["V02"]}), keep_raw=True)
+        assert cleaned.loc[0, "QC_PROCESS"] == "V02"
+
+
+
     def test_elevation_width_5_accepts_fixed_width_token(self):
         cleaned = clean_noaa_dataframe(pd.DataFrame({"ELEVATION": ["-0400"]}), keep_raw=True)
         assert len("-0400") == 5
@@ -2618,6 +2639,67 @@ class TestTopStrictCoverageGapFixes:
     def test_elevation_width_5_rejects_short_integer_token(self):
         cleaned = clean_noaa_dataframe(pd.DataFrame({"ELEVATION": ["-400"]}), keep_raw=True)
         assert len("-400") != 5
+        assert pd.isna(cleaned.loc[0, "ELEVATION"])
+
+    def test_latitude_range_accepts_upper_bound(self):
+        """LATITUDE range must enforce MIN: -90000 MAX: +90000."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LATITUDE": ["+90000"]}), keep_raw=True)
+        assert cleaned.loc[0, "LATITUDE"] == pytest.approx(90.0)
+
+    def test_latitude_range_rejects_above_upper_bound(self):
+        """LATITUDE range must reject values > 90000."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LATITUDE": ["+90001"]}), keep_raw=True)
+        assert pd.isna(cleaned.loc[0, "LATITUDE"])
+
+    def test_latitude_range_accepts_lower_bound(self):
+        """LATITUDE range must accept MIN: -90000."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LATITUDE": ["-90000"]}), keep_raw=True)
+        assert cleaned.loc[0, "LATITUDE"] == pytest.approx(-90.0)
+
+    def test_latitude_range_rejects_below_lower_bound(self):
+        """LATITUDE range must reject values < -90000."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LATITUDE": ["-90001"]}), keep_raw=True)
+        assert pd.isna(cleaned.loc[0, "LATITUDE"])
+
+    def test_longitude_range_accepts_upper_bound(self):
+        """LONGITUDE range must enforce MIN: -179999 MAX: +180000."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LONGITUDE": ["+180000"]}), keep_raw=True)
+        assert cleaned.loc[0, "LONGITUDE"] == pytest.approx(180.0)
+
+    def test_longitude_range_rejects_above_upper_bound(self):
+        """LONGITUDE range must reject values > 180000."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LONGITUDE": ["+180001"]}), keep_raw=True)
+        assert pd.isna(cleaned.loc[0, "LONGITUDE"])
+
+    def test_longitude_range_accepts_lower_bound(self):
+        """LONGITUDE range must accept MIN: -179999."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LONGITUDE": ["-179999"]}), keep_raw=True)
+        assert cleaned.loc[0, "LONGITUDE"] == pytest.approx(-179.999)
+
+    def test_longitude_range_mid_value(self):
+        """LONGITUDE range accepts mid-range values."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"LONGITUDE": ["-100000"]}), keep_raw=True)
+        assert cleaned.loc[0, "LONGITUDE"] == pytest.approx(-100.0)
+
+
+    def test_elevation_range_accepts_upper_bound(self):
+        """ELEVATION range must enforce MIN: -400 MAX: +8850."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"ELEVATION": ["+8850"]}), keep_raw=True)
+        assert cleaned.loc[0, "ELEVATION"] == pytest.approx(8850.0)
+
+    def test_elevation_range_rejects_above_upper_bound(self):
+        """ELEVATION range must reject values > 8850."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"ELEVATION": ["+8851"]}), keep_raw=True)
+        assert pd.isna(cleaned.loc[0, "ELEVATION"])
+
+    def test_elevation_range_accepts_lower_bound(self):
+        """ELEVATION range must accept MIN: -400."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"ELEVATION": ["-0400"]}), keep_raw=True)
+        assert cleaned.loc[0, "ELEVATION"] == pytest.approx(-400.0)
+
+    def test_elevation_range_rejects_below_lower_bound(self):
+        """ELEVATION range must reject values < -400."""
+        cleaned = clean_noaa_dataframe(pd.DataFrame({"ELEVATION": ["-0401"]}), keep_raw=True)
         assert pd.isna(cleaned.loc[0, "ELEVATION"])
 
     @pytest.mark.parametrize(
