@@ -40,9 +40,47 @@ def test_spec_coverage_generator_smoke() -> None:
 
     report_text = report_path.read_text(encoding="utf-8")
     assert "Overall coverage" in report_text
+    assert "Enforcement layer breakdown" in report_text
+    assert "Confidence breakdown" in report_text
     assert "Precision warnings" in report_text
 
     metric_rows = [row for row in rows if row.get("rule_type") != "unknown"]
+
+    required_columns = {
+        "implemented_in_constants",
+        "constants_location",
+        "implemented_in_cleaning",
+        "cleaning_location",
+        "implementation_confidence",
+        "enforcement_layer",
+        "code_implemented",
+    }
+    missing_columns = required_columns - set(rows[0].keys())
+    assert not missing_columns, f"Missing expected CSV columns: {sorted(missing_columns)}"
+
+    for row in rows:
+        assert row["implemented_in_constants"] in {"TRUE", "FALSE"}
+        assert row["implemented_in_cleaning"] in {"TRUE", "FALSE"}
+        assert row["implementation_confidence"] in {"high", "medium", "low"}
+        assert row["enforcement_layer"] in {"constants_only", "cleaning_only", "both", "neither"}
+
+        expected_implemented = (
+            row["implemented_in_constants"] == "TRUE" or row["implemented_in_cleaning"] == "TRUE"
+        )
+        assert row["code_implemented"] == ("TRUE" if expected_implemented else "FALSE")
+
+        if row["enforcement_layer"] == "constants_only":
+            assert row["implemented_in_constants"] == "TRUE"
+            assert row["implemented_in_cleaning"] == "FALSE"
+        elif row["enforcement_layer"] == "cleaning_only":
+            assert row["implemented_in_constants"] == "FALSE"
+            assert row["implemented_in_cleaning"] == "TRUE"
+        elif row["enforcement_layer"] == "both":
+            assert row["implemented_in_constants"] == "TRUE"
+            assert row["implemented_in_cleaning"] == "TRUE"
+        else:
+            assert row["implemented_in_constants"] == "FALSE"
+            assert row["implemented_in_cleaning"] == "FALSE"
 
     range_rows = [row for row in metric_rows if row.get("rule_type") == "range"]
     assert range_rows, "Expected at least one range rule row"
@@ -65,6 +103,40 @@ def test_spec_coverage_generator_smoke() -> None:
         assert (
             "Arity tests not detected; arity tested% may be 0." in report_text
         ), "Report should explicitly explain why arity tested% may be 0 when no arity tests are detected"
+
+    cleaning_only_rows = [
+        row
+        for row in metric_rows
+        if row.get("implemented_in_constants") == "FALSE"
+        and row.get("implemented_in_cleaning") == "TRUE"
+        and row.get("enforcement_layer") == "cleaning_only"
+    ]
+    assert cleaning_only_rows, "Expected at least one cleaning-only implemented rule"
+
+    known_cleaning_only = [
+        row
+        for row in cleaning_only_rows
+        if row.get("identifier") == "DATE"
+        and row.get("rule_type") == "domain"
+        and row.get("implementation_confidence") in {"high", "medium"}
+        and "src/noaa_climate_data/cleaning.py:" in (row.get("cleaning_location") or "")
+    ]
+    assert known_cleaning_only, "Expected DATE domain rule to be detected as cleaning-only with medium/high confidence"
+
+    neither_rows = [
+        row
+        for row in metric_rows
+        if row.get("implemented_in_constants") == "FALSE"
+        and row.get("implemented_in_cleaning") == "FALSE"
+        and row.get("enforcement_layer") == "neither"
+    ]
+    assert neither_rows, "Expected at least one rule to remain unimplemented in both layers"
+
+    implemented_rows = [row for row in metric_rows if row.get("code_implemented") == "TRUE"]
+    cleaning_only_share = (len(cleaning_only_rows) / len(implemented_rows)) if implemented_rows else 0.0
+    assert (
+        cleaning_only_share <= 0.5
+    ), f"Cleaning-only implementation share too high ({cleaning_only_share:.2%}); likely overmatching"
 
     expected_gap_rows = [
         row

@@ -30,6 +30,12 @@ OUTPUT_COLUMNS = [
     "max_value",
     "sentinel_values",
     "allowed_values_or_codes",
+    "implemented_in_constants",
+    "constants_location",
+    "implemented_in_cleaning",
+    "cleaning_location",
+    "implementation_confidence",
+    "enforcement_layer",
     "code_implemented",
     "code_location",
     "test_covered",
@@ -49,6 +55,9 @@ RULE_TYPE_ORDER = [
 ]
 RULE_TYPE_SET = set(RULE_TYPE_ORDER)
 METRIC_RULE_TYPES = [rule_type for rule_type in RULE_TYPE_ORDER if rule_type != "unknown"]
+IMPLEMENTATION_CONFIDENCE_ORDER = {"high": 3, "medium": 2, "low": 1}
+IMPLEMENTATION_CONFIDENCE_VALUES = set(IMPLEMENTATION_CONFIDENCE_ORDER)
+ENFORCEMENT_LAYER_VALUES = {"constants_only", "cleaning_only", "both", "neither"}
 
 IDENTIFIER_RE = re.compile(r"\b[A-Z][A-Z0-9]{1,5}\b")
 IDENTIFIER_WITH_DIGIT_RE = re.compile(r"\b([A-Z]{1,4})(\d{1,2})\b")
@@ -111,6 +120,12 @@ class SpecRuleRow:
     max_value: str = ""
     sentinel_values: str = ""
     allowed_values_or_codes: str = ""
+    implemented_in_constants: bool = False
+    constants_location: str = ""
+    implemented_in_cleaning: bool = False
+    cleaning_location: str = ""
+    implementation_confidence: str = "low"
+    enforcement_layer: str = "neither"
     code_implemented: bool = False
     code_location: str = ""
     test_covered: bool = False
@@ -153,6 +168,12 @@ class SpecRuleRow:
             "max_value": self.max_value,
             "sentinel_values": self.sentinel_values,
             "allowed_values_or_codes": self.allowed_values_or_codes,
+            "implemented_in_constants": "TRUE" if self.implemented_in_constants else "FALSE",
+            "constants_location": self.constants_location,
+            "implemented_in_cleaning": "TRUE" if self.implemented_in_cleaning else "FALSE",
+            "cleaning_location": self.cleaning_location,
+            "implementation_confidence": self.implementation_confidence,
+            "enforcement_layer": self.enforcement_layer,
             "code_implemented": "TRUE" if self.code_implemented else "FALSE",
             "code_location": self.code_location,
             "test_covered": "TRUE" if self.test_covered else "FALSE",
@@ -171,11 +192,50 @@ class ConstantsAstIndex:
 
 
 @dataclass(slots=True)
+class CleaningEvidence:
+    identifier: str
+    identifier_family: str
+    rule_type: str
+    evidence_kind: str
+    location: str
+    confidence: str
+
+
+@dataclass(slots=True)
 class CleaningIndex:
     function_lines: dict[str, int] = field(default_factory=dict)
     strict_arity_line: int | None = None
     strict_width_line: int | None = None
-    identifier_range_lines: dict[str, int] = field(default_factory=dict)
+    evidence: list[CleaningEvidence] = field(default_factory=list)
+    _evidence_seen: set[tuple[str, str, str, str, str, str]] = field(default_factory=set)
+
+    def add_evidence(
+        self,
+        identifier: str,
+        family: str,
+        rule_type: str,
+        evidence_kind: str,
+        line: int | None,
+        confidence: str,
+    ) -> None:
+        confidence_norm = confidence if confidence in IMPLEMENTATION_CONFIDENCE_VALUES else "low"
+        rule_type_norm = rule_type if rule_type in RULE_TYPE_SET else "other"
+        location = f"src/noaa_climate_data/cleaning.py:{line}" if line else ""
+        family_norm = family or (identifier_family(identifier) if identifier else "")
+        key = (identifier, family_norm, rule_type_norm, evidence_kind, location, confidence_norm)
+        if key in self._evidence_seen:
+            return
+        self._evidence_seen.add(key)
+        self.evidence.append(
+            CleaningEvidence(
+                identifier=identifier,
+                identifier_family=family_norm,
+                rule_type=rule_type_norm,
+                evidence_kind=evidence_kind,
+                location=location,
+                confidence=confidence_norm,
+            )
+        )
 
 
 @dataclass(slots=True)
@@ -484,37 +544,269 @@ def parse_constants_ast(constants_path: Path) -> ConstantsAstIndex:
     return index
 
 
+def ast_literal_float(node: ast.AST | None) -> float | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return float(node.value)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+        nested = ast_literal_float(node.operand)
+        if nested is not None:
+            return -nested
+    return None
+
+
+def ast_call_name(func: ast.AST) -> str:
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return ""
+
+
+def between_bounds_from_call(node: ast.AST) -> tuple[float, float] | None:
+    if not isinstance(node, ast.Call):
+        return None
+    if not isinstance(node.func, ast.Attribute) or node.func.attr != "between":
+        return None
+    if len(node.args) < 2:
+        return None
+    low = ast_literal_float(node.args[0])
+    high = ast_literal_float(node.args[1])
+    if low is None or high is None:
+        return None
+    return low, high
+
+
+def control_column_from_if_test(test: ast.AST) -> str | None:
+    if not isinstance(test, ast.Compare):
+        return None
+    if len(test.ops) != 1 or not isinstance(test.ops[0], ast.In):
+        return None
+    if len(test.comparators) != 1:
+        return None
+    comparator = test.comparators[0]
+    if not (
+        isinstance(comparator, ast.Attribute)
+        and comparator.attr == "columns"
+        and isinstance(comparator.value, ast.Name)
+        and comparator.value.id == "work"
+    ):
+        return None
+    return ast_literal_str(test.left)
+
+
 def parse_cleaning_index(cleaning_path: Path) -> CleaningIndex:
     source = cleaning_path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(cleaning_path))
     index = CleaningIndex()
     lines = source.splitlines()
 
+    function_defs: dict[str, ast.FunctionDef] = {}
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef):
-            if node.name in {"clean_value_quality", "_expand_parsed", "clean_noaa_dataframe"}:
-                index.function_lines[node.name] = node.lineno
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        function_defs[node.name] = node
+        if node.name in {
+            "clean_value_quality",
+            "_expand_parsed",
+            "clean_noaa_dataframe",
+            "_normalize_control_fields",
+        }:
+            index.function_lines[node.name] = node.lineno
 
+    # AST-first: strict gates, parse rejects, and local clamp/minmax evidence.
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            call_name = ast_call_name(node.func)
+            if call_name == "get_expected_part_count":
+                if index.strict_arity_line is None:
+                    index.strict_arity_line = node.lineno
+                index.add_evidence("", "", "arity", "strict_gate", node.lineno, "low")
+            elif call_name == "get_token_width_rules":
+                if index.strict_width_line is None:
+                    index.strict_width_line = node.lineno
+                index.add_evidence("", "", "width", "strict_gate", node.lineno, "low")
+            elif call_name == "is_valid_eqd_identifier":
+                for fam in ("Q", "P", "R", "C", "D", "N"):
+                    index.add_evidence("", fam, "cardinality", "parse_reject", node.lineno, "medium")
+            elif call_name == "is_valid_repeated_identifier":
+                index.add_evidence("", "", "cardinality", "parse_reject", node.lineno, "low")
+
+        if isinstance(node, ast.If):
+            prefix_value = ""
+            prefix_family = ""
+            has_scaled_numeric_compare = False
+            for test_node in ast.walk(node.test):
+                if isinstance(test_node, ast.Compare):
+                    if (
+                        isinstance(test_node.left, ast.Name)
+                        and test_node.left.id == "prefix"
+                        and len(test_node.ops) == 1
+                        and isinstance(test_node.ops[0], ast.Eq)
+                        and len(test_node.comparators) == 1
+                    ):
+                        token = ast_literal_str(test_node.comparators[0])
+                        if token:
+                            prefix_value = token
+                    if (
+                        isinstance(test_node.left, ast.Name)
+                        and test_node.left.id == "scaled"
+                        and len(test_node.ops) == 1
+                        and isinstance(test_node.ops[0], (ast.Gt, ast.GtE, ast.Lt, ast.LtE))
+                        and len(test_node.comparators) == 1
+                        and ast_literal_float(test_node.comparators[0]) is not None
+                    ):
+                        has_scaled_numeric_compare = True
+                if (
+                    isinstance(test_node, ast.Call)
+                    and isinstance(test_node.func, ast.Attribute)
+                    and isinstance(test_node.func.value, ast.Name)
+                    and test_node.func.value.id == "prefix"
+                    and test_node.func.attr == "startswith"
+                    and test_node.args
+                ):
+                    token = ast_literal_str(test_node.args[0])
+                    if token:
+                        prefix_family = token
+
+            clamp_assignment_line: int | None = None
+            for stmt in node.body:
+                if not isinstance(stmt, ast.Assign):
+                    continue
+                if not any(isinstance(target, ast.Name) and target.id == "scaled" for target in stmt.targets):
+                    continue
+                if ast_literal_float(stmt.value) is None:
+                    continue
+                clamp_assignment_line = stmt.lineno
+                break
+
+            if clamp_assignment_line and (prefix_value or prefix_family):
+                confidence = "high" if prefix_value and has_scaled_numeric_compare else "medium"
+                evidence_kind = "clamp" if has_scaled_numeric_compare else "special_case"
+                family = identifier_family(prefix_value) if prefix_value else prefix_family
+                index.add_evidence(prefix_value, family, "range", evidence_kind, clamp_assignment_line, confidence)
+
+    normalize_control = function_defs.get("_normalize_control_fields")
+    if normalize_control:
+        date_validation_line: int | None = None
+        time_validation_line: int | None = None
+        for stmt in normalize_control.body:
+            if not isinstance(stmt, ast.FunctionDef):
+                continue
+            if stmt.name == "_normalize_date":
+                for sub in ast.walk(stmt):
+                    if (
+                        isinstance(sub, ast.Call)
+                        and isinstance(sub.func, ast.Attribute)
+                        and sub.func.attr == "fullmatch"
+                    ):
+                        date_validation_line = sub.lineno
+                        break
+            if stmt.name == "_normalize_time":
+                for sub in ast.walk(stmt):
+                    if between_bounds_from_call(sub) is not None:
+                        time_validation_line = sub.lineno
+                        break
+
+        for stmt in normalize_control.body:
+            if not isinstance(stmt, ast.If):
+                continue
+            column = control_column_from_if_test(stmt.test)
+            if not column:
+                continue
+            if column == "DATE" and date_validation_line is not None:
+                index.add_evidence("DATE", "DATE", "domain", "strict_gate", date_validation_line, "high")
+            if column == "TIME" and time_validation_line is not None:
+                index.add_evidence("TIME", "TIME", "range", "fallback_bounds", time_validation_line, "high")
+
+            for sub in ast.walk(stmt):
+                bounds = between_bounds_from_call(sub)
+                if bounds is not None:
+                    index.add_evidence(column, column, "range", "fallback_bounds", sub.lineno, "high")
+                    continue
+                if (
+                    isinstance(sub, ast.Call)
+                    and isinstance(sub.func, ast.Attribute)
+                    and sub.func.attr == "isin"
+                ):
+                    rule_type = "allowed_quality" if column == "QUALITY_CONTROL" else "domain"
+                    index.add_evidence(column, column, rule_type, "strict_gate", sub.lineno, "high")
+                    continue
+                if (
+                    isinstance(sub, ast.Compare)
+                    and len(sub.ops) == 1
+                    and isinstance(sub.left, ast.Name)
+                    and sub.left.id == "series"
+                    and len(sub.comparators) == 1
+                ):
+                    sentinel = ast_literal_str(sub.comparators[0])
+                    if sentinel is None:
+                        continue
+                    if sentinel in {"99999", "9", "None", "nan", ""}:
+                        rule_type = "sentinel"
+                    else:
+                        rule_type = "domain"
+                    index.add_evidence(column, column, rule_type, "fallback_bounds", sub.lineno, "high")
+
+    # Conservative regex fallback for line-oriented rules.
     active_column: str | None = None
+    active_indent: int = -1
     for line_no, line in enumerate(lines, start=1):
-        if index.strict_arity_line is None and "get_expected_part_count(" in line:
-            index.strict_arity_line = line_no
-        if index.strict_width_line is None and "get_token_width_rules(" in line:
-            index.strict_width_line = line_no
-        if "hour.between(0, 23)" in line and "minute.between(0, 59)" in line:
-            index.identifier_range_lines.setdefault("TIME", line_no)
+        stripped = line.strip()
+        indent = len(line) - len(line.lstrip(" "))
 
-        col_match = re.search(r'"([A-Z_]+)"\s+in\s+work\.columns', line)
-        if col_match:
-            active_column = col_match.group(1)
-        if active_column and "series.between(" in line:
-            index.identifier_range_lines.setdefault(active_column, line_no)
-        if line.strip() == "":
+        match_column = re.match(r'^\s*if\s+"([A-Z_]+)"\s+in\s+work\.columns\s*:', line)
+        if match_column:
+            active_column = match_column.group(1)
+            active_indent = indent
+        elif active_column and stripped and indent <= active_indent:
             active_column = None
+            active_indent = -1
 
-        prefix_match = re.search(r'prefix\s*==\s*"([A-Z0-9]+)"', line)
-        if prefix_match and any(token in line for token in ("<", ">", "between", "scaled")):
-            index.identifier_range_lines.setdefault(prefix_match.group(1), line_no)
+        if "hour.between(0, 23)" in line and "minute.between(0, 59)" in line:
+            index.add_evidence("TIME", "TIME", "range", "fallback_bounds", line_no, "high")
+
+        if re.search(r"\bvalue\s*<\s*part_rule\.min_value\b", line) or re.search(
+            r"\bvalue\s*>\s*part_rule\.max_value\b",
+            line,
+        ):
+            index.add_evidence("", "", "range", "minmax_check", line_no, "low")
+
+        if "_is_missing_numeric(value)" in line:
+            index.add_evidence("", "", "sentinel", "fallback_bounds", line_no, "low")
+
+        if "is_wnd_calm" in line and "=" in line:
+            index.add_evidence("WND", "WND", "domain", "special_case", line_no, "medium")
+        if "is_od_calm" in line and "=" in line:
+            index.add_evidence("", "OD", "domain", "special_case", line_no, "medium")
+        if "is_oe_calm" in line and "=" in line:
+            index.add_evidence("", "OE", "domain", "special_case", line_no, "medium")
+
+        clamp_match = re.search(
+            r'if\s+prefix\s*==\s*"([A-Z0-9]+)".*scaled\s*[<>]=?\s*([+-]?\d+(?:\.\d+)?)',
+            line,
+        )
+        if clamp_match:
+            ident = clamp_match.group(1)
+            index.add_evidence(ident, identifier_family(ident), "range", "clamp", line_no, "high")
+
+        if active_column:
+            between_match = re.search(
+                r"series\.between\(\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)\s*\)",
+                line,
+            )
+            if between_match:
+                index.add_evidence(active_column, active_column, "range", "fallback_bounds", line_no, "high")
+            if "series.isin(" in line:
+                rule_type = "allowed_quality" if active_column == "QUALITY_CONTROL" else "domain"
+                index.add_evidence(active_column, active_column, rule_type, "strict_gate", line_no, "high")
+            sentinel_match = re.search(r'series\s*!=\s*"([^"]+)"', line)
+            if sentinel_match:
+                token = sentinel_match.group(1)
+                if token in {"99999", "9", "None", "nan", ""}:
+                    rule_type = "sentinel"
+                else:
+                    rule_type = "domain"
+                index.add_evidence(active_column, active_column, rule_type, "fallback_bounds", line_no, "high")
 
     return index
 
@@ -1360,11 +1652,10 @@ def parse_float_safe(value: str) -> float | None:
         return None
 
 
-def coverage_for_row(
+def coverage_in_constants_for_row(
     row: SpecRuleRow,
     constants_module,
     constants_ast: ConstantsAstIndex,
-    cleaning_index: CleaningIndex,
 ) -> tuple[bool, str, str]:
     get_field_rule = getattr(constants_module, "get_field_rule")
     known_identifiers: set[str] = set(getattr(constants_module, "KNOWN_IDENTIFIERS", set()))
@@ -1411,8 +1702,9 @@ def coverage_for_row(
         return False, "", "none"
 
     if row.rule_type == "arity":
-        if constants_ast.function_lines.get("get_expected_part_count") and cleaning_index.strict_arity_line and rules:
-            return True, f"src/noaa_climate_data/cleaning.py:{cleaning_index.strict_arity_line}", "strict_gate_arity"
+        line = constants_ast.function_lines.get("get_expected_part_count")
+        if line is not None and rules:
+            return True, f"src/noaa_climate_data/constants.py:{line}", "strict_gate_arity"
         return False, "", "none"
 
     if row.rule_type == "width":
@@ -1426,16 +1718,9 @@ def coverage_for_row(
                     if line is None:
                         line = constants_ast.part_lines.get((identifier_family(cand), int(part_idx)))
                     return True, (f"src/noaa_climate_data/constants.py:{line}" if line else ""), "strict_gate_width"
-        if cleaning_index.strict_width_line and constants_ast.function_lines.get("get_token_width_rules"):
-            return True, f"src/noaa_climate_data/cleaning.py:{cleaning_index.strict_width_line}", "strict_gate_width"
         return False, "", "none"
 
     if not rules:
-        if row.rule_type == "range":
-            for candidate in [row.identifier, row.identifier_family, f"{row.identifier_family}1"]:
-                line = cleaning_index.identifier_range_lines.get(candidate)
-                if line is not None:
-                    return True, f"src/noaa_climate_data/cleaning.py:{line}", "cleaning_clamp"
         return False, "", "none"
 
     spec_min = parse_float_safe(row.min_value)
@@ -1544,12 +1829,88 @@ def coverage_for_row(
                             line = constants_ast.part_lines.get((identifier_family(cand), int(part_idx)))
                         return True, (f"src/noaa_climate_data/constants.py:{line}" if line else ""), "field_rule_minmax"
 
-        for candidate in [row.identifier, row.identifier_family, f"{row.identifier_family}1"]:
-            line = cleaning_index.identifier_range_lines.get(candidate)
-            if line is not None:
-                return True, f"src/noaa_climate_data/cleaning.py:{line}", "cleaning_clamp"
-
     return False, "", "none"
+
+
+def equivalent_rule_types(rule_type: str) -> set[str]:
+    out = {rule_type}
+    if rule_type == "allowed_quality":
+        out.add("domain")
+    elif rule_type == "domain":
+        out.add("allowed_quality")
+    return out
+
+
+def evidence_sort_key(evidence: CleaningEvidence) -> tuple[int, int, int]:
+    evidence_kind_rank = {
+        "clamp": 6,
+        "minmax_check": 5,
+        "special_case": 4,
+        "strict_gate": 3,
+        "fallback_bounds": 2,
+        "parse_reject": 1,
+    }.get(evidence.evidence_kind, 0)
+    location_line = 0
+    if evidence.location and ":" in evidence.location:
+        raw_line = evidence.location.rsplit(":", 1)[-1]
+        if raw_line.isdigit():
+            location_line = -int(raw_line)
+    return (
+        IMPLEMENTATION_CONFIDENCE_ORDER.get(evidence.confidence, 0),
+        evidence_kind_rank,
+        location_line,
+    )
+
+
+def best_cleaning_evidence(candidates: list[CleaningEvidence]) -> CleaningEvidence | None:
+    if not candidates:
+        return None
+    return max(candidates, key=evidence_sort_key)
+
+
+def coverage_in_cleaning_for_row(
+    row: SpecRuleRow,
+    cleaning_index: CleaningIndex,
+) -> tuple[bool, str, str, str]:
+    if row.identifier == "UNSPECIFIED":
+        return False, "", "low", "none"
+
+    rule_types = equivalent_rule_types(row.rule_type)
+    exact_candidates: list[CleaningEvidence] = []
+    family_candidates: list[CleaningEvidence] = []
+    for evidence in cleaning_index.evidence:
+        if evidence.rule_type not in rule_types:
+            continue
+        if evidence.identifier and evidence.identifier == row.identifier:
+            exact_candidates.append(evidence)
+            continue
+        if evidence.identifier_family and evidence.identifier_family == row.identifier_family:
+            if evidence.identifier and evidence.identifier != row.identifier and evidence.confidence == "high":
+                continue
+            family_candidates.append(evidence)
+
+    selected = best_cleaning_evidence(exact_candidates)
+    if selected is not None:
+        return True, selected.location, selected.confidence, f"exact_{selected.evidence_kind}"
+
+    selected = best_cleaning_evidence(family_candidates)
+    if selected is not None:
+        return True, selected.location, selected.confidence, f"family_{selected.evidence_kind}"
+
+    return False, "", "low", "none"
+
+
+def enforcement_layer(
+    implemented_in_constants: bool,
+    implemented_in_cleaning: bool,
+) -> str:
+    if implemented_in_constants and implemented_in_cleaning:
+        return "both"
+    if implemented_in_constants:
+        return "constants_only"
+    if implemented_in_cleaning:
+        return "cleaning_only"
+    return "neither"
 
 
 def apply_coverage(
@@ -1560,10 +1921,28 @@ def apply_coverage(
     test_index: TestEvidenceIndex,
 ) -> list[SpecRuleRow]:
     for row in rows:
-        implemented, location, coverage_reason = coverage_for_row(row, constants_module, constants_ast, cleaning_index)
-        row.code_implemented = implemented
-        row.code_location = location
-        row.notes.add(f"coverage_reason={coverage_reason}")
+        constants_implemented, constants_location, constants_reason = coverage_in_constants_for_row(
+            row,
+            constants_module,
+            constants_ast,
+        )
+        cleaning_implemented, cleaning_location, cleaning_confidence, cleaning_reason = coverage_in_cleaning_for_row(
+            row,
+            cleaning_index,
+        )
+
+        row.implemented_in_constants = constants_implemented
+        row.constants_location = constants_location
+        row.implemented_in_cleaning = cleaning_implemented
+        row.cleaning_location = cleaning_location
+        row.implementation_confidence = (
+            cleaning_confidence if cleaning_confidence in IMPLEMENTATION_CONFIDENCE_VALUES else "low"
+        )
+        row.enforcement_layer = enforcement_layer(constants_implemented, cleaning_implemented)
+        row.code_implemented = constants_implemented or cleaning_implemented
+        row.code_location = constants_location or cleaning_location
+        row.notes.add(f"coverage_reason_constants={constants_reason}")
+        row.notes.add(f"coverage_reason_cleaning={cleaning_reason}")
 
         test_location, match_reason = test_index.find(
             row.identifier,
@@ -1636,6 +2015,10 @@ def row_gap_score(row: SpecRuleRow) -> int:
 def pointer_for_gap(row: SpecRuleRow, cleaning_index: CleaningIndex) -> str:
     if row.code_location:
         return row.code_location
+    if row.cleaning_location:
+        return row.cleaning_location
+    if row.constants_location:
+        return row.constants_location
     if row.rule_type == "arity" and cleaning_index.strict_arity_line:
         return f"src/noaa_climate_data/cleaning.py:{cleaning_index.strict_arity_line}"
     if row.rule_type == "width" and cleaning_index.strict_width_line:
@@ -1668,6 +2051,13 @@ def build_report(
     unknown_excluded = total - total_metric
     implemented = sum(1 for r in metric_rows if r.code_implemented)
     tested = sum(1 for r in metric_rows if r.test_covered)
+    layer_counter = Counter(r.enforcement_layer for r in metric_rows)
+    cleaning_implemented_rows = [r for r in metric_rows if r.implemented_in_cleaning]
+    cleaning_confidence_counter = Counter(
+        r.implementation_confidence
+        for r in cleaning_implemented_rows
+        if r.implementation_confidence in IMPLEMENTATION_CONFIDENCE_VALUES
+    )
 
     by_part: dict[str, list[SpecRuleRow]] = defaultdict(list)
     by_family: dict[str, list[SpecRuleRow]] = defaultdict(list)
@@ -1857,6 +2247,21 @@ def build_report(
     lines.append(f"- Rows linked to unresolved `NEXT_STEPS.md` items: **{unresolved_count}**")
     lines.append(f"- Open checklist items in `ARCHITECTURE_NEXT_STEPS.md`: **{arch_unchecked}**")
     lines.append("")
+    lines.append("## Enforcement layer breakdown")
+    lines.append("")
+    for layer in ["constants_only", "cleaning_only", "both", "neither"]:
+        count = layer_counter.get(layer, 0)
+        lines.append(f"- {layer}: **{count}** ({pct(count, total_metric)})")
+    lines.append("")
+    lines.append("## Confidence breakdown")
+    lines.append("")
+    lines.append(
+        f"- Cleaning-implemented metric rules: **{len(cleaning_implemented_rows)}** ({pct(len(cleaning_implemented_rows), total_metric)})"
+    )
+    for confidence in ["high", "medium", "low"]:
+        count = cleaning_confidence_counter.get(confidence, 0)
+        lines.append(f"- {confidence}: **{count}** ({pct(count, len(cleaning_implemented_rows))})")
+    lines.append("")
     lines.append("## Precision warnings")
     lines.append("")
     lines.append(f"- Tested rows matched by `exact_signature`: **{exact_signature_count}** ({pct(exact_signature_count, len(tested_rows))})")
@@ -1933,7 +2338,7 @@ def build_report(
     lines.append("")
     lines.append("- Add or tweak regexes in `parse_spec_docs()` for new rule text patterns.")
     lines.append("- Extend `infer_rule_types_from_text()` if new rule classes appear.")
-    lines.append("- Extend `coverage_for_row()` for new implementation metadata fields.")
+    lines.append("- Extend `coverage_in_constants_for_row()` and `coverage_in_cleaning_for_row()` for new enforcement metadata.")
     lines.append("- Extend `parse_tests_evidence()` value-token and assertion-intent hooks for new test styles.")
     lines.append("- Keep deterministic ordering by preserving `sort_key()` and fixed table order.")
 
