@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import ast
 import csv
+import hashlib
+import json
 import re
 import sys
 from collections import Counter, defaultdict
@@ -20,6 +22,12 @@ from pathlib import Path
 from typing import Iterable, Mapping
 
 OUTPUT_COLUMNS = [
+    "rule_id",
+    "row_kind",
+    "spec_file",
+    "spec_line_start",
+    "spec_line_end",
+    "spec_evidence",
     "spec_part",
     "spec_doc",
     "identifier",
@@ -116,6 +124,12 @@ class SpecRuleRow:
     identifier_family: str
     rule_type: str
     spec_rule_text: str
+    rule_id: str = ""
+    row_kind: str = "spec_rule"
+    spec_file: str = ""
+    spec_line_start: int | None = None
+    spec_line_end: int | None = None
+    spec_evidence: str = ""
     min_value: str = ""
     max_value: str = ""
     sentinel_values: str = ""
@@ -134,6 +148,11 @@ class SpecRuleRow:
 
     def key(self) -> tuple[str, ...]:
         return (
+            self.rule_id,
+            self.row_kind,
+            self.spec_file,
+            str(self.spec_line_start if self.spec_line_start is not None else ""),
+            str(self.spec_line_end if self.spec_line_end is not None else ""),
             self.spec_part,
             self.spec_doc,
             self.identifier,
@@ -147,17 +166,16 @@ class SpecRuleRow:
         )
 
     def sort_key(self) -> tuple[str, ...]:
-        return (
-            self.spec_part,
-            self.spec_doc,
-            self.identifier_family,
-            self.identifier,
-            self.rule_type,
-            self.spec_rule_text,
-        )
+        return stable_row_sort_key(self)
 
     def csv_record(self) -> dict[str, str]:
         return {
+            "rule_id": self.rule_id,
+            "row_kind": self.row_kind,
+            "spec_file": self.spec_file,
+            "spec_line_start": str(self.spec_line_start) if self.spec_line_start is not None else "",
+            "spec_line_end": str(self.spec_line_end) if self.spec_line_end is not None else "",
+            "spec_evidence": self.spec_evidence,
             "spec_part": self.spec_part,
             "spec_doc": self.spec_doc,
             "identifier": self.identifier,
@@ -474,6 +492,211 @@ def short_text(value: str, limit: int = 160) -> str:
 def pipe_join(values: Iterable[str]) -> str:
     uniq = {v for v in values if v}
     return "|".join(sorted(uniq, key=natural_key)) if uniq else ""
+
+
+def parse_numeric_or_text(value: str) -> int | float | str | None:
+    token = normalize_num_token(value)
+    if token == "":
+        return None
+    if re.fullmatch(r"[+-]?\d+", token):
+        return int(token)
+    if re.fullmatch(r"[+-]?\d+\.\d+", token):
+        return float(token)
+    return token
+
+
+def parse_pipe_tokens(value: str) -> list[str]:
+    if not value:
+        return []
+    tokens = [token.strip() for token in value.split("|") if token.strip()]
+    return sorted(set(tokens), key=natural_key)
+
+
+def normalize_pipe_field(value: str) -> str:
+    return "|".join(parse_pipe_tokens(value))
+
+
+def canonical_json(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+
+
+def short_sha1(value: str) -> str:
+    return hashlib.sha1(value.encode("utf-8")).hexdigest()[:10]
+
+
+def parse_pos_range(value: str) -> tuple[int, int] | None:
+    match = re.search(r"\bPOS\s*:?\s*(\d+)\s*-\s*(\d+)\b", value, re.IGNORECASE)
+    if not match:
+        return None
+    start = int(match.group(1))
+    end = int(match.group(2))
+    return (start, end) if start <= end else (end, start)
+
+
+def parse_cardinality_range(value: str) -> tuple[int | None, int | None]:
+    if not value:
+        return None, None
+    match = re.fullmatch(r"\s*(\d+)\s*-\s*(\d+)\s*", value)
+    if match:
+        low = int(match.group(1))
+        high = int(match.group(2))
+        if low > high:
+            low, high = high, low
+        return low, high
+    one = parse_numeric_or_text(value)
+    if isinstance(one, int):
+        return one, one
+    return None, None
+
+
+def list_payload_values(value: str) -> list[int | float | str]:
+    out: list[int | float | str] = []
+    for token in parse_pipe_tokens(value):
+        normalized = parse_numeric_or_text(token)
+        out.append(token if normalized is None else normalized)
+    return out
+
+
+def build_row_payload(row: SpecRuleRow) -> dict[str, object]:
+    if row.rule_type == "range":
+        return {
+            "min_value": parse_numeric_or_text(row.min_value),
+            "max_value": parse_numeric_or_text(row.max_value),
+        }
+    if row.rule_type == "sentinel":
+        return {"missing_values": list_payload_values(row.sentinel_values)}
+    if row.rule_type == "allowed_quality":
+        return {"allowed_quality": list_payload_values(row.allowed_values_or_codes)}
+    if row.rule_type == "domain":
+        tokens = parse_pipe_tokens(row.allowed_values_or_codes)
+        if len(tokens) == 1 and tokens[0].startswith("^") and tokens[0].endswith("$"):
+            return {"allowed_pattern": tokens[0]}
+        return {"allowed_values": list_payload_values(row.allowed_values_or_codes)}
+    if row.rule_type == "width":
+        pos = parse_pos_range(row.spec_rule_text)
+        if pos is not None:
+            return {"pos_start": pos[0], "pos_end": pos[1]}
+        width = parse_numeric_or_text(row.allowed_values_or_codes)
+        return {"token_width": width}
+    if row.rule_type == "arity":
+        expected_parts = parse_numeric_or_text(row.allowed_values_or_codes)
+        return {"expected_parts": expected_parts}
+    if row.rule_type == "cardinality":
+        min_occurs, max_occurs = parse_cardinality_range(row.allowed_values_or_codes)
+        return {"min_occurs": min_occurs, "max_occurs": max_occurs}
+    return {}
+
+
+def row_payload_hash(row: SpecRuleRow) -> str:
+    payload = build_row_payload(row)
+    return short_sha1(canonical_json(payload))
+
+
+def normalize_row(row: SpecRuleRow) -> None:
+    row.identifier = row.identifier.strip().upper()
+    row.rule_type = row.rule_type.strip().lower()
+    row.identifier_family = identifier_family(row.identifier)
+    row.sentinel_values = normalize_pipe_field(row.sentinel_values)
+    row.allowed_values_or_codes = normalize_pipe_field(row.allowed_values_or_codes)
+    row.spec_evidence = normalize_text_line(row.spec_evidence).strip()
+
+    row_kind = row.row_kind.strip().lower() if row.row_kind else "spec_rule"
+    row.row_kind = row_kind if row_kind in {"spec_rule", "synthetic"} else "spec_rule"
+
+    if row.row_kind == "synthetic":
+        row.spec_file = "N/A"
+        row.spec_line_start = None
+        row.spec_line_end = None
+        row.spec_evidence = ""
+        return
+
+    if not row.spec_file or row.spec_file == "N/A":
+        row.spec_file = row.spec_doc if row.spec_doc.endswith(".md") else f"part-{row.spec_part}.md"
+    if row.spec_line_start is None:
+        row.spec_line_start = 1
+    if row.spec_line_end is None:
+        row.spec_line_end = row.spec_line_start
+    if row.spec_line_end < row.spec_line_start:
+        row.spec_line_start, row.spec_line_end = row.spec_line_end, row.spec_line_start
+
+
+def assign_rule_id(row: SpecRuleRow) -> None:
+    if row.row_kind == "synthetic":
+        payload = build_row_payload(row)
+        payload_obj = {
+            "identifier": row.identifier,
+            "rule_type": row.rule_type,
+            "payload": payload,
+        }
+        payload_hash = short_sha1(canonical_json(payload_obj))
+        source = row.spec_doc or "unknown_source"
+        text_hash = short_sha1(canonical_json({"spec_rule_text": row.spec_rule_text}))
+        name_or_key = "|".join(
+            [
+                row.spec_part or "00",
+                row.identifier or "UNSPECIFIED",
+                row.rule_type or "unknown",
+                payload_hash,
+                text_hash,
+            ]
+        )
+        row.rule_id = f"synthetic::{source}::{name_or_key}"
+        return
+
+    payload_hash = row_payload_hash(row)
+    row.rule_id = (
+        f"{row.spec_file}:{row.spec_line_start}-{row.spec_line_end}"
+        f"::{row.identifier}::{row.rule_type}::{payload_hash}"
+    )
+
+
+def normalize_and_assign_rule_ids(rows: list[SpecRuleRow]) -> list[SpecRuleRow]:
+    for row in rows:
+        normalize_row(row)
+        assign_rule_id(row)
+    return rows
+
+
+def row_kind_rank(value: str) -> int:
+    if value == "spec_rule":
+        return 0
+    if value == "synthetic":
+        return 1
+    return 2
+
+
+def line_sort_value(value: int | None) -> int:
+    return value if value is not None else 10**9
+
+
+def stable_row_sort_key(row: SpecRuleRow) -> tuple[object, ...]:
+    return (
+        row_kind_rank(row.row_kind),
+        row.spec_file,
+        line_sort_value(row.spec_line_start),
+        line_sort_value(row.spec_line_end),
+        row.identifier,
+        row.rule_type,
+        row.rule_id,
+    )
+
+
+def build_spec_evidence(raw_lines: list[str], line_start: int, line_end: int, limit: int = 200) -> str:
+    if not raw_lines:
+        return ""
+    start = max(1, line_start)
+    end = min(len(raw_lines), line_end)
+    if end < start:
+        end = start
+    snippet_parts = [
+        normalize_text_line(raw_lines[idx - 1]).strip()
+        for idx in range(start, end + 1)
+        if normalize_text_line(raw_lines[idx - 1]).strip()
+    ]
+    snippet = " ".join(snippet_parts).strip()
+    if len(snippet) <= limit:
+        return snippet
+    return snippet[: limit - 3].rstrip() + "..."
 
 
 def parse_constants_ast(constants_path: Path) -> ConstantsAstIndex:
@@ -1112,6 +1335,10 @@ def add_row(
     rows: list[SpecRuleRow],
     spec_part: str,
     spec_doc: str,
+    spec_file: str,
+    spec_line_start: int,
+    spec_line_end: int,
+    spec_evidence: str,
     identifiers: list[str],
     rule_type: str,
     spec_rule_text: str,
@@ -1132,6 +1359,10 @@ def add_row(
             SpecRuleRow(
                 spec_part=spec_part,
                 spec_doc=spec_doc,
+                spec_file=spec_file,
+                spec_line_start=spec_line_start,
+                spec_line_end=spec_line_end,
+                spec_evidence=spec_evidence,
                 identifier=ident,
                 identifier_family=fam,
                 rule_type=rule_type,
@@ -1154,6 +1385,7 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
             continue
         spec_part = m.group(1)
         spec_doc = path.name
+        spec_file = path.name
         lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
 
         current_identifiers: list[str] = []
@@ -1165,13 +1397,21 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
         pending_min_identifiers: list[str] = []
         pending_min_line = 0
 
+        def evidence(line_start: int, line_end: int) -> str:
+            return build_spec_evidence(lines, line_start, line_end)
+
         def flush_block(force_line: int) -> None:
             nonlocal block_type, block_codes, block_identifiers, block_start_line
             if block_type and block_codes and block_identifiers:
+                line_end = max(block_start_line, force_line - 1)
                 add_row(
                     rows,
                     spec_part,
                     spec_doc,
+                    spec_file,
+                    block_start_line,
+                    line_end,
+                    evidence(block_start_line, line_end),
                     block_identifiers,
                     block_type,
                     f"Enumerated codes near line {block_start_line}",
@@ -1249,6 +1489,10 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                     rows,
                     spec_part,
                     spec_doc,
+                    spec_file,
+                    idx,
+                    idx,
+                    evidence(idx, idx),
                     current_identifiers,
                     "range",
                     f"MIN {min_token} MAX {max_token}",
@@ -1265,6 +1509,10 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                     rows,
                     spec_part,
                     spec_doc,
+                    spec_file,
+                    idx,
+                    idx,
+                    evidence(idx, idx),
                     current_identifiers,
                     "range",
                     f"MIN {min_token} MAX {max_token}",
@@ -1285,6 +1533,10 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                         rows,
                         spec_part,
                         spec_doc,
+                        spec_file,
+                        pending_min_line,
+                        idx,
+                        evidence(pending_min_line, idx),
                         pending_min_identifiers or current_identifiers,
                         "range",
                         f"MIN {pending_min_token} MAX {max_token}",
@@ -1303,6 +1555,10 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                     rows,
                     spec_part,
                     spec_doc,
+                    spec_file,
+                    idx,
+                    idx,
+                    evidence(idx, idx),
                     current_identifiers,
                     "sentinel",
                     f"Missing sentinels {pipe_join(sentinels)}",
@@ -1316,6 +1572,10 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                     rows,
                     spec_part,
                     spec_doc,
+                    spec_file,
+                    idx,
+                    idx,
+                    evidence(idx, idx),
                     current_identifiers,
                     "width",
                     f"FLD LEN {width}",
@@ -1331,6 +1591,10 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                     rows,
                     spec_part,
                     spec_doc,
+                    spec_file,
+                    idx,
+                    idx,
+                    evidence(idx, idx),
                     current_identifiers,
                     "width",
                     f"POS {start_pos}-{end_pos} width {width}",
@@ -1345,6 +1609,10 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                         rows,
                         spec_part,
                         spec_doc,
+                        spec_file,
+                        idx,
+                        idx,
+                        evidence(idx, idx),
                         current_identifiers,
                         "cardinality",
                         short_text(line),
@@ -1355,6 +1623,10 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                         rows,
                         spec_part,
                         spec_doc,
+                        spec_file,
+                        idx,
+                        idx,
+                        evidence(idx, idx),
                         current_identifiers,
                         "cardinality",
                         short_text(line),
@@ -1400,6 +1672,10 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                         rows,
                         spec_part,
                         spec_doc,
+                        spec_file,
+                        idx,
+                        idx,
+                        evidence(idx, idx),
                         current_identifiers,
                         "arity",
                         short_text(line),
@@ -1564,6 +1840,8 @@ def annotate_known_gaps(
                 synthetic = SpecRuleRow(
                     spec_part=hint.part or "00",
                     spec_doc="NOAA_CLEANING_ALIGNMENT_REPORT.md",
+                    row_kind="synthetic",
+                    spec_file="N/A",
                     identifier=base_id,
                     identifier_family=identifier_family(base_id),
                     rule_type=synthetic_rule,
@@ -1593,6 +1871,8 @@ def annotate_known_gaps(
         synthetic = SpecRuleRow(
             spec_part=hint.part or "00",
             spec_doc="NOAA_CLEANING_ALIGNMENT_REPORT.md",
+            row_kind="synthetic",
+            spec_file="N/A",
             identifier=synthetic_id,
             identifier_family=identifier_family(synthetic_id),
             rule_type=synthetic_rule,
@@ -2045,10 +2325,12 @@ def build_report(
     cleaning_index: CleaningIndex,
     arity_tests_detected: bool,
 ) -> None:
-    total = len(rows)
-    metric_rows = [row for row in rows if row.rule_type in METRIC_RULE_TYPES]
+    spec_rows = [row for row in rows if row.row_kind == "spec_rule"]
+    synthetic_rows_list = [row for row in rows if row.row_kind == "synthetic"]
+    total = len(spec_rows)
+    metric_rows = [row for row in spec_rows if row.rule_type in METRIC_RULE_TYPES]
     total_metric = len(metric_rows)
-    unknown_excluded = total - total_metric
+    unknown_excluded = len(spec_rows) - total_metric
     implemented = sum(1 for r in metric_rows if r.code_implemented)
     tested = sum(1 for r in metric_rows if r.test_covered)
     layer_counter = Counter(r.enforcement_layer for r in metric_rows)
@@ -2063,7 +2345,7 @@ def build_report(
     by_family: dict[str, list[SpecRuleRow]] = defaultdict(list)
     by_type: dict[str, list[SpecRuleRow]] = defaultdict(list)
 
-    for row in rows:
+    for row in spec_rows:
         by_part[row.spec_part].append(row)
         by_family[row.identifier_family].append(row)
         by_type[row.rule_type].append(row)
@@ -2212,7 +2494,7 @@ def build_report(
             ]
         )
 
-    unresolved_count = sum(1 for r in rows if "unresolved_in_next_steps" in r.notes)
+    unresolved_count = sum(1 for r in spec_rows if "unresolved_in_next_steps" in r.notes)
     arch_unchecked = sum(1 for line in architecture_text.splitlines() if line.strip().startswith("- [ ]"))
     tested_rows = [r for r in metric_rows if r.test_covered]
     tested_match_counter = Counter(note_value(r, "test_match=") for r in tested_rows)
@@ -2220,8 +2502,8 @@ def build_report(
     exact_assertion_count = tested_match_counter.get("exact_assertion", 0)
     family_assertion_count = tested_match_counter.get("family_assertion", 0)
     wildcard_assertion_count = tested_match_counter.get("wildcard_assertion", 0)
-    synthetic_rows = sum(1 for r in rows if any(note.startswith("synthetic_") for note in r.notes))
-    synthetic_gap_rows = sum(1 for r in rows if "synthetic_gap_row" in r.notes)
+    synthetic_rows = len(synthetic_rows_list)
+    synthetic_gap_rows = sum(1 for r in synthetic_rows_list if "synthetic_gap_row" in r.notes)
     arity_rows = [r for r in metric_rows if r.rule_type == "arity"]
     arity_tested = sum(1 for r in arity_rows if r.test_covered)
 
@@ -2239,6 +2521,7 @@ def build_report(
     lines.append("## Overall coverage")
     lines.append("")
     lines.append(f"- Total spec rules extracted: **{total}**")
+    lines.append(f"- Synthetic rows excluded from coverage metrics: **{synthetic_rows}**")
     lines.append(f"- Metric-eligible rules (excluding `unknown`): **{total_metric}**")
     lines.append(f"- Unknown/noisy rows excluded from %: **{unknown_excluded}**")
     lines.append(f"- Rules implemented in code: **{implemented}** ({pct(implemented, total_metric)})")
@@ -2246,6 +2529,12 @@ def build_report(
     lines.append(f"- Expected-gap tagged rules: **{len(known_gap_rows_full)}**")
     lines.append(f"- Rows linked to unresolved `NEXT_STEPS.md` items: **{unresolved_count}**")
     lines.append(f"- Open checklist items in `ARCHITECTURE_NEXT_STEPS.md`: **{arch_unchecked}**")
+    lines.append("")
+    lines.append("## Rule Identity & Provenance")
+    lines.append("")
+    lines.append("- `rule_id` format for spec rows: `{spec_file}:{start}-{end}::{identifier}::{rule_type}::{payload_hash}`.")
+    lines.append("- `rule_id` format for synthetic rows: `synthetic::{source}::{name_or_key}`.")
+    lines.append("- Rows are tracked per spec origin line range; identical payloads at different ranges remain separate rows intentionally.")
     lines.append("")
     lines.append("## Enforcement layer breakdown")
     lines.append("")
@@ -2376,6 +2665,7 @@ def main() -> None:
     unresolved_items = parse_unresolved_next_steps(next_steps)
     rows = annotate_unresolved_next_steps(rows, unresolved_items, known_identifiers, known_families)
 
+    rows = normalize_and_assign_rule_ids(rows)
     rows = merge_duplicate_rows(rows)
 
     test_index = parse_tests_evidence(tests_path, known_identifiers, known_families)
@@ -2388,8 +2678,8 @@ def main() -> None:
     architecture_text = architecture_next_steps.read_text(encoding="utf-8", errors="ignore")
     build_report(rows, report_output, architecture_text, cleaning_index, test_index.arity_tests_detected)
 
-    total = len(rows)
-    metric_rows = [r for r in rows if r.rule_type in METRIC_RULE_TYPES]
+    total = sum(1 for r in rows if r.row_kind == "spec_rule")
+    metric_rows = [r for r in rows if r.row_kind == "spec_rule" and r.rule_type in METRIC_RULE_TYPES]
     metric_total = len(metric_rows)
     impl = sum(1 for r in metric_rows if r.code_implemented)
     tested = sum(1 for r in metric_rows if r.test_covered)
