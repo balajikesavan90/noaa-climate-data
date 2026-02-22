@@ -402,6 +402,16 @@ class TestSentinelsInCleanedOutput:
         result = clean_value_quality("001,+1501,1", "IA2")
         assert result["IA2__part2"] is None
 
+    def test_ia2_domain_enforced(self):
+        result = clean_value_quality("001,+0100,1", "IA2")
+        assert result["IA2__part1"] == pytest.approx(0.1)
+        assert result["IA2__part3"] == pytest.approx(1.0)
+
+        result = clean_value_quality("A01,+0100,1", "IA2")
+        assert result["IA2__part1"] is None
+        assert result["IA2__part2"] == pytest.approx(10.0)
+        assert result["IA2__part3"] == pytest.approx(1.0)
+
     def test_ka_invalid_extreme_code(self):
         result = clean_value_quality("005,X,0123,1", "KA1")
         assert result["KA1__part2"] is None
@@ -605,6 +615,13 @@ class TestCrnRanges:
         assert result["ST1__part2"] is None
         result = clean_value_quality("1,0123,4,9999,4,01,4,2,4", "ST1")
         assert result["ST1__part4"] is None
+
+    def test_st1_temperature_type_range_enforced(self):
+        result = clean_value_quality("4,0123,4,0050,4,01,4,2,4", "ST1")
+        assert result["ST1__part1"] == pytest.approx(4.0)
+
+        result = clean_value_quality("0,0123,4,0050,4,01,4,2,4", "ST1")
+        assert result["ST1__part1"] is None
 
     def test_me1_missing_parts(self):
         result = clean_value_quality("9,9999,1", "ME1")
@@ -1393,6 +1410,17 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("00010,1,0,00020,1,0,00030,1,0,99999,1,0", "CI1")
         assert result["CI1__part10"] is None
 
+    def test_ci1_domain_enforced(self):
+        result = clean_value_quality("00010,1,0,00020,1,0,00030,1,0,00040,1,0", "CI1")
+        assert result["CI1__part1"] == pytest.approx(1.0)
+        assert result["CI1__part10"] == pytest.approx(4.0)
+
+        result = clean_value_quality("00010,1,0,00020,1,0,00030,1,0,ABCDE,1,0", "CI1")
+        assert result["CI1__part10"] is None
+
+        result = clean_value_quality("00010,2,0,00020,1,0,00030,1,0,00040,1,0", "CI1")
+        assert result["CI1__part1"] is None
+
     def test_cn1_datalogger_quality_rejects_2(self):
         result = clean_value_quality("0123,1,0,0456,1,0,0789,2,0", "CN1")
         assert result["CN1__part7"] is None
@@ -1514,6 +1542,22 @@ class TestQualityNullsCorrectPart:
         assert result["CV1__part1"] is None
         result = clean_value_quality("+00123,1,0,1200,1,0,10000,1,0,1300,1,0", "CV1")
         assert result["CV1__part7"] is None
+
+    def test_cv2_range_enforced(self):
+        result = clean_value_quality("+00123,1,0,1200,1,0,+00234,1,0,1300,1,0", "CV2")
+        assert result["CV2__part1"] == pytest.approx(12.3)
+        assert result["CV2__part7"] == pytest.approx(23.4)
+
+        result = clean_value_quality("10000,1,0,1200,1,0,+00234,1,0,1300,1,0", "CV2")
+        assert result["CV2__part1"] is None
+
+    def test_cv3_range_enforced(self):
+        result = clean_value_quality("+00123,1,0,1200,1,0,+00234,1,0,1300,1,0", "CV3")
+        assert result["CV3__part1"] == pytest.approx(12.3)
+        assert result["CV3__part7"] == pytest.approx(23.4)
+
+        result = clean_value_quality("+00123,1,0,1200,1,0,10000,1,0,1300,1,0", "CV3")
+        assert result["CV3__part7"] is None
 
     def test_cw_wet2_missing(self):
         result = clean_value_quality("00010,1,0,99999,1,0", "CW1")
@@ -1787,6 +1831,14 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("+0100,2,0,+0050,1,0,+0150,1,0,0010,1,0", "IB1")
         assert result["IB1__part1"] is None
         assert result["IB1__part4"] == pytest.approx(5.0)
+
+    def test_ib1_sentinel_9_enforced(self):
+        result = clean_value_quality("+0100,1,9,+0050,1,0,+0150,1,0,0010,1,0", "IB1")
+        assert result["IB1__part1"] == pytest.approx(10.0)
+        assert result["IB1__part3"] is None
+
+        result = clean_value_quality("+0100,1,0,+0050,1,0,+0150,1,0,0010,1,0", "IB1")
+        assert result["IB1__part3"] == pytest.approx(0.0)
 
     def test_ic1_quality_rejects_2(self):
         result = clean_value_quality("24,0100,1,2,050,1,4,+050,1,4,+040,1,4", "IC1")
@@ -2286,6 +2338,23 @@ class TestControlAndMandatoryNormalization:
         assert cleaned.loc[0, "TIME"] == "2359"
         assert pd.isna(cleaned.loc[1, "DATE"])
         assert pd.isna(cleaned.loc[1, "TIME"])
+
+    def test_control_date_time_width_and_range_enforced(self):
+        df = pd.DataFrame(
+            {
+                "DATE": ["20240229", "99991231", "2024013", "20240230"],
+                "TIME": ["0000", "2359", "123", "2400"],
+            }
+        )
+        cleaned = clean_noaa_dataframe(df, keep_raw=True)
+        assert cleaned.loc[0, "DATE"] == "20240229"
+        assert cleaned.loc[1, "DATE"] == "99991231"
+        assert pd.isna(cleaned.loc[2, "DATE"])
+        assert pd.isna(cleaned.loc[3, "DATE"])
+        assert cleaned.loc[0, "TIME"] == "0000"
+        assert cleaned.loc[1, "TIME"] == "2359"
+        assert pd.isna(cleaned.loc[2, "TIME"])
+        assert pd.isna(cleaned.loc[3, "TIME"])
 
     def test_control_date_rejects_iso_timestamps(self):
         df = pd.DataFrame(

@@ -407,7 +407,7 @@ def _expand_parsed(
         if value is None:
             payload[key] = domain_value
             continue
-        if part_rule and part_rule.kind == "numeric":
+        if part_rule and value is not None:
             if part_rule.min_value is not None and value < part_rule.min_value:
                 payload[key] = None
                 continue
@@ -442,7 +442,7 @@ def _expand_parsed(
         
         # Check range (value is pre-scale)
         out_of_range = False
-        if value is not None and part_rule.kind == "numeric":
+        if value is not None:
             if part_rule.min_value is not None and value < part_rule.min_value:
                 out_of_range = True
             elif part_rule.max_value is not None and value > part_rule.max_value:
@@ -727,8 +727,29 @@ def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
         text = series.astype(str).str.strip()
         text = text.where(~text.isin({"", "nan", "None"}))
         match = text.str.fullmatch(r"\d{8}")
-        parsed = pd.to_datetime(text, format="%Y%m%d", errors="coerce", utc=True)
-        return text.where(match & parsed.notna())
+        year = pd.to_numeric(text.str.slice(0, 4), errors="coerce")
+        month = pd.to_numeric(text.str.slice(4, 6), errors="coerce")
+        day = pd.to_numeric(text.str.slice(6, 8), errors="coerce")
+
+        in_spec_range = (
+            match
+            & year.between(0, 9999)
+            & month.between(1, 12)
+            & day.between(1, 31)
+        )
+
+        month_lengths = pd.Series(
+            [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
+            index=range(1, 13),
+            dtype="int64",
+        )
+        max_day = month.map(month_lengths)
+        leap_year = (year % 4 == 0) & ((year % 100 != 0) | (year % 400 == 0))
+        feb_leap = (month == 2) & leap_year
+        max_day = max_day.where(~feb_leap, 29)
+
+        valid_calendar = in_spec_range & (day <= max_day)
+        return text.where(valid_calendar)
 
     def _normalize_time(series: pd.Series) -> pd.Series:
         text = series.astype(str).str.strip()

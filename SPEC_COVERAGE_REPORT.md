@@ -14,10 +14,10 @@ python3 tools/spec_coverage/generate_spec_coverage.py
 - Synthetic rows excluded from coverage metrics: **28**
 - Metric-eligible rules (excluding `unknown`): **3583**
 - Unknown/noisy rows excluded from %: **0**
-- Rules implemented in code: **1725** (48.1%)
-- Progress KPI (`tested_strict`): **901** (25.1%)
-- Weak coverage (`tested_any`, includes wildcard): **920** (25.7%)
-- tested_any from non-wild matches only: **901** (25.1%)
+- Rules implemented in code: **1786** (49.8%)
+- Progress KPI (`tested_strict`): **945** (26.4%)
+- Weak coverage (`tested_any`, includes wildcard): **964** (26.9%)
+- tested_any from non-wild matches only: **945** (26.4%)
 - Wildcard-only tested_any (not counted toward progress): **19** (0.5%)
 - Coverage progress is measured with `tested_strict` only.
 - `test_covered` in CSV mirrors `test_covered_any` for backward compatibility.
@@ -32,69 +32,14 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 | rank | spec_part | identifier | rule_type | enforcement_layer | implemented | test_strict | test_any | match_strength | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 02 | DATE | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 2 | 02 | DATE | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 3 | 02 | TIME | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 4 | 11 | CV2 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 5 | 11 | CV3 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 6 | 23 | IA2 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 7 | 23 | IA2 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 8 | 23 | IB1 | sentinel | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 9 | 11 | CV1 | range | neither | FALSE | TRUE | TRUE | exact_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_... |
-| 10 | 11 | CV1 | range | neither | FALSE | TRUE | TRUE | exact_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_... |
-| 11 | 26 | ST1 | range | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 12 | 26 | ST1 | range | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 13 | 06 | CI1 | domain | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 14 | 06 | CI1 | domain | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 15 | 06 | CI1 | domain | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 16 | 06 | CI1 | domain | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 17 | 06 | CI1 | domain | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 18 | 06 | CI1 | domain | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 19 | 07 | CO1 | domain | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 20 | 20 | GQ1 | sentinel | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 21 | 20 | GQ1 | sentinel | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 22 | 23 | IB1 | domain | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
-| 23 | 26 | ST1 | domain | neither | FALSE | TRUE | TRUE | exact_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_... |
-| 24 | 02 | LATITUDE | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 25 | 02 | LONGITUDE | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 26 | 02 | REPORT_TYPE | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 27 | 02 | ELEVATION | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 28 | 02 | CALL_SIGN | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 29 | 02 | QC_PROCESS | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 30 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 31 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 32 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 33 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 34 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 35 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 36 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 37 | 04 | AA1 | cardinality | neither | FALSE | FALSE | TRUE | wildcard_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
-| 38 | 04 | AA2 | cardinality | neither | FALSE | FALSE | TRUE | wildcard_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
-| 39 | 04 | AA3 | cardinality | neither | FALSE | FALSE | TRUE | wildcard_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
-| 40 | 04 | AA4 | cardinality | neither | FALSE | FALSE | TRUE | wildcard_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
-| 41 | 04 | AA1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 42 | 04 | AA2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 43 | 04 | AA3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 44 | 04 | AA4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 45 | 04 | AA1 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 46 | 04 | AA2 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 47 | 04 | AA3 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 48 | 04 | AA4 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 49 | 04 | AA1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 50 | 04 | AA2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-
-### Implementation gaps (strict): Not implemented + not tested_strict
-
-| rank | spec_part | identifier | rule_type | enforcement_layer | implemented | test_strict | test_any | match_strength | notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 02 | DATE | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 2 | 02 | DATE | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 3 | 02 | TIME | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 4 | 11 | CV2 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 5 | 11 | CV3 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 6 | 23 | IA2 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 7 | 23 | IA2 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 8 | 23 | IB1 | sentinel | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
+| 1 | 06 | CI1 | range | neither | FALSE | TRUE | TRUE | exact_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_... |
+| 2 | 06 | CI1 | range | neither | FALSE | TRUE | TRUE | exact_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_... |
+| 3 | 06 | CI1 | range | neither | FALSE | TRUE | TRUE | exact_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_... |
+| 4 | 07 | CO1 | domain | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
+| 5 | 20 | GQ1 | sentinel | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
+| 6 | 20 | GQ1 | sentinel | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
+| 7 | 23 | IB1 | domain | neither | FALSE | TRUE | TRUE | exact_signature | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_... |
+| 8 | 26 | ST1 | domain | neither | FALSE | TRUE | TRUE | exact_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_... |
 | 9 | 02 | LATITUDE | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 | 10 | 02 | LONGITUDE | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 | 11 | 02 | REPORT_TYPE | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
@@ -112,32 +57,87 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | 23 | 04 | AA2 | cardinality | neither | FALSE | FALSE | TRUE | wildcard_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
 | 24 | 04 | AA3 | cardinality | neither | FALSE | FALSE | TRUE | wildcard_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
 | 25 | 04 | AA4 | cardinality | neither | FALSE | FALSE | TRUE | wildcard_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
+| 26 | 04 | AA1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 27 | 04 | AA2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 28 | 04 | AA3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 29 | 04 | AA4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 30 | 04 | AA1 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 31 | 04 | AA2 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 32 | 04 | AA3 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 33 | 04 | AA4 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 34 | 04 | AA1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 35 | 04 | AA2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 36 | 04 | AA3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 37 | 04 | AA4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 38 | 04 | AA1 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 39 | 04 | AA2 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 40 | 04 | AA3 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 41 | 04 | AA4 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 42 | 04 | AA1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 43 | 04 | AA2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 44 | 04 | AA3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 45 | 04 | AA4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 46 | 04 | AA1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 47 | 04 | AA2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 48 | 04 | AA3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 49 | 04 | AA4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 50 | 04 | AA1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+
+### Implementation gaps (strict): Not implemented + not tested_strict
+
+| rank | spec_part | identifier | rule_type | enforcement_layer | implemented | test_strict | test_any | match_strength | notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 02 | LATITUDE | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 2 | 02 | LONGITUDE | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 3 | 02 | REPORT_TYPE | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 4 | 02 | ELEVATION | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 5 | 02 | CALL_SIGN | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 6 | 02 | QC_PROCESS | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 7 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 8 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 9 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 10 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 11 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 12 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 13 | 03 | WND | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 14 | 04 | AA1 | cardinality | neither | FALSE | FALSE | TRUE | wildcard_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
+| 15 | 04 | AA2 | cardinality | neither | FALSE | FALSE | TRUE | wildcard_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
+| 16 | 04 | AA3 | cardinality | neither | FALSE | FALSE | TRUE | wildcard_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
+| 17 | 04 | AA4 | cardinality | neither | FALSE | FALSE | TRUE | wildcard_assertion | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
+| 18 | 04 | AA1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 19 | 04 | AA2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 20 | 04 | AA3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 21 | 04 | AA4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 22 | 04 | AA1 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 23 | 04 | AA2 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 24 | 04 | AA3 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 25 | 04 | AA4 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 
 ### Missing tests (strict): Implemented + not tested_strict
 
 | rank | spec_part | identifier | rule_type | enforcement_layer | implemented | test_strict | test_any | match_strength | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 02 | TIME | range | cleaning_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=exact_fallback_bounds;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolv... |
-| 2 | 09 | CT2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 3 | 09 | CT3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 4 | 10 | CU2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 5 | 10 | CU3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 6 | 10 | CU2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 7 | 10 | CU3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 8 | 11 | CV2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 9 | 11 | CV3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 10 | 11 | CV2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 11 | 11 | CV3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 12 | 13 | CX2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 13 | 13 | CX3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 14 | 13 | CX2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 15 | 13 | CX3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 16 | 13 | CX2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 17 | 13 | CX3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
-| 18 | 23 | IB1 | sentinel | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_sentinel;expected_gap_from_alignment_report;test_match=none;unresolved... |
-| 19 | 02 | LATITUDE | range | cleaning_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=exact_fallback_bounds;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 20 | 02 | LONGITUDE | range | cleaning_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=exact_fallback_bounds;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 21 | 02 | ELEVATION | range | cleaning_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=exact_fallback_bounds;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 1 | 09 | CT2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 2 | 09 | CT3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 3 | 10 | CU2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 4 | 10 | CU3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 5 | 10 | CU2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 6 | 10 | CU3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 7 | 13 | CX2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 8 | 13 | CX3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 9 | 13 | CX2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 10 | 13 | CX3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 11 | 13 | CX2 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 12 | 13 | CX3 | range | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_i... |
+| 13 | 02 | LATITUDE | range | cleaning_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=exact_fallback_bounds;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 14 | 02 | LONGITUDE | range | cleaning_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=exact_fallback_bounds;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 15 | 02 | ELEVATION | range | cleaning_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=exact_fallback_bounds;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 16 | 03 | WND | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
+| 17 | 03 | WND | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
+| 18 | 03 | WND | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
+| 19 | 03 | WND | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
+| 20 | 03 | WND | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
+| 21 | 03 | WND | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
 | 22 | 03 | WND | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
 | 23 | 03 | WND | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
 | 24 | 03 | WND | width | constants_only | TRUE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;test_match=none;unresolved_in_next_steps |
@@ -151,35 +151,35 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 ## Enforcement layer breakdown
 
-- constants_only: **1241** (34.6%)
-- cleaning_only: **29** (0.8%)
-- both: **455** (12.7%)
-- neither: **1858** (51.9%)
+- constants_only: **1273** (35.5%)
+- cleaning_only: **28** (0.8%)
+- both: **485** (13.5%)
+- neither: **1797** (50.2%)
 
 ## Confidence breakdown
 
-- Cleaning-implemented metric rules: **484** (13.5%)
-- high: **8** (1.7%)
-- medium: **476** (98.3%)
+- Cleaning-implemented metric rules: **513** (14.3%)
+- high: **8** (1.6%)
+- medium: **505** (98.4%)
 - low: **0** (0.0%)
 
 ## Match quality
 
 | Match strength | Count | % of metric rules |
 | --- | --- | --- |
-| exact_signature | 390 | 10.9% |
-| exact_assertion | 423 | 11.8% |
+| exact_signature | 411 | 11.5% |
+| exact_assertion | 446 | 12.4% |
 | family_assertion | 88 | 2.5% |
 | wildcard_assertion | 19 | 0.5% |
-| none | 2663 | 74.3% |
+| none | 2619 | 73.1% |
 
 ## Precision warnings
 
 - Wildcard policy: `wildcard_assertion` counts as tested-any only; it never counts as strict.
-- Tested-any rows matched by `exact_signature`: **390** (42.4%)
-- Tested-any rows matched by `exact_assertion`: **423** (46.0%)
-- Tested-any rows matched by `family_assertion`: **88** (9.6%)
-- Tested-any rows matched by `wildcard_assertion`: **19** (2.1%)
+- Tested-any rows matched by `exact_signature`: **411** (42.6%)
+- Tested-any rows matched by `exact_assertion`: **446** (46.3%)
+- Tested-any rows matched by `family_assertion`: **88** (9.1%)
+- Tested-any rows matched by `wildcard_assertion`: **19** (2.0%)
 - Synthetic rows in CSV: **28**
 - Synthetic gap rows in CSV: **28**
 - Unknown rule rows excluded from percentages: **0**
@@ -189,7 +189,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 ## Suspicious coverage
 
-- tested_any=TRUE and code_implemented=FALSE: **311** (8.7%)
+- tested_any=TRUE and code_implemented=FALSE: **296** (8.3%)
 | Rule ID | Identifier family | Rule type | Notes |
 | --- | --- | --- | --- |
 | part-04-additional-data-section.md:37-37::AA1::cardinality::78392f3dcb | AA | cardinality | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=wildcard_assertion;unresolved_in_next_steps |
@@ -222,16 +222,16 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | Part | Rules | Metric rules | Implemented | Tested strict | Tested any (weak) | Implemented % | Tested strict % | Tested any (weak) % |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 01 | 0 | 0 | 0 | 0 | 0 | 0.0% | 0.0% | 0.0% |
-| 02 | 29 | 29 | 8 | 0 | 0 | 27.6% | 0.0% | 0.0% |
+| 02 | 29 | 29 | 11 | 4 | 4 | 37.9% | 13.8% | 13.8% |
 | 03 | 53 | 53 | 42 | 0 | 0 | 79.2% | 0.0% | 0.0% |
 | 04 | 603 | 603 | 302 | 73 | 77 | 50.1% | 12.1% | 12.8% |
 | 05 | 450 | 450 | 261 | 98 | 100 | 58.0% | 21.8% | 22.2% |
-| 06 | 287 | 287 | 114 | 74 | 74 | 39.7% | 25.8% | 25.8% |
+| 06 | 287 | 287 | 130 | 74 | 74 | 45.3% | 25.8% | 25.8% |
 | 07 | 74 | 74 | 53 | 23 | 23 | 71.6% | 31.1% | 31.1% |
 | 08 | 11 | 11 | 3 | 3 | 3 | 27.3% | 27.3% | 27.3% |
 | 09 | 28 | 28 | 12 | 6 | 6 | 42.9% | 21.4% | 21.4% |
 | 10 | 55 | 55 | 21 | 13 | 13 | 38.2% | 23.6% | 23.6% |
-| 11 | 109 | 109 | 33 | 24 | 24 | 30.3% | 22.0% | 22.0% |
+| 11 | 109 | 109 | 60 | 54 | 54 | 55.0% | 49.5% | 49.5% |
 | 12 | 20 | 20 | 5 | 11 | 11 | 25.0% | 55.0% | 55.0% |
 | 13 | 109 | 109 | 39 | 27 | 27 | 35.8% | 24.8% | 24.8% |
 | 14 | 15 | 15 | 7 | 7 | 7 | 46.7% | 46.7% | 46.7% |
@@ -243,10 +243,10 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | 20 | 20 | 20 | 7 | 13 | 13 | 35.0% | 65.0% | 65.0% |
 | 21 | 20 | 20 | 7 | 13 | 13 | 35.0% | 65.0% | 65.0% |
 | 22 | 8 | 8 | 3 | 0 | 0 | 37.5% | 0.0% | 0.0% |
-| 23 | 109 | 109 | 44 | 38 | 38 | 40.4% | 34.9% | 34.9% |
+| 23 | 109 | 109 | 56 | 48 | 48 | 51.4% | 44.0% | 44.0% |
 | 24 | 244 | 244 | 119 | 20 | 33 | 48.8% | 8.2% | 13.5% |
 | 25 | 7 | 7 | 3 | 2 | 2 | 42.9% | 28.6% | 28.6% |
-| 26 | 29 | 29 | 14 | 18 | 18 | 48.3% | 62.1% | 62.1% |
+| 26 | 29 | 29 | 17 | 18 | 18 | 58.6% | 62.1% | 62.1% |
 | 27 | 109 | 109 | 52 | 57 | 57 | 47.7% | 52.3% | 52.3% |
 | 28 | 19 | 19 | 9 | 10 | 10 | 47.4% | 52.6% | 52.6% |
 | 29 | 306 | 306 | 178 | 109 | 109 | 58.2% | 35.6% | 35.6% |
@@ -282,16 +282,16 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | CF | 33 | 33 | 12 | 0 | 0 | 36.4% | 0.0% | 0.0% |
 | CG | 30 | 30 | 12 | 0 | 0 | 40.0% | 0.0% | 0.0% |
 | CH | 46 | 46 | 18 | 0 | 0 | 39.1% | 0.0% | 0.0% |
-| CI | 36 | 36 | 13 | 14 | 14 | 36.1% | 38.9% | 38.9% |
+| CI | 36 | 36 | 29 | 14 | 14 | 80.6% | 38.9% | 38.9% |
 | CN | 113 | 113 | 47 | 60 | 60 | 41.6% | 53.1% | 53.1% |
 | CO | 73 | 73 | 53 | 23 | 23 | 72.6% | 31.5% | 31.5% |
 | CR | 10 | 10 | 3 | 3 | 3 | 30.0% | 30.0% | 30.0% |
 | CT | 27 | 27 | 12 | 6 | 6 | 44.4% | 22.2% | 22.2% |
 | CU | 54 | 54 | 21 | 13 | 13 | 38.9% | 24.1% | 24.1% |
-| CV | 108 | 108 | 33 | 24 | 24 | 30.6% | 22.2% | 22.2% |
+| CV | 108 | 108 | 60 | 54 | 54 | 55.6% | 50.0% | 50.0% |
 | CW | 19 | 19 | 5 | 11 | 11 | 26.3% | 57.9% | 57.9% |
 | CX | 108 | 108 | 39 | 27 | 27 | 36.1% | 25.0% | 25.0% |
-| DATE | 2 | 2 | 0 | 0 | 0 | 0.0% | 0.0% | 0.0% |
+| DATE | 2 | 2 | 2 | 2 | 2 | 100.0% | 100.0% | 100.0% |
 | ED | 14 | 14 | 7 | 7 | 7 | 50.0% | 50.0% | 50.0% |
 | ELEVATION | 3 | 3 | 1 | 0 | 0 | 33.3% | 0.0% | 0.0% |
 | GA | 24 | 24 | 18 | 9 | 9 | 75.0% | 37.5% | 37.5% |
@@ -310,8 +310,8 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | GQ | 19 | 19 | 7 | 13 | 13 | 36.8% | 68.4% | 68.4% |
 | GR | 19 | 19 | 7 | 13 | 13 | 36.8% | 68.4% | 68.4% |
 | HAIL | 7 | 7 | 3 | 0 | 0 | 42.9% | 0.0% | 0.0% |
-| IA | 16 | 16 | 6 | 7 | 7 | 37.5% | 43.8% | 43.8% |
-| IB | 54 | 54 | 20 | 15 | 15 | 37.0% | 27.8% | 27.8% |
+| IA | 16 | 16 | 12 | 9 | 9 | 75.0% | 56.2% | 56.2% |
+| IB | 54 | 54 | 26 | 23 | 23 | 48.1% | 42.6% | 42.6% |
 | IC | 38 | 38 | 18 | 16 | 16 | 47.4% | 42.1% | 42.1% |
 | KA | 60 | 60 | 32 | 0 | 4 | 53.3% | 0.0% | 6.7% |
 | KB | 45 | 45 | 21 | 0 | 3 | 46.7% | 0.0% | 6.7% |
@@ -341,8 +341,8 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | REPORT_TYPE | 4 | 4 | 3 | 0 | 0 | 75.0% | 0.0% | 0.0% |
 | RH | 60 | 60 | 33 | 21 | 21 | 55.0% | 35.0% | 35.0% |
 | SA | 12 | 12 | 6 | 4 | 4 | 50.0% | 33.3% | 33.3% |
-| ST | 28 | 28 | 14 | 18 | 18 | 50.0% | 64.3% | 64.3% |
-| TIME | 2 | 2 | 1 | 0 | 0 | 50.0% | 0.0% | 0.0% |
+| ST | 28 | 28 | 17 | 18 | 18 | 60.7% | 64.3% | 64.3% |
+| TIME | 2 | 2 | 2 | 2 | 2 | 100.0% | 100.0% | 100.0% |
 | UA | 19 | 19 | 8 | 10 | 10 | 42.1% | 52.6% | 52.6% |
 | UG | 30 | 30 | 12 | 17 | 17 | 40.0% | 56.7% | 56.7% |
 | UNSPECIFIED | 36 | 36 | 0 | 0 | 0 | 0.0% | 0.0% | 0.0% |
@@ -356,12 +356,12 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 | Rule type | Rules | Implemented | Tested strict | Tested any (weak) | Implemented % | Tested strict % | Tested any (weak) % |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| range | 363 | 290 | 118 | 118 | 79.9% | 32.5% | 32.5% |
-| sentinel | 688 | 580 | 160 | 160 | 84.3% | 23.3% | 23.3% |
-| allowed_quality | 81 | 75 | 47 | 47 | 92.6% | 58.0% | 58.0% |
-| domain | 945 | 479 | 443 | 443 | 50.7% | 46.9% | 46.9% |
+| range | 363 | 297 | 128 | 128 | 81.8% | 35.3% | 35.3% |
+| sentinel | 688 | 586 | 168 | 168 | 85.2% | 24.4% | 24.4% |
+| allowed_quality | 81 | 75 | 55 | 55 | 92.6% | 67.9% | 67.9% |
+| domain | 945 | 508 | 459 | 459 | 53.8% | 48.6% | 48.6% |
 | cardinality | 128 | 109 | 109 | 128 | 85.2% | 85.2% | 100.0% |
-| width | 1207 | 21 | 0 | 0 | 1.7% | 0.0% | 0.0% |
+| width | 1207 | 40 | 2 | 2 | 3.3% | 0.2% | 0.2% |
 | arity | 171 | 171 | 24 | 24 | 100.0% | 14.0% | 14.0% |
 | unknown | 0 | 0 | 0 | 0 | excluded | excluded | excluded |
 
@@ -391,21 +391,11 @@ Showing top 30 expected-gap rows (full list is in `spec_coverage.csv`).
 
 | Part | Identifier | Rule type | Code impl | Tested strict | Tested any | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| 02 | DATE | range | FALSE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 02 | DATE | width | FALSE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 02 | TIME | width | FALSE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 11 | CV2 | range | FALSE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 11 | CV3 | range | FALSE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 23 | IA2 | domain | FALSE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 23 | IB1 | sentinel | FALSE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 11 | CV1 | range | FALSE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
-| 26 | ST1 | range | FALSE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_next_steps |
-| 06 | CI1 | domain | FALSE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_next_steps |
+| 06 | CI1 | range | FALSE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 | 07 | CO1 | domain | FALSE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_next_steps |
 | 20 | GQ1 | sentinel | FALSE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_next_steps |
 | 23 | IB1 | domain | FALSE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_next_steps |
 | 26 | ST1 | domain | FALSE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
-| 02 | TIME | range | TRUE | FALSE | FALSE | coverage_reason_cleaning=exact_fallback_bounds;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
 | 09 | CT2 | range | TRUE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
 | 09 | CT3 | range | TRUE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
 | 10 | CU2 | range | TRUE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
@@ -414,13 +404,23 @@ Showing top 30 expected-gap rows (full list is in `spec_coverage.csv`).
 | 13 | CX3 | range | TRUE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
 | 04 | AA | range | FALSE | FALSE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;synthetic_gap_row;test_match=wildcard_assertion;unresolved_in_next_steps |
 | 04 | TMP | cardinality | FALSE | FALSE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;synthetic_gap_row;test_match=wildcard_assertion;unresolved_in_next_steps |
-| 06 | CI1 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
+| 02 | DATE | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_next_steps |
+| 02 | DATE | width | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
+| 02 | TIME | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=exact_fallback_bounds;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_next_steps |
+| 02 | TIME | width | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 | 07 | CO2 | cardinality | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=repeated_identifier_range;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 | 07 | CO3 | cardinality | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=repeated_identifier_range;expected_gap_from_alignment_report;test_match=family_assertion;unresolved_in_next_steps |
 | 07 | CO4 | cardinality | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=repeated_identifier_range;expected_gap_from_alignment_report;test_match=family_assertion;unresolved_in_next_steps |
 | 07 | CO5 | cardinality | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=repeated_identifier_range;expected_gap_from_alignment_report;test_match=family_assertion;unresolved_in_next_steps |
 | 07 | CO6 | cardinality | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=repeated_identifier_range;expected_gap_from_alignment_report;test_match=family_assertion;unresolved_in_next_steps |
 | 07 | CO7 | cardinality | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=repeated_identifier_range;expected_gap_from_alignment_report;test_match=family_assertion;unresolved_in_next_steps |
+| 07 | CO8 | cardinality | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=repeated_identifier_range;expected_gap_from_alignment_report;test_match=family_assertion;unresolved_in_next_steps |
+| 07 | CO9 | cardinality | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=repeated_identifier_range;expected_gap_from_alignment_report;test_match=family_assertion;unresolved_in_next_steps |
+| 09 | CT1 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
+| 10 | CU1 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
+| 11 | CV1 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
+| 11 | CV2 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
+| 11 | CV3 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 
 ## How to extend
 

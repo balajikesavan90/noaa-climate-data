@@ -549,7 +549,7 @@ class TestQCSignalsComprehensiveKA:
     def test_ka1_part3_pass(self):
         """KA1 part 3 (temperature) in-range + good quality -> PASS."""
         result = _expand_parsed(
-            parse_field("100,M,+2000,1"),
+            parse_field("100,M,+0200,1"),
             "KA1",
             allow_quality=True,
             strict_mode=False,
