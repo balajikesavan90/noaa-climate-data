@@ -4504,6 +4504,14 @@ class TestA4TokenWidthValidation:
         result = clean_value_quality("0123,1,0", "CR1", strict_mode=True)
         assert result["CR1__part1"] is None
 
+    def test_cr1_sentinel_rejects_missing_version_token(self):
+        result = clean_value_quality("99999,1,0", "CR1", strict_mode=True)
+        assert result["CR1__part1"] is None
+
+    def test_cr1_sentinel_accepts_non_sentinel_version_token(self):
+        result = clean_value_quality("00123,1,0", "CR1", strict_mode=True)
+        assert result["CR1__part1"] == pytest.approx(0.123)
+
     @pytest.mark.parametrize("prefix", ["CT1", "CT2", "CT3"])
     def test_ct_token_width_accepts_signed_temperature(self, prefix: str):
         """CT1-CT3 average temperature accepts signed token with expected width."""
@@ -4515,6 +4523,16 @@ class TestA4TokenWidthValidation:
         """CT1-CT3 average temperature rejects unsigned token in strict mode."""
         result = clean_value_quality("0123,1,0", prefix, strict_mode=True)
         assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["CT1", "CT2", "CT3"])
+    def test_ct_repeated_sentinel_rejects_missing_temperature_token(self, prefix: str):
+        result = clean_value_quality("+9999,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["CT1", "CT2", "CT3"])
+    def test_ct_repeated_sentinel_accepts_non_sentinel_temperature_token(self, prefix: str):
+        result = clean_value_quality("+0123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(12.3)
 
     @pytest.mark.parametrize("prefix", ["CU1", "CU2", "CU3"])
     def test_cu_token_width_accepts_signed_avg_and_four_digit_std(self, prefix: str):
@@ -4535,6 +4553,18 @@ class TestA4TokenWidthValidation:
         result = clean_value_quality("+0123,1,0,100,1,0", prefix, strict_mode=True)
         assert result[f"{prefix}__part4"] is None
 
+    @pytest.mark.parametrize("prefix", ["CU1", "CU2", "CU3"])
+    def test_cu_repeated_sentinel_rejects_missing_temperature_tokens(self, prefix: str):
+        result = clean_value_quality("+9999,1,0,9999,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part4"] is None
+
+    @pytest.mark.parametrize("prefix", ["CU1", "CU2", "CU3"])
+    def test_cu_repeated_sentinel_accepts_non_sentinel_temperature_tokens(self, prefix: str):
+        result = clean_value_quality("+0123,1,0,0100,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(12.3)
+        assert result[f"{prefix}__part4"] == pytest.approx(10.0)
+
     @pytest.mark.parametrize("prefix", ["CV1", "CV2", "CV3"])
     def test_cv_token_width_accepts_signed_min_and_max_temperature(self, prefix: str):
         """CV1-CV3 accepts signed min/max temperature tokens."""
@@ -4547,6 +4577,22 @@ class TestA4TokenWidthValidation:
         """CV1-CV3 rejects unsigned min temperature token in strict mode."""
         result = clean_value_quality("0123,1,0,1200,1,0,+0234,1,0,1300,1,0", prefix, strict_mode=True)
         assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["CV2", "CV3"])
+    def test_cv_repeated_sentinel_rejects_missing_temperature_tokens(self, prefix: str):
+        result = clean_value_quality("9999,1,0,9999,1,0,9999,1,0,9999,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part4"] is None
+        assert result[f"{prefix}__part7"] is None
+        assert result[f"{prefix}__part10"] is None
+
+    @pytest.mark.parametrize("prefix", ["CV2", "CV3"])
+    def test_cv_repeated_sentinel_accepts_non_sentinel_temperature_tokens(self, prefix: str):
+        result = clean_value_quality("+0123,1,0,1200,1,0,+0234,1,0,1300,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(12.3)
+        assert result[f"{prefix}__part4"] == pytest.approx(1200.0)
+        assert result[f"{prefix}__part7"] == pytest.approx(23.4)
+        assert result[f"{prefix}__part10"] == pytest.approx(1300.0)
 
     def test_cw_token_width_rejects_short_wet_token(self):
         """CW1 rejects short wetness token in strict mode."""
@@ -4564,6 +4610,22 @@ class TestA4TokenWidthValidation:
         """CX1-CX3 rejects unsigned precipitation token in strict mode."""
         result = clean_value_quality("00100,1,0,1000,1,0,1000,1,0,1000,1,0", prefix, strict_mode=True)
         assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["CX1", "CX2", "CX3"])
+    def test_cx_repeated_sentinel_rejects_missing_precipitation_tokens(self, prefix: str):
+        result = clean_value_quality("99999,1,0,9999,1,0,9999,1,0,9999,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part4"] is None
+        assert result[f"{prefix}__part7"] is None
+        assert result[f"{prefix}__part10"] is None
+
+    @pytest.mark.parametrize("prefix", ["CX1", "CX2", "CX3"])
+    def test_cx_repeated_sentinel_accepts_non_sentinel_precipitation_tokens(self, prefix: str):
+        result = clean_value_quality("+00100,1,0,1000,1,0,1000,1,0,1000,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(10.0)
+        assert result[f"{prefix}__part4"] == pytest.approx(1000.0)
+        assert result[f"{prefix}__part7"] == pytest.approx(1000.0)
+        assert result[f"{prefix}__part10"] == pytest.approx(1000.0)
 
     @pytest.mark.parametrize("prefix", ["GA1", "GA2", "GA3", "GA4", "GA5", "GA6"])
     def test_ga_token_width_accepts_signed_base_height(self, prefix: str):
