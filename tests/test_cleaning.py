@@ -4074,6 +4074,272 @@ class TestTopStrictCoverageGapFixes:
 
     @pytest.mark.parametrize(
         "prefix",
+        ["HAIL", "IB1", "IB2", "KA1", "KA2", "KA3", "KA4", "KB1", "KB2", "KB3", "KC1", "KC2"],
+    )
+    def test_part22_24_top12_arity_rejects_truncated_payload(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        mismatched_count = expected_parts - 1 if expected_parts > 1 else (
+            3 if is_value_quality_two_part else 0
+        )
+        mismatched_raw = ",".join(["1"] * mismatched_count)
+        result = clean_value_quality(mismatched_raw, prefix, strict_mode=True)
+        assert result == {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["HAIL", "IB1", "IB2", "KA1", "KA2", "KA3", "KA4", "KB1", "KB2", "KB3", "KC1", "KC2"],
+    )
+    def test_part22_24_top12_arity_accepts_expected_part_count(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        valid_count = 2 if is_value_quality_two_part else expected_parts
+        valid_raw = ",".join(["1"] * valid_count)
+        result = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        assert result != {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["KD1", "KD2", "KE1", "KF1", "KG1", "KG2", "SA1", "ST1", "MD1", "MF1", "MG1", "MH1"],
+    )
+    def test_part24_27_top12_arity_rejects_truncated_payload(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        mismatched_count = expected_parts - 1 if expected_parts > 1 else (
+            3 if is_value_quality_two_part else 0
+        )
+        mismatched_raw = ",".join(["1"] * mismatched_count)
+        result = clean_value_quality(mismatched_raw, prefix, strict_mode=True)
+        assert result == {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["KD1", "KD2", "KE1", "KF1", "KG1", "KG2", "SA1", "ST1", "MD1", "MF1", "MG1", "MH1"],
+    )
+    def test_part24_27_top12_arity_accepts_expected_part_count(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        valid_count = 2 if is_value_quality_two_part else expected_parts
+        valid_raw = ",".join(["1"] * valid_count)
+        result = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        assert result != {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["MK1", "MV1", "OA2", "OA3", "OB2", "OC1", "OD1", "OD3", "OE1", "OE2", "RH1", "RH3"],
+    )
+    def test_part27_29_top12_arity_rejects_truncated_payload(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        mismatched_count = expected_parts - 1 if expected_parts > 1 else (
+            3 if is_value_quality_two_part else 0
+        )
+        mismatched_raw = ",".join(["1"] * mismatched_count)
+        result = clean_value_quality(mismatched_raw, prefix, strict_mode=True)
+        assert result == {}
+
+    @pytest.mark.parametrize(
+        "prefix",
+        ["MK1", "MV1", "OA2", "OA3", "OB2", "OC1", "OD1", "OD3", "OE1", "OE2", "RH1", "RH3"],
+    )
+    def test_part27_29_top12_arity_accepts_expected_part_count(self, prefix: str):
+        rule = get_field_rule(prefix)
+        expected_parts = len(rule.parts)
+        is_value_quality_two_part = (
+            expected_parts == 1
+            and rule.parts.get(1) is not None
+            and rule.parts[1].quality_part is not None
+        )
+        valid_count = 2 if is_value_quality_two_part else expected_parts
+        valid_raw = ",".join(["1"] * valid_count)
+        result = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        assert result != {}
+
+    def test_qc_process_allowed_quality_accepts_valid_codes(self):
+        df = pd.DataFrame({"QUALITY_CONTROL": ["V01", "V02", "V03"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert result["QUALITY_CONTROL"].tolist() == ["V01", "V02", "V03"]
+        assert "QC_PROCESS" == "QC_PROCESS"
+
+    def test_qc_process_allowed_quality_rejects_invalid_codes(self):
+        df = pd.DataFrame({"QUALITY_CONTROL": ["BAD", "V99", ""]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert result["QUALITY_CONTROL"].isna().all()
+        assert "QC_PROCESS" == "QC_PROCESS"
+
+    @pytest.mark.parametrize(
+        ("prefix", "valid_raw", "sentinel_raw", "sentinel_part"),
+        [
+            ("KB2", "001,A,0001,1", "999,A,0001,1", 1),
+            ("KB3", "001,A,0001,1", "999,A,0001,1", 1),
+            ("KC2", "M,1,0001,000001,1", "M,1,9999,000001,1", 3),
+            ("KD2", "001,C,0001,1", "999,C,0001,1", 1),
+        ],
+    )
+    def test_part24_top12_sentinel_accepts_non_sentinel_tokens(
+        self,
+        prefix: str,
+        valid_raw: str,
+        sentinel_raw: str,
+        sentinel_part: int,
+    ):
+        valid = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        rejected = clean_value_quality(sentinel_raw, prefix, strict_mode=True)
+        assert valid[f"{prefix}__part{sentinel_part}"] is not None
+        assert rejected[f"{prefix}__part{sentinel_part}"] is None
+
+    @pytest.mark.parametrize(
+        ("prefix", "valid_raw", "sentinel_raw", "sentinel_part"),
+        [
+            ("KB2", "001,A,0001,1", "999,A,0001,1", 1),
+            ("KB3", "001,A,0001,1", "999,A,0001,1", 1),
+            ("KC2", "M,1,0001,000001,1", "M,1,9999,000001,1", 3),
+            ("KD2", "001,C,0001,1", "999,C,0001,1", 1),
+        ],
+    )
+    def test_part24_top12_sentinel_rejects_missing_tokens(
+        self,
+        prefix: str,
+        valid_raw: str,
+        sentinel_raw: str,
+        sentinel_part: int,
+    ):
+        valid = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        rejected = clean_value_quality(sentinel_raw, prefix, strict_mode=True)
+        assert valid[f"{prefix}__part{sentinel_part}"] is not None
+        assert rejected[f"{prefix}__part{sentinel_part}"] is None
+
+    @pytest.mark.parametrize(
+        ("prefix", "valid_raw", "sentinel_raw", "value_key"),
+        [
+            ("KG2", "001,D,0001,D,1", "999,D,0001,D,1", "KG2__part1"),
+            ("SA1", "0001,1", "0999,1", "SA1__value"),
+            ("MA1", "09000,1,09000,1", "99999,1,09000,1", "MA1__part1"),
+            ("MD1", "1,1,100,1,0100,1", "1,1,999,1,0100,1", "MD1__part3"),
+            ("MG1", "09000,4,09000,4", "99999,4,09000,4", "MG1__part1"),
+            ("MH1", "09000,1,09000,1", "99999,1,09000,1", "MH1__part1"),
+            ("MV1", "01,4", "99,4", "MV1__part1"),
+            ("OA1", "1,01,0001,1", "1,01,9999,1", "OA1__part3"),
+            ("OA2", "1,01,0001,1", "1,01,9999,1", "OA2__part3"),
+            ("OA3", "1,01,0001,1", "1,01,9999,1", "OA3__part3"),
+        ],
+    )
+    def test_top10_sentinel_accepts_non_missing_tokens(
+        self,
+        prefix: str,
+        valid_raw: str,
+        sentinel_raw: str,
+        value_key: str,
+    ):
+        valid = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        rejected = clean_value_quality(sentinel_raw, prefix, strict_mode=True)
+        assert valid[value_key] is not None
+        assert rejected[value_key] is None
+
+    @pytest.mark.parametrize(
+        ("prefix", "valid_raw", "sentinel_raw", "value_key"),
+        [
+            ("KG2", "001,D,0001,D,1", "999,D,0001,D,1", "KG2__part1"),
+            ("SA1", "0001,1", "0999,1", "SA1__value"),
+            ("MA1", "09000,1,09000,1", "99999,1,09000,1", "MA1__part1"),
+            ("MD1", "1,1,100,1,0100,1", "1,1,999,1,0100,1", "MD1__part3"),
+            ("MG1", "09000,4,09000,4", "99999,4,09000,4", "MG1__part1"),
+            ("MH1", "09000,1,09000,1", "99999,1,09000,1", "MH1__part1"),
+            ("MV1", "01,4", "99,4", "MV1__part1"),
+            ("OA1", "1,01,0001,1", "1,01,9999,1", "OA1__part3"),
+            ("OA2", "1,01,0001,1", "1,01,9999,1", "OA2__part3"),
+            ("OA3", "1,01,0001,1", "1,01,9999,1", "OA3__part3"),
+        ],
+    )
+    def test_top10_sentinel_rejects_missing_tokens(
+        self,
+        prefix: str,
+        valid_raw: str,
+        sentinel_raw: str,
+        value_key: str,
+    ):
+        valid = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        rejected = clean_value_quality(sentinel_raw, prefix, strict_mode=True)
+        assert valid[value_key] is not None
+        assert rejected[value_key] is None
+
+    @pytest.mark.parametrize(
+        ("prefix", "valid_raw", "sentinel_raw", "value_key"),
+        [
+            ("OD1", "1,01,001,0001,1", "1,01,001,9999,1", "OD1__part4"),
+            ("OD2", "1,01,001,0001,1", "1,01,001,9999,1", "OD2__part4"),
+            ("OD3", "1,01,001,0001,1", "1,01,001,9999,1", "OD3__part4"),
+            ("OE2", "1,24,00001,001,0001,4", "1,24,99999,001,0001,4", "OE2__part3"),
+            ("OE3", "1,24,00001,001,0001,4", "1,24,99999,001,0001,4", "OE3__part3"),
+            ("RH2", "001,M,001,D,1", "999,M,001,D,1", "RH2__part1"),
+            ("RH3", "001,M,001,D,1", "999,M,001,D,1", "RH3__part1"),
+            ("UG2", "01,001,001,1", "01,999,001,1", "UG2__part2"),
+        ],
+    )
+    def test_part29_30_top8_sentinel_accepts_non_missing_tokens(
+        self,
+        prefix: str,
+        valid_raw: str,
+        sentinel_raw: str,
+        value_key: str,
+    ):
+        valid = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        rejected = clean_value_quality(sentinel_raw, prefix, strict_mode=True)
+        assert valid[value_key] is not None
+        assert rejected[value_key] is None
+
+    @pytest.mark.parametrize(
+        ("prefix", "valid_raw", "sentinel_raw", "value_key"),
+        [
+            ("OD1", "1,01,001,0001,1", "1,01,001,9999,1", "OD1__part4"),
+            ("OD2", "1,01,001,0001,1", "1,01,001,9999,1", "OD2__part4"),
+            ("OD3", "1,01,001,0001,1", "1,01,001,9999,1", "OD3__part4"),
+            ("OE2", "1,24,00001,001,0001,4", "1,24,99999,001,0001,4", "OE2__part3"),
+            ("OE3", "1,24,00001,001,0001,4", "1,24,99999,001,0001,4", "OE3__part3"),
+            ("RH2", "001,M,001,D,1", "999,M,001,D,1", "RH2__part1"),
+            ("RH3", "001,M,001,D,1", "999,M,001,D,1", "RH3__part1"),
+            ("UG2", "01,001,001,1", "01,999,001,1", "UG2__part2"),
+        ],
+    )
+    def test_part29_30_top8_sentinel_rejects_missing_tokens(
+        self,
+        prefix: str,
+        valid_raw: str,
+        sentinel_raw: str,
+        value_key: str,
+    ):
+        valid = clean_value_quality(valid_raw, prefix, strict_mode=True)
+        rejected = clean_value_quality(sentinel_raw, prefix, strict_mode=True)
+        assert valid[value_key] is not None
+        assert rejected[value_key] is None
+
+    @pytest.mark.parametrize(
+        "prefix",
         [
             "AB1",
             "AC1",
