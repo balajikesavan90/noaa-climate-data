@@ -3777,6 +3777,75 @@ class TestTopStrictCoverageGapFixes:
         result = clean_value_quality(raw, prefix, strict_mode=True)
         assert result[f"{prefix}{part_suffix}"] is None
 
+    @pytest.mark.parametrize("prefix", ["AU2", "AU3", "AU4", "AU5", "AU6", "AU7", "AU8"])
+    def test_au_repeated_domain_rejects_invalid_component_codes(self, prefix: str):
+        result = clean_value_quality("5,1,10,1,6,4,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part3"] is None
+        assert result[f"{prefix}__part5"] is None
+        assert result[f"{prefix}__part6"] is None
+
+    @pytest.mark.parametrize("prefix", ["AU2", "AU3", "AU4", "AU5", "AU6", "AU7", "AU8"])
+    def test_au_repeated_domain_accepts_valid_component_codes(self, prefix: str):
+        result = clean_value_quality("1,1,01,1,1,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part2"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part3"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part4"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part5"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part6"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part7"] == pytest.approx(1.0)
+
+    @pytest.mark.parametrize("prefix", ["AU2", "AU3", "AU4", "AU5", "AU6", "AU7", "AU8", "AU9"])
+    def test_au_repeated_sentinel_rejects_missing_component_tokens(self, prefix: str):
+        result = clean_value_quality("1,9,99,9,9,9,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] is None
+        assert result[f"{prefix}__part3"] is None
+        assert result[f"{prefix}__part4"] is None
+        assert result[f"{prefix}__part5"] is None
+        assert result[f"{prefix}__part6"] is None
+
+    @pytest.mark.parametrize("prefix", ["AU2", "AU3", "AU4", "AU5", "AU6", "AU7", "AU8", "AU9"])
+    def test_au_repeated_sentinel_accepts_non_sentinel_component_tokens(self, prefix: str):
+        result = clean_value_quality("1,1,01,1,1,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part3"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part4"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part5"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part6"] == pytest.approx(1.0)
+
+    @pytest.mark.parametrize("prefix", ["AU2", "AU3", "AU4", "AU5", "AU6", "AU7", "AU8"])
+    def test_au_repeated_quality_rejects_invalid_quality_code(self, prefix: str):
+        result = clean_value_quality("1,1,01,1,1,1,8", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part2"] is None
+        assert result[f"{prefix}__part3"] is None
+        assert result[f"{prefix}__part4"] is None
+        assert result[f"{prefix}__part5"] is None
+        assert result[f"{prefix}__part6"] is None
+
+    @pytest.mark.parametrize("prefix", ["AU2", "AU3", "AU4", "AU5", "AU6", "AU7", "AU8"])
+    def test_au_repeated_quality_accepts_allowed_quality_code(self, prefix: str):
+        result = clean_value_quality("1,1,01,1,1,1,M", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part2"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part3"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part4"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part5"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part6"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part7"] == "M"
+
+    @pytest.mark.parametrize("prefix", ["AU2", "AU3", "AU4", "AU5", "AU6", "AU7", "AU8"])
+    def test_au_repeated_arity_rejects_truncated_payload(self, prefix: str):
+        result = clean_value_quality("1,1,01,1,1,1", prefix, strict_mode=True)
+        assert result == {}
+
+    @pytest.mark.parametrize("prefix", ["AU2", "AU3", "AU4", "AU5", "AU6", "AU7", "AU8"])
+    def test_au_repeated_arity_accepts_expected_part_count(self, prefix: str):
+        result = clean_value_quality("1,1,01,1,1,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part7"] == pytest.approx(1.0)
+
     def test_aw4_width_accepts_expected_part_widths(self):
         result = clean_value_quality("89,1", "AW4", strict_mode=True)
         assert result["AW4__part1"] is not None
