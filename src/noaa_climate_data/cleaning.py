@@ -564,16 +564,18 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
         >>> clean_value_quality("1101,1", "OC1")  # 1101 > max 1100
         {'OC1__value': None, 'OC1__qc_pass': False, 'OC1__qc_reason': 'OUT_OF_RANGE', ...}
     """
-    eqd_valid = is_valid_eqd_identifier(prefix)
-    if eqd_valid is False:
-        if strict_mode:
-            logger.warning(f"[PARSE_STRICT] Rejected {prefix}: invalid EQD identifier format")
-        return {}
-    repeated_valid = is_valid_repeated_identifier(prefix)
-    if repeated_valid is False:
-        if strict_mode:
-            logger.warning(f"[PARSE_STRICT] Rejected {prefix}: invalid repeated identifier format")
-        return {}
+    field_rule = get_field_rule(prefix)
+    if field_rule is None:
+        eqd_valid = is_valid_eqd_identifier(prefix)
+        if eqd_valid is False:
+            if strict_mode:
+                logger.warning(f"[PARSE_STRICT] Rejected {prefix}: invalid EQD identifier format")
+            return {}
+        repeated_valid = is_valid_repeated_identifier(prefix)
+        if repeated_valid is False:
+            if strict_mode:
+                logger.warning(f"[PARSE_STRICT] Rejected {prefix}: invalid repeated identifier format")
+            return {}
     parsed = parse_field(raw)
     
     # A3: Strict mode arity validation - check expected vs actual part count
@@ -597,7 +599,6 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
         return _expand_parsed(parsed, prefix, allow_quality=True, strict_mode=strict_mode)
     if not _is_value_quality_field(prefix, len(parsed.parts)):
         return _expand_parsed(parsed, prefix, allow_quality=True, strict_mode=strict_mode)
-    field_rule = get_field_rule(prefix)
     part_rule = field_rule.parts.get(1) if field_rule else None
     entry = get_field_registry_entry(prefix, 1, suffix="value")
     value_key = entry.internal_name if entry else f"{prefix}__value"

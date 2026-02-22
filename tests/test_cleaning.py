@@ -1837,6 +1837,14 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("ABCDEF,A ,ALTPb0", prefix, strict_mode=True)
         assert result[f"{prefix}__part2"] is None
 
+    def test_n2_token_width_accepts_single_char_units_code(self):
+        result = clean_value_quality("ABCDEF,A,ALTPb0", "N2", strict_mode=True)
+        assert result["N2__part2"] == "A"
+
+    def test_n2_token_width_rejects_two_char_units_code(self):
+        result = clean_value_quality("ABCDEF,AA,ALTPb0", "N2", strict_mode=True)
+        assert result["N2__part2"] is None
+
     def test_gp1_missing_parts(self):
         result = clean_value_quality("9999,9999,99,999,9999,99,999,9999,99,999", "GP1")
         assert result["GP1__part1"] is None
@@ -1912,6 +1920,15 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("100000,1,0,99998,1,0,00000,1,0,00000,1,0", "GH1")
         assert result["GH1__part1"] is None
         assert result["GH1__part4"] == pytest.approx(9999.8)
+
+    def test_gh1_token_width_accepts_fixed_width_tokens(self):
+        result = clean_value_quality("00010,1,0,00000,1,0,00000,1,0,00000,1,0", "GH1", strict_mode=True)
+        assert result["GH1__part1"] == pytest.approx(1.0)
+        assert result["GH1__part4"] == pytest.approx(0.0)
+
+    def test_gh1_token_width_rejects_short_numeric_token(self):
+        result = clean_value_quality("0010,1,0,00000,1,0,00000,1,0,00000,1,0", "GH1", strict_mode=True)
+        assert result["GH1__part1"] is None
 
     def test_gm1_data_flag_domain(self):
         result = clean_value_quality("0060,0123,AA,1,0456,00,1,0789,00,1,0123,1", "GM1")

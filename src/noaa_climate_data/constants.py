@@ -242,8 +242,8 @@ EQD_ELEMENT_UNITS_TABLE = {
     "I": "MT",
     "J": "NA",
     "K": "N1",
-    # TODO(spec-coverage): `N2` maps from EQD unit code `L`, but strict parser accepts
-    # only `N01`/`N99` for repeated IDs today; closing top `N2` gap needs identifier-model redesign.
+    # `N2` remains a legacy spec alias for `N02` in some tables.
+    # Keep the semantic mapping here while parser normalization handles alias resolution.
     "L": "N2",
     "M": "P",
     "O": "TC",
@@ -3241,16 +3241,20 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 quality_part=2,
                 min_value=0,
                 max_value=99998,
+                token_width=5,
+                token_pattern=re.compile(r"^\d{5}$"),
             ),
             2: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=SOLARAD_QC_FLAGS,
+                token_width=1,
             ),
             3: FieldPartRule(
                 kind="categorical",
                 agg="drop",
                 allowed_values={str(value) for value in range(0, 10)},
+                token_width=1,
             ),
             4: FieldPartRule(
                 scale=0.1,
@@ -3258,16 +3262,20 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 quality_part=5,
                 min_value=0,
                 max_value=99998,
+                token_width=5,
+                token_pattern=re.compile(r"^\d{5}$"),
             ),
             5: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=SOLARAD_QC_FLAGS,
+                token_width=1,
             ),
             6: FieldPartRule(
                 kind="categorical",
                 agg="drop",
                 allowed_values={str(value) for value in range(0, 10)},
+                token_width=1,
             ),
             7: FieldPartRule(
                 scale=0.1,
@@ -3275,16 +3283,20 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 quality_part=8,
                 min_value=0,
                 max_value=99998,
+                token_width=5,
+                token_pattern=re.compile(r"^\d{5}$"),
             ),
             8: FieldPartRule(
                 kind="quality",
                 agg="drop",
                 allowed_quality=SOLARAD_QC_FLAGS,
+                token_width=1,
             ),
             9: FieldPartRule(
                 kind="categorical",
                 agg="drop",
                 allowed_values={str(value) for value in range(0, 10)},
+                token_width=1,
             ),
             10: FieldPartRule(
                 scale=0.1,
@@ -3299,11 +3311,13 @@ FIELD_RULE_PREFIXES: dict[str, FieldRule] = {
                 kind="quality",
                 agg="drop",
                 allowed_quality=SOLARAD_QC_FLAGS,
+                token_width=1,
             ),
             12: FieldPartRule(
                 kind="categorical",
                 agg="drop",
                 allowed_values={str(value) for value in range(0, 10)},
+                token_width=1,
             ),
         },
     ),
@@ -4772,6 +4786,10 @@ _REPEATED_IDENTIFIER_RANGES: dict[str, range] = {
     "RH": range(1, 4),
 }
 
+_IDENTIFIER_ALIASES: dict[str, str] = {
+    "N2": "N02",
+}
+
 
 def is_valid_repeated_identifier(prefix: str) -> bool | None:
     """Validate repeated identifier format with exact suffix digit count.
@@ -4879,6 +4897,7 @@ def is_valid_identifier(identifier: str) -> bool:
 
 
 def get_field_rule(prefix: str) -> FieldRule | None:
+    prefix = _IDENTIFIER_ALIASES.get(prefix, prefix)
     if prefix in FIELD_RULES:
         return FIELD_RULES[prefix]
     eqd_valid = is_valid_eqd_identifier(prefix)
@@ -4961,6 +4980,9 @@ def _build_known_identifiers() -> set[str]:
     for letter in "QPRCDN":
         for idx in range(1, 100):  # 01-99
             identifiers.add(f"{letter}{idx:02d}")
+
+    # Legacy aliases accepted by parser for compatibility with spec naming.
+    identifiers.update(_IDENTIFIER_ALIASES.keys())
     
     return identifiers
 
