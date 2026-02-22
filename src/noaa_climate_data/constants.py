@@ -468,7 +468,8 @@ EQD_UNIT_RULE = FieldRule(
 # QC Status Values (2-tier, per _compute_qc_signals):
 QC_STATUS_VALUES = frozenset({"PASS", "INVALID", "MISSING"})
 #   - PASS: All validation checks passed (quality flag OK, not sentinel, in range)
-#   - INVALID: Any validation check failed (reason in QC_REASON_ENUM)
+#   - MISSING: Intentional absence (data collected but sentinel value indicates no measurement)
+#   - INVALID: Data quality issues (bad quality code, out of range, malformed format)
 #
 # QC Reason Codes (failures only, None if PASS):
 QC_REASON_ENUM = frozenset(

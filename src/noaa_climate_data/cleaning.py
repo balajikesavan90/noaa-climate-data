@@ -495,14 +495,14 @@ def _compute_qc_signals(
         >>> _compute_qc_signals(False, False, True, False)   # Out of range
         (False, 'INVALID', 'OUT_OF_RANGE')
         >>> _compute_qc_signals(True, False, False, False)   # Sentinel value
-        (False, 'INVALID', 'SENTINEL_MISSING')
+        (False, 'MISSING', 'SENTINEL_MISSING')
     """
     if malformed_token:
         return False, "INVALID", "MALFORMED_TOKEN"
     if bad_quality:
         return False, "INVALID", "BAD_QUALITY_CODE"
     if is_sentinel:
-        return False, "INVALID", "SENTINEL_MISSING"
+        return False, "MISSING", "SENTINEL_MISSING"
     if out_of_range:
         return False, "INVALID", "OUT_OF_RANGE"
     return True, "PASS", None

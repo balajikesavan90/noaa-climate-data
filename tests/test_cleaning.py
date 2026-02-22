@@ -2618,7 +2618,7 @@ class TestQCSignalsValueQualityFields:
         result = clean_value_quality("9999,1", "OC1")
         assert result["OC1__value"] is None
         assert result["OC1__qc_pass"] is False
-        assert result["OC1__qc_status"] == "INVALID"
+        assert result["OC1__qc_status"] == "MISSING"
         assert result["OC1__qc_reason"] == "SENTINEL_MISSING"
 
     def test_oc1_bad_quality_code(self):
