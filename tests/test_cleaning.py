@@ -2039,6 +2039,20 @@ class TestQualityNullsCorrectPart:
         assert result["AJ1__part1"] is None
         assert result["AJ1__part4"] is None
 
+    def test_aj1_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("1200,1,1,120000,1,1", "AJ1", strict_mode=True)
+        assert result["AJ1__part1"] is not None
+        assert result["AJ1__part2"] is not None
+        assert result["AJ1__part3"] is not None
+        assert result["AJ1__part4"] is not None
+        assert result["AJ1__part5"] is not None
+        assert result["AJ1__part6"] is not None
+
+    def test_aj1_width_rejects_short_part1_token_as_malformed(self):
+        result = clean_value_quality("120,1,1,120000,1,1", "AJ1", strict_mode=True)
+        assert result["AJ1__part1"] is None
+        assert result["AJ1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
     def test_ag_discrepancy_and_missing_depth(self):
         result = clean_value_quality("9,999", "AG1")
         assert result["AG1__part1"] is None
@@ -2098,6 +2112,18 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("0100,1,320203,1", "AK1")
         assert result["AK1__part3"] is None
 
+    def test_ak1_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("1500,1,010203,1", "AK1", strict_mode=True)
+        assert result["AK1__part1"] is not None
+        assert result["AK1__part2"] is not None
+        assert result["AK1__part3"] is not None
+        assert result["AK1__part4"] is not None
+
+    def test_ak1_width_rejects_short_part1_token_as_malformed(self):
+        result = clean_value_quality("100,1,010203,1", "AK1", strict_mode=True)
+        assert result["AK1__part1"] is None
+        assert result["AK1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
     def test_al_missing_and_quality(self):
         result = clean_value_quality("99,999,9,1", "AL1")
         assert result["AL1__part1"] is None
@@ -2113,6 +2139,20 @@ class TestQualityNullsCorrectPart:
         assert result["AL1__part1"] is None
         result = clean_value_quality("24,501,1,1", "AL1")
         assert result["AL1__part2"] is None
+
+    @pytest.mark.parametrize("prefix", ["AL1", "AL2", "AL3", "AL4"])
+    def test_al_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("72,500,1,9", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+        assert result[f"{prefix}__part4"] is not None
+
+    @pytest.mark.parametrize("prefix", ["AL1", "AL2", "AL3", "AL4"])
+    def test_al_repeated_width_rejects_short_period_token_as_malformed(self, prefix: str):
+        result = clean_value_quality("7,500,1,9", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
 
     def test_am_missing_and_quality(self):
         result = clean_value_quality("9999,9,9999,9999,9999,1", "AM1")
@@ -2132,6 +2172,20 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("0100,1,3202,0203,0304,1", "AM1")
         assert result["AM1__part3"] is None
 
+    def test_am1_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("2000,1,0101,0202,0303,1", "AM1", strict_mode=True)
+        assert result["AM1__part1"] is not None
+        assert result["AM1__part2"] is not None
+        assert result["AM1__part3"] is not None
+        assert result["AM1__part4"] is not None
+        assert result["AM1__part5"] is not None
+        assert result["AM1__part6"] is not None
+
+    def test_am1_width_rejects_short_part1_token_as_malformed(self):
+        result = clean_value_quality("200,1,0101,0202,0303,1", "AM1", strict_mode=True)
+        assert result["AM1__part1"] is None
+        assert result["AM1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
     def test_an_missing_and_quality(self):
         result = clean_value_quality("999,9999,9,1", "AN1")
         assert result["AN1__part1"] is None
@@ -2148,6 +2202,18 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("024,9999,1,1", "AN1")
         assert result["AN1__part2"] is None
 
+    def test_an1_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("744,9998,1,9", "AN1", strict_mode=True)
+        assert result["AN1__part1"] is not None
+        assert result["AN1__part2"] is not None
+        assert result["AN1__part3"] is not None
+        assert result["AN1__part4"] is not None
+
+    def test_an1_width_rejects_short_part1_token_as_malformed(self):
+        result = clean_value_quality("74,9998,1,9", "AN1", strict_mode=True)
+        assert result["AN1__part1"] is None
+        assert result["AN1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
     def test_ao_missing_and_quality(self):
         result = clean_value_quality("99,9999,9,1", "AO1")
         assert result["AO1__part1"] is None
@@ -2158,6 +2224,35 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("15,0010,1,8", "AO1")
         assert result["AO1__part2"] is None
 
+    @pytest.mark.parametrize("prefix", ["AO1", "AO2", "AO3", "AO4"])
+    def test_ao_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("98,9998,1,9", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+        assert result[f"{prefix}__part4"] is not None
+
+    @pytest.mark.parametrize("prefix", ["AO1", "AO2", "AO3", "AO4"])
+    def test_ao_repeated_width_rejects_short_period_token_as_malformed(self, prefix: str):
+        result = clean_value_quality("8,9998,1,9", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["AO1", "AO2", "AO3", "AO4"])
+    def test_ao_repeated_range_accepts_upper_bounds(self, prefix: str):
+        result = clean_value_quality("98,9998,1,9", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(98.0)
+        assert result[f"{prefix}__part2"] == pytest.approx(999.8)
+
+    @pytest.mark.parametrize("prefix", ["AO1", "AO2", "AO3", "AO4"])
+    def test_ao_repeated_range_rule_bounds_are_not_open_ended(self, prefix: str):
+        rule = get_field_rule(prefix)
+        assert rule is not None
+        assert rule.parts[1].max_value == 98
+        assert rule.parts[2].max_value == 9998
+        assert rule.parts[1].max_value != 99
+        assert rule.parts[2].max_value != 9999
+
     def test_ap_missing_and_quality(self):
         result = clean_value_quality("9999,9,1", "AP1")
         assert result["AP1__part1"] is None
@@ -2166,6 +2261,28 @@ class TestQualityNullsCorrectPart:
     def test_ap_quality_rejects_8(self):
         result = clean_value_quality("0010,9,8", "AP1")
         assert result["AP1__part1"] is None
+
+    def test_ap4_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("9998,9,1", "AP4", strict_mode=True)
+        assert result["AP4__part1"] is not None
+        assert result["AP4__part2"] is None
+        assert result["AP4__part3"] is not None
+
+    def test_ap4_width_rejects_short_part1_token_as_malformed(self):
+        result = clean_value_quality("998,9,1", "AP4", strict_mode=True)
+        assert result["AP4__part1"] is None
+        assert result["AP4__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_ap4_range_accepts_upper_bound(self):
+        result = clean_value_quality("9998,9,1", "AP4", strict_mode=True)
+        assert result["AP4__part1"] == pytest.approx(999.8)
+
+    def test_ap4_range_rule_bounds_are_not_open_ended(self):
+        rule = get_field_rule("AP4")
+        assert rule is not None
+        assert rule.parts[1].min_value == 0
+        assert rule.parts[1].max_value == 9998
+        assert rule.parts[1].max_value != 9999
 
 
 class TestTwoPartFieldNamingAndQuality:
@@ -2736,6 +2853,41 @@ class TestTopStrictCoverageGapFixes:
         assert result[f"{prefix}__part1"] is None
         result = clean_value_quality("045,3001,1,010100,1", prefix)
         assert result[f"{prefix}__part2"] is None
+
+    @pytest.mark.parametrize("prefix", ["AI1", "AI2", "AI3", "AI4", "AI5", "AI6"])
+    def test_ai_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("060,3000,1,010100,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+        assert result[f"{prefix}__part4"] is not None
+        assert result[f"{prefix}__part5"] is not None
+
+    @pytest.mark.parametrize("prefix", ["AI1", "AI2", "AI3", "AI4", "AI5", "AI6"])
+    def test_ai_repeated_width_rejects_short_period_token_as_malformed(self, prefix: str):
+        result = clean_value_quality("60,3000,1,010100,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["AI1", "AI2", "AI3", "AI4", "AI5", "AI6"])
+    def test_ai_repeated_range_accepts_spec_bounds(self, prefix: str):
+        result = clean_value_quality("180,3000,1,010100,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(180.0)
+        assert result[f"{prefix}__part2"] == pytest.approx(300.0)
+
+    @pytest.mark.parametrize("prefix", ["AI1", "AI2", "AI3", "AI4", "AI5", "AI6"])
+    def test_ai_repeated_range_rejects_out_of_range_values(self, prefix: str):
+        below = clean_value_quality("059,3000,1,010100,1", prefix, strict_mode=True)
+        assert below[f"{prefix}__part1"] is None
+        assert below[f"{prefix}__part1__qc_reason"] == "OUT_OF_RANGE"
+
+        above = clean_value_quality("181,3000,1,010100,1", prefix, strict_mode=True)
+        assert above[f"{prefix}__part1"] is None
+        assert above[f"{prefix}__part1__qc_reason"] == "OUT_OF_RANGE"
+
+        depth_above = clean_value_quality("060,3001,1,010100,1", prefix, strict_mode=True)
+        assert depth_above[f"{prefix}__part2"] is None
+        assert depth_above[f"{prefix}__part2__qc_reason"] == "OUT_OF_RANGE"
 
 
 # ── Gate A: Parser Strictness ───────────────────────────────────────────
