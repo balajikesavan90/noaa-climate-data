@@ -2834,6 +2834,18 @@ class TestQualityNullsCorrectPart:
         result = clean_value_quality("0010,9,8", "AP1")
         assert result["AP1__part1"] is None
 
+    def test_ap4_sentinel_rejects_missing_amount_token(self):
+        result = clean_value_quality("9999,9,1", "AP4", strict_mode=True)
+        assert result["AP4__part1"] is None
+
+    def test_ap4_sentinel_accepts_non_sentinel_amount_token(self):
+        result = clean_value_quality("9998,9,1", "AP4", strict_mode=True)
+        assert result["AP4__part1"] == pytest.approx(999.8)
+
+    def test_ap4_sentinel_rejects_missing_condition_token(self):
+        result = clean_value_quality("0001,9,1", "AP4", strict_mode=True)
+        assert result["AP4__part2"] is None
+
     def test_ap4_width_accepts_expected_part_widths(self):
         result = clean_value_quality("9998,9,1", "AP4", strict_mode=True)
         assert result["AP4__part1"] is not None
@@ -3695,6 +3707,52 @@ class TestTopStrictCoverageGapFixes:
     def test_at_repeated_width_rejects_short_weather_tokens(self, prefix: str):
         result = clean_value_quality("AU,01,FG,1", prefix, strict_mode=True)
         assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AT2", "AT3", "AT4", "AT5", "AT6", "AT7"])
+    def test_at_repeated_domain_rejects_invalid_source_code(self, prefix: str):
+        result = clean_value_quality("XX,01,FG  ,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part2"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part3"] == "FG"
+
+    @pytest.mark.parametrize("prefix", ["AT2", "AT3", "AT4", "AT5", "AT6", "AT7"])
+    def test_at_repeated_domain_accepts_valid_source_code(self, prefix: str):
+        result = clean_value_quality("AW,01,FG  ,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == "AW"
+
+    @pytest.mark.parametrize("prefix", ["AT2", "AT3", "AT4", "AT5", "AT6", "AT7"])
+    def test_at_repeated_domain_rejects_invalid_weather_type_code(self, prefix: str):
+        result = clean_value_quality("AU,20,FG  ,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] is None
+
+    @pytest.mark.parametrize("prefix", ["AT2", "AT3", "AT4", "AT5", "AT6", "AT7"])
+    def test_at_repeated_domain_accepts_valid_weather_type_code(self, prefix: str):
+        result = clean_value_quality("AU,22,FG  ,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] == pytest.approx(22.0)
+
+    @pytest.mark.parametrize("prefix", ["AT2", "AT3", "AT4", "AT5", "AT6", "AT7"])
+    def test_at_repeated_domain_rejects_invalid_weather_abbreviation(self, prefix: str):
+        result = clean_value_quality("AU,01,ABCD,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AT2", "AT3", "AT4", "AT5", "AT6", "AT7"])
+    def test_at_repeated_domain_accepts_valid_weather_abbreviation(self, prefix: str):
+        result = clean_value_quality("AU,01,WIND,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] == "WIND"
+
+    @pytest.mark.parametrize("prefix", ["AT2", "AT3", "AT4", "AT5", "AT6", "AT7"])
+    def test_at_repeated_quality_rejects_invalid_quality_code(self, prefix: str):
+        result = clean_value_quality("AU,01,FG  ,8", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part2"] is None
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AT2", "AT3", "AT4", "AT5", "AT6", "AT7"])
+    def test_at_repeated_quality_accepts_allowed_quality_code(self, prefix: str):
+        result = clean_value_quality("AU,01,FG  ,M", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == "AU"
+        assert result[f"{prefix}__part2"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part3"] == "FG"
 
     @pytest.mark.parametrize("prefix", ["AU1", "AU2", "AU3", "AU4", "AU5", "AU6", "AU7", "AU8", "AU9"])
     def test_au_repeated_width_accepts_expected_part_widths(self, prefix: str):
