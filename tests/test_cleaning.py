@@ -1352,13 +1352,13 @@ class TestQualityNullsCorrectPart:
         assert result["AT1__part3"] is None
 
     def test_at_invalid_source_code(self):
-        result = clean_value_quality("XX,01,FG,1", "AT1")
+        result = clean_value_quality("XX,01,FG  ,1", "AT1")
         assert result["AT1__part1"] is None
         assert result["AT1__part2"] == pytest.approx(1.0)
         assert result["AT1__part3"] == "FG"
 
     def test_at_invalid_weather_type(self):
-        result = clean_value_quality("AU,99,FG,1", "AT1")
+        result = clean_value_quality("AU,99,FG  ,1", "AT1")
         assert result["AT1__part2"] is None
 
     def test_aw_tornado_code_99(self):
@@ -2888,6 +2888,190 @@ class TestTopStrictCoverageGapFixes:
         depth_above = clean_value_quality("060,3001,1,010100,1", prefix, strict_mode=True)
         assert depth_above[f"{prefix}__part2"] is None
         assert depth_above[f"{prefix}__part2__qc_reason"] == "OUT_OF_RANGE"
+
+    @pytest.mark.parametrize("prefix", ["AT1", "AT2", "AT3", "AT4", "AT5", "AT6", "AT7", "AT8"])
+    def test_at_repeated_width_accepts_padded_weather_tokens(self, prefix: str):
+        result = clean_value_quality("AU,01,FG  ,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == "AU"
+        assert result[f"{prefix}__part2"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part3"] == "FG"
+        assert result[f"{prefix}__part4"] == pytest.approx(1.0)
+
+    @pytest.mark.parametrize("prefix", ["AT1", "AT2", "AT3", "AT4", "AT5", "AT6", "AT7", "AT8"])
+    def test_at_repeated_width_rejects_short_weather_tokens(self, prefix: str):
+        result = clean_value_quality("AU,01,FG,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AU1", "AU2", "AU3", "AU4", "AU5", "AU6", "AU7", "AU8", "AU9"])
+    def test_au_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("1,1,01,1,1,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+        assert result[f"{prefix}__part4"] is not None
+        assert result[f"{prefix}__part5"] is not None
+        assert result[f"{prefix}__part6"] is not None
+        assert result[f"{prefix}__part7"] is not None
+
+    @pytest.mark.parametrize("prefix", ["AU1", "AU2", "AU3", "AU4", "AU5", "AU6", "AU7", "AU8", "AU9"])
+    @pytest.mark.parametrize(
+        ("raw", "part_suffix"),
+        [
+            ("1,1,01 ,1,1,1,1", "__part3"),
+            ("1,1,01,1,1,1,1 ", "__part7"),
+        ],
+    )
+    def test_au_repeated_width_rejects_malformed_tokens(self, prefix: str, raw: str, part_suffix: str):
+        result = clean_value_quality(raw, prefix, strict_mode=True)
+        assert result[f"{prefix}{part_suffix}"] is None
+
+    def test_aw4_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("89,1", "AW4", strict_mode=True)
+        assert result["AW4__part1"] is not None
+        assert result["AW4__part2"] is not None
+
+    def test_aw4_width_rejects_malformed_part_widths(self):
+        result = clean_value_quality("89 ,1", "AW4", strict_mode=True)
+        assert result["AW4__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["AX1", "AX2", "AX3", "AX4", "AX5", "AX6"])
+    def test_ax_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("01,4,24,4", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+        assert result[f"{prefix}__part4"] is not None
+
+    @pytest.mark.parametrize("prefix", ["AX1", "AX2", "AX3", "AX4", "AX5", "AX6"])
+    def test_ax_repeated_width_rejects_malformed_part_widths(self, prefix: str):
+        result = clean_value_quality("01,4,24 ,4", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AY1", "AY2"])
+    def test_ay_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("1,1,24,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+        assert result[f"{prefix}__part4"] is not None
+
+    @pytest.mark.parametrize("prefix", ["AY1", "AY2"])
+    def test_ay_repeated_width_rejects_malformed_part_widths(self, prefix: str):
+        result = clean_value_quality("1,1,24 ,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["AZ1", "AZ2"])
+    def test_az_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("1,1,24,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+        assert result[f"{prefix}__part4"] is not None
+
+    @pytest.mark.parametrize("prefix", ["AZ1", "AZ2"])
+    def test_az_repeated_width_rejects_malformed_part_widths(self, prefix: str):
+        result = clean_value_quality("1,1,24 ,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["CB1", "CB2"])
+    def test_cb_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("05,+00123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+        assert result[f"{prefix}__part4"] is not None
+
+    @pytest.mark.parametrize("prefix", ["CB1", "CB2"])
+    def test_cb_repeated_width_rejects_short_numeric_part2(self, prefix: str):
+        result = clean_value_quality("05,+0123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] is None
+        assert result[f"{prefix}__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["CF1", "CF2", "CF3"])
+    def test_cf_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("0123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+
+    @pytest.mark.parametrize("prefix", ["CF1", "CF2", "CF3"])
+    def test_cf_repeated_width_rejects_short_numeric_part1(self, prefix: str):
+        result = clean_value_quality("123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["CG1", "CG2", "CG3"])
+    def test_cg_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("+00123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+
+    @pytest.mark.parametrize("prefix", ["CG1", "CG2", "CG3"])
+    def test_cg_repeated_width_rejects_short_numeric_part1(self, prefix: str):
+        result = clean_value_quality("+0123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["CH1", "CH2"])
+    def test_ch_repeated_width_accepts_expected_part_widths(self, prefix: str):
+        result = clean_value_quality("30,+01234,1,0,0456,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is not None
+        assert result[f"{prefix}__part2"] is not None
+        assert result[f"{prefix}__part3"] is not None
+        assert result[f"{prefix}__part4"] is not None
+        assert result[f"{prefix}__part5"] is not None
+        assert result[f"{prefix}__part6"] is not None
+        assert result[f"{prefix}__part7"] is not None
+
+    @pytest.mark.parametrize("prefix", ["CH1", "CH2"])
+    def test_ch_repeated_width_rejects_short_numeric_part2(self, prefix: str):
+        result = clean_value_quality("30,+1234,1,0,0456,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] is None
+        assert result[f"{prefix}__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_cn1_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("0123,1,0,0456,1,0,0789,1,0", "CN1", strict_mode=True)
+        assert result["CN1__part1"] is not None
+        assert result["CN1__part4"] is not None
+        assert result["CN1__part7"] is not None
+
+    def test_cn1_width_rejects_short_numeric_part1(self):
+        result = clean_value_quality("123,1,0,0456,1,0,0789,1,0", "CN1", strict_mode=True)
+        assert result["CN1__part1"] is None
+        assert result["CN1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_cn2_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("0001,1,0,0002,1,0,60,1,0", "CN2", strict_mode=True)
+        assert result["CN2__part1"] is not None
+        assert result["CN2__part4"] is not None
+        assert result["CN2__part7"] is not None
+
+    def test_cn2_width_rejects_short_numeric_part7(self):
+        result = clean_value_quality("0001,1,0,0002,1,0,6,1,0", "CN2", strict_mode=True)
+        assert result["CN2__part7"] is None
+        assert result["CN2__part7__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_cn3_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("000100,1,0,000200,1,0", "CN3", strict_mode=True)
+        assert result["CN3__part1"] is not None
+        assert result["CN3__part4"] is not None
+
+    def test_cn3_width_rejects_short_numeric_part1(self):
+        result = clean_value_quality("00100,1,0,000200,1,0", "CN3", strict_mode=True)
+        assert result["CN3__part1"] is None
+        assert result["CN3__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_cn4_width_accepts_expected_part_widths(self):
+        result = clean_value_quality("1,1,0,0001,1,0,100,1,0,100,1,0", "CN4", strict_mode=True)
+        assert result["CN4__part4"] is not None
+        assert result["CN4__part7"] is not None
+        assert result["CN4__part10"] is not None
+
+    def test_cn4_width_rejects_short_numeric_part7(self):
+        result = clean_value_quality("1,1,0,0001,1,0,10,1,0,100,1,0", "CN4", strict_mode=True)
+        assert result["CN4__part7"] is None
+        assert result["CN4__part7__qc_reason"] == "MALFORMED_TOKEN"
 
 
 # ── Gate A: Parser Strictness ───────────────────────────────────────────

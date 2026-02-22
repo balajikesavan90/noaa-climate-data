@@ -14,10 +14,10 @@ python3 tools/spec_coverage/generate_spec_coverage.py
 - Synthetic rows excluded from coverage metrics: **28**
 - Metric-eligible rules (excluding `unknown`): **3583**
 - Unknown/noisy rows excluded from %: **0**
-- Rules implemented in code: **2087** (58.2%)
-- Progress KPI (`tested_strict`): **1573** (43.9%)
-- Weak coverage (`tested_any`, includes wildcard): **1586** (44.3%)
-- tested_any from non-wild matches only: **1573** (43.9%)
+- Rules implemented in code: **2331** (65.1%)
+- Progress KPI (`tested_strict`): **1836** (51.2%)
+- Weak coverage (`tested_any`, includes wildcard): **1849** (51.6%)
+- tested_any from non-wild matches only: **1836** (51.2%)
 - Wildcard-only tested_any (not counted toward progress): **13** (0.4%)
 - Coverage progress is measured with `tested_strict` only.
 - `test_covered` in CSV mirrors `test_covered_any` for backward compatibility.
@@ -32,86 +32,86 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 | rank | spec_part | identifier | rule_type | enforcement_layer | implemented | test_strict | test_any | match_strength | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 05 | AT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 2 | 05 | AT2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 3 | 05 | AT3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 4 | 05 | AT4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 5 | 05 | AT5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 6 | 05 | AT6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 7 | 05 | AT7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 8 | 05 | AT8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 9 | 05 | AT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 10 | 05 | AT2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 11 | 05 | AT3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 12 | 05 | AT4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 13 | 05 | AT5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 14 | 05 | AT6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 15 | 05 | AT7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 16 | 05 | AT8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 17 | 05 | AT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 18 | 05 | AT2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 19 | 05 | AT3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 20 | 05 | AT4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 21 | 05 | AT5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 22 | 05 | AT6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 23 | 05 | AT7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 24 | 05 | AT8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 25 | 05 | AT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 26 | 05 | AT2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 27 | 05 | AT3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 28 | 05 | AT4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 29 | 05 | AT5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 30 | 05 | AT6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 31 | 05 | AT7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 32 | 05 | AT8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 33 | 05 | AU1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 34 | 05 | AU2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 35 | 05 | AU3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 36 | 05 | AU4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 37 | 05 | AU5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 38 | 05 | AU6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 39 | 05 | AU7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 40 | 05 | AU8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 41 | 05 | AU9 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 42 | 05 | AU1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 43 | 05 | AU2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 44 | 05 | AU3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 45 | 05 | AU4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 46 | 05 | AU5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 47 | 05 | AU6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 48 | 05 | AU7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 49 | 05 | AU8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 50 | 05 | AU9 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 1 | 07 | CO1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 2 | 07 | CO1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 3 | 07 | CO1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 4 | 07 | CO2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 5 | 07 | CO3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 6 | 07 | CO4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 7 | 07 | CO5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 8 | 07 | CO6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 9 | 07 | CO7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 10 | 07 | CO8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 11 | 07 | CO9 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 12 | 07 | CO2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 13 | 07 | CO3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 14 | 07 | CO4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 15 | 07 | CO5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 16 | 07 | CO6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 17 | 07 | CO7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 18 | 07 | CO8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 19 | 07 | CO9 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 20 | 08 | CR1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 21 | 08 | CR1 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 22 | 08 | CR1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 23 | 08 | CR1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 24 | 09 | CT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 25 | 09 | CT2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 26 | 09 | CT3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 27 | 09 | CT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 28 | 09 | CT2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 29 | 09 | CT3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 30 | 09 | CT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 31 | 09 | CT2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 32 | 09 | CT3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 33 | 10 | CU1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 34 | 10 | CU2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 35 | 10 | CU3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 36 | 10 | CU1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 37 | 10 | CU2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 38 | 10 | CU3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 39 | 10 | CU1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 40 | 10 | CU2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 41 | 10 | CU3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 42 | 10 | CU1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 43 | 10 | CU2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 44 | 10 | CU3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 45 | 10 | CU1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 46 | 10 | CU2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 47 | 10 | CU3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 48 | 10 | CU1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 49 | 10 | CU2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 50 | 10 | CU3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 
 ### Implementation gaps (strict): Not implemented + not tested_strict
 
 | rank | spec_part | identifier | rule_type | enforcement_layer | implemented | test_strict | test_any | match_strength | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 05 | AT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 2 | 05 | AT2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 3 | 05 | AT3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 4 | 05 | AT4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 5 | 05 | AT5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 6 | 05 | AT6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 7 | 05 | AT7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 8 | 05 | AT8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 9 | 05 | AT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 10 | 05 | AT2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 11 | 05 | AT3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 12 | 05 | AT4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 13 | 05 | AT5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 14 | 05 | AT6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 15 | 05 | AT7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 16 | 05 | AT8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 17 | 05 | AT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 18 | 05 | AT2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 19 | 05 | AT3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 20 | 05 | AT4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 21 | 05 | AT5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 22 | 05 | AT6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 23 | 05 | AT7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 24 | 05 | AT8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 25 | 05 | AT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 1 | 07 | CO1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 2 | 07 | CO1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 3 | 07 | CO1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 4 | 07 | CO2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 5 | 07 | CO3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 6 | 07 | CO4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 7 | 07 | CO5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 8 | 07 | CO6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 9 | 07 | CO7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 10 | 07 | CO8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 11 | 07 | CO9 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 12 | 07 | CO2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 13 | 07 | CO3 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 14 | 07 | CO4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 15 | 07 | CO5 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 16 | 07 | CO6 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 17 | 07 | CO7 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 18 | 07 | CO8 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 19 | 07 | CO9 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 20 | 08 | CR1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 21 | 08 | CR1 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 22 | 08 | CR1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 23 | 08 | CR1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 24 | 09 | CT1 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 25 | 09 | CT2 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 
 ### Missing tests (strict): Implemented + not tested_strict
 
@@ -151,10 +151,10 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 ## Enforcement layer breakdown
 
-- constants_only: **1559** (43.5%)
+- constants_only: **1803** (50.3%)
 - cleaning_only: **18** (0.5%)
 - both: **510** (14.2%)
-- neither: **1496** (41.8%)
+- neither: **1252** (34.9%)
 
 ## Confidence breakdown
 
@@ -167,19 +167,19 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 | Match strength | Count | % of metric rules |
 | --- | --- | --- |
-| exact_signature | 646 | 18.0% |
-| exact_assertion | 854 | 23.8% |
-| family_assertion | 73 | 2.0% |
+| exact_signature | 660 | 18.4% |
+| exact_assertion | 1141 | 31.8% |
+| family_assertion | 35 | 1.0% |
 | wildcard_assertion | 13 | 0.4% |
-| none | 1997 | 55.7% |
+| none | 1734 | 48.4% |
 
 ## Precision warnings
 
 - Wildcard policy: `wildcard_assertion` counts as tested-any only; it never counts as strict.
-- Tested-any rows matched by `exact_signature`: **646** (40.7%)
-- Tested-any rows matched by `exact_assertion`: **854** (53.8%)
-- Tested-any rows matched by `family_assertion`: **73** (4.6%)
-- Tested-any rows matched by `wildcard_assertion`: **13** (0.8%)
+- Tested-any rows matched by `exact_signature`: **660** (35.7%)
+- Tested-any rows matched by `exact_assertion`: **1141** (61.7%)
+- Tested-any rows matched by `family_assertion`: **35** (1.9%)
+- Tested-any rows matched by `wildcard_assertion`: **13** (0.7%)
 - Synthetic rows in CSV: **28**
 - Synthetic gap rows in CSV: **28**
 - Unknown rule rows excluded from percentages: **0**
@@ -189,7 +189,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 ## Suspicious coverage
 
-- tested_any=TRUE and code_implemented=FALSE: **388** (10.8%)
+- tested_any=TRUE and code_implemented=FALSE: **400** (11.2%)
 | Rule ID | Identifier family | Rule type | Notes |
 | --- | --- | --- | --- |
 | part-03-mandatory-data-section.md:99-99::CIG::domain::6333f4110f | CIG | domain | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=exact_assertion;unresolved_in_next_steps |
@@ -225,8 +225,8 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | 02 | 29 | 29 | 21 | 11 | 11 | 72.4% | 37.9% | 37.9% |
 | 03 | 53 | 53 | 44 | 51 | 51 | 83.0% | 96.2% | 96.2% |
 | 04 | 603 | 603 | 549 | 461 | 461 | 91.0% | 76.5% | 76.5% |
-| 05 | 450 | 450 | 261 | 105 | 105 | 58.0% | 23.3% | 23.3% |
-| 06 | 287 | 287 | 133 | 104 | 104 | 46.3% | 36.2% | 36.2% |
+| 05 | 450 | 450 | 416 | 260 | 260 | 92.4% | 57.8% | 57.8% |
+| 06 | 287 | 287 | 222 | 212 | 212 | 77.4% | 73.9% | 73.9% |
 | 07 | 74 | 74 | 54 | 23 | 23 | 73.0% | 31.1% | 31.1% |
 | 08 | 11 | 11 | 3 | 3 | 3 | 27.3% | 27.3% | 27.3% |
 | 09 | 28 | 28 | 12 | 6 | 6 | 42.9% | 21.4% | 21.4% |
@@ -271,20 +271,20 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | AN | 15 | 15 | 13 | 14 | 14 | 86.7% | 93.3% | 93.3% |
 | AO | 64 | 64 | 56 | 55 | 55 | 87.5% | 85.9% | 85.9% |
 | AP | 9 | 9 | 8 | 7 | 7 | 88.9% | 77.8% | 77.8% |
-| AT | 80 | 80 | 40 | 17 | 17 | 50.0% | 21.2% | 21.2% |
-| AU | 225 | 225 | 153 | 48 | 48 | 68.0% | 21.3% | 21.3% |
-| AW | 8 | 8 | 4 | 5 | 5 | 50.0% | 62.5% | 62.5% |
-| AX | 84 | 84 | 36 | 15 | 15 | 42.9% | 17.9% | 17.9% |
-| AY | 26 | 26 | 12 | 7 | 7 | 46.2% | 26.9% | 26.9% |
-| AZ | 26 | 26 | 16 | 13 | 13 | 61.5% | 50.0% | 50.0% |
+| AT | 80 | 80 | 72 | 49 | 49 | 90.0% | 61.2% | 61.2% |
+| AU | 225 | 225 | 225 | 120 | 120 | 100.0% | 53.3% | 53.3% |
+| AW | 8 | 8 | 7 | 8 | 8 | 87.5% | 100.0% | 100.0% |
+| AX | 84 | 84 | 66 | 45 | 45 | 78.6% | 53.6% | 53.6% |
+| AY | 26 | 26 | 22 | 17 | 17 | 84.6% | 65.4% | 65.4% |
+| AZ | 26 | 26 | 24 | 21 | 21 | 92.3% | 80.8% | 80.8% |
 | CALL_SIGN | 3 | 3 | 3 | 1 | 1 | 100.0% | 33.3% | 33.3% |
-| CB | 28 | 28 | 12 | 5 | 5 | 42.9% | 17.9% | 17.9% |
-| CF | 33 | 33 | 12 | 4 | 4 | 36.4% | 12.1% | 12.1% |
-| CG | 30 | 30 | 12 | 3 | 3 | 40.0% | 10.0% | 10.0% |
-| CH | 46 | 46 | 18 | 9 | 9 | 39.1% | 19.6% | 19.6% |
+| CB | 28 | 28 | 22 | 18 | 18 | 78.6% | 64.3% | 64.3% |
+| CF | 33 | 33 | 24 | 22 | 22 | 72.7% | 66.7% | 66.7% |
+| CG | 30 | 30 | 24 | 19 | 19 | 80.0% | 63.3% | 63.3% |
+| CH | 46 | 46 | 34 | 31 | 31 | 73.9% | 67.4% | 67.4% |
 | CI | 36 | 36 | 32 | 23 | 23 | 88.9% | 63.9% | 63.9% |
 | CIG | 12 | 12 | 10 | 12 | 12 | 83.3% | 100.0% | 100.0% |
-| CN | 113 | 113 | 47 | 60 | 60 | 41.6% | 53.1% | 53.1% |
+| CN | 113 | 113 | 86 | 99 | 99 | 76.1% | 87.6% | 87.6% |
 | CO | 73 | 73 | 54 | 23 | 23 | 74.0% | 31.5% | 31.5% |
 | CR | 10 | 10 | 3 | 3 | 3 | 30.0% | 30.0% | 30.0% |
 | CT | 27 | 27 | 12 | 6 | 6 | 44.4% | 22.2% | 22.2% |
@@ -363,10 +363,10 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | range | 363 | 352 | 242 | 242 | 97.0% | 66.7% | 66.7% |
 | sentinel | 688 | 595 | 240 | 240 | 86.5% | 34.9% | 34.9% |
-| allowed_quality | 81 | 75 | 64 | 64 | 92.6% | 79.0% | 79.0% |
-| domain | 945 | 525 | 648 | 648 | 55.6% | 68.6% | 68.6% |
+| allowed_quality | 81 | 75 | 71 | 71 | 92.6% | 87.7% | 87.7% |
+| domain | 945 | 525 | 660 | 660 | 55.6% | 69.8% | 69.8% |
 | cardinality | 128 | 113 | 115 | 128 | 88.3% | 89.8% | 100.0% |
-| width | 1207 | 256 | 222 | 222 | 21.2% | 18.4% | 18.4% |
+| width | 1207 | 500 | 466 | 466 | 41.4% | 38.6% | 38.6% |
 | arity | 171 | 171 | 42 | 42 | 100.0% | 24.6% | 24.6% |
 | unknown | 0 | 0 | 0 | 0 | excluded | excluded | excluded |
 

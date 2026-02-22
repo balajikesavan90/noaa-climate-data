@@ -43,6 +43,7 @@ from .constants import (
 @dataclass(frozen=True)
 class ParsedField:
     parts: list[str]
+    raw_parts: list[str]
     values: list[float | None]
     quality: str | None
 
@@ -241,14 +242,15 @@ def _to_float(value: str) -> float | None:
 
 
 def _split_field(raw: str) -> list[str]:
-    return [part.strip() for part in raw.split(",")]
+    return raw.split(",")
 
 
 def parse_field(raw: str) -> ParsedField:
-    parts = _split_field(raw)
+    raw_parts = _split_field(raw)
+    parts = [part.strip() for part in raw_parts]
     values = [_to_float(part) for part in parts]
     quality = parts[-1] if parts and len(parts[-1]) == 1 else None
-    return ParsedField(parts=parts, values=values, quality=quality)
+    return ParsedField(parts=parts, raw_parts=raw_parts, values=values, quality=quality)
 
 
 def _expand_parsed(
@@ -360,11 +362,16 @@ def _expand_parsed(
             width_rules = get_token_width_rules(prefix, idx)
             if width_rules:
                 part_stripped = part.strip()
+                raw_part = parsed.raw_parts[idx - 1] if idx - 1 < len(parsed.raw_parts) else part
                 # Check token width
                 if 'width' in width_rules:
                     expected_width = width_rules['width']
-                    # Handle signed values (e.g., temperature)
-                    test_value = part_stripped.lstrip('+-')
+                    if part_rule and part_rule.kind == "numeric":
+                        # Handle signed numeric values (e.g., temperature).
+                        test_value = part_stripped.lstrip('+-')
+                    else:
+                        # Preserve raw token width for fixed-width categorical/quality tokens.
+                        test_value = raw_part
                     if len(test_value) != expected_width:
                         logger.warning(
                             f"[PARSE_STRICT] Rejected {prefix} part {idx}: "
