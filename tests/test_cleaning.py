@@ -1501,6 +1501,14 @@ class TestQualityNullsCorrectPart:
         assert result["CR1__part1"] is None
         assert result["CR1__part2"] is None
 
+    def test_cr1_range_accepts_max(self):
+        result = clean_value_quality("99998,1,0", "CR1")
+        assert result["CR1__part1"] == pytest.approx(99.998)
+
+    def test_cr1_range_rejects_negative(self):
+        result = clean_value_quality("-00001,1,0", "CR1")
+        assert result["CR1__part1"] is None
+
     def test_ct_quality_rejects_2(self):
         result = clean_value_quality("+00123,2,0", "CT1")
         assert result["CT1__part1"] is None
@@ -1520,48 +1528,57 @@ class TestQualityNullsCorrectPart:
         assert result["CU1__part4"] is None
 
     def test_cv_min_quality_rejects_2(self):
-        result = clean_value_quality("+00123,2,0,1200,1,0,+00234,1,0,1300,1,0", "CV1")
+        result = clean_value_quality("+0123,2,0,1200,1,0,+0234,1,0,1300,1,0", "CV1")
         assert result["CV1__part1"] is None
         assert result["CV1__part7"] == pytest.approx(23.4)
 
     def test_cv_max_time_missing(self):
-        result = clean_value_quality("+00123,1,0,1200,1,0,+00234,1,0,9999,1,0", "CV1")
+        result = clean_value_quality("+0123,1,0,1200,1,0,+0234,1,0,9999,1,0", "CV1")
         assert result["CV1__part10"] is None
 
     def test_cv_min_time_invalid(self):
-        result = clean_value_quality("+00123,1,0,2460,1,0,+00234,1,0,1300,1,0", "CV1")
+        result = clean_value_quality("+0123,1,0,2460,1,0,+0234,1,0,1300,1,0", "CV1")
         assert result["CV1__part4"] is None
         assert result["CV1__part7"] == pytest.approx(23.4)
 
     def test_cv_max_time_invalid(self):
-        result = clean_value_quality("+00123,1,0,1200,1,0,+00234,1,0,2400,1,0", "CV1")
+        result = clean_value_quality("+0123,1,0,1200,1,0,+0234,1,0,2400,1,0", "CV1")
         assert result["CV1__part10"] is None
 
     def test_cv_range_enforced(self):
-        result = clean_value_quality("10000,1,0,1200,1,0,+00234,1,0,1300,1,0", "CV1")
+        result = clean_value_quality("10000,1,0,1200,1,0,+0234,1,0,1300,1,0", "CV1")
         assert result["CV1__part1"] is None
-        result = clean_value_quality("+00123,1,0,1200,1,0,10000,1,0,1300,1,0", "CV1")
+        result = clean_value_quality("+0123,1,0,1200,1,0,10000,1,0,1300,1,0", "CV1")
         assert result["CV1__part7"] is None
 
     def test_cv2_range_enforced(self):
-        result = clean_value_quality("+00123,1,0,1200,1,0,+00234,1,0,1300,1,0", "CV2")
+        result = clean_value_quality("+0123,1,0,1200,1,0,+0234,1,0,1300,1,0", "CV2")
         assert result["CV2__part1"] == pytest.approx(12.3)
         assert result["CV2__part7"] == pytest.approx(23.4)
 
-        result = clean_value_quality("10000,1,0,1200,1,0,+00234,1,0,1300,1,0", "CV2")
+        result = clean_value_quality("10000,1,0,1200,1,0,+0234,1,0,1300,1,0", "CV2")
         assert result["CV2__part1"] is None
 
     def test_cv3_range_enforced(self):
-        result = clean_value_quality("+00123,1,0,1200,1,0,+00234,1,0,1300,1,0", "CV3")
+        result = clean_value_quality("+0123,1,0,1200,1,0,+0234,1,0,1300,1,0", "CV3")
         assert result["CV3__part1"] == pytest.approx(12.3)
         assert result["CV3__part7"] == pytest.approx(23.4)
 
-        result = clean_value_quality("+00123,1,0,1200,1,0,10000,1,0,1300,1,0", "CV3")
+        result = clean_value_quality("+0123,1,0,1200,1,0,10000,1,0,1300,1,0", "CV3")
         assert result["CV3__part7"] is None
 
     def test_cw_wet2_missing(self):
         result = clean_value_quality("00010,1,0,99999,1,0", "CW1")
         assert result["CW1__part4"] is None
+
+    def test_cw_range_accepts_non_negative(self):
+        result = clean_value_quality("00010,1,0,00020,1,0", "CW1")
+        assert result["CW1__part1"] == pytest.approx(1.0)
+        assert result["CW1__part4"] == pytest.approx(2.0)
+
+    def test_cw_range_rejects_negative(self):
+        result = clean_value_quality("-00001,1,0,00020,1,0", "CW1")
+        assert result["CW1__part1"] is None
 
     def test_cx_precip_quality_rejects_2(self):
         result = clean_value_quality("+00100,2,0,1000,1,0,1000,1,0,1000,1,0", "CX1")
@@ -3390,6 +3407,125 @@ class TestA4TokenWidthValidation:
         
         # Should expand successfully
         assert result["sea_level_pressure_hpa"].iloc[0] == 1013.2
+
+    def test_cr1_token_width_accepts_five_digit_version(self):
+        """CR1 datalogger version accepts 5-digit token."""
+        result = clean_value_quality("00123,1,0", "CR1", strict_mode=True)
+        assert result["CR1__part1"] == pytest.approx(0.123)
+
+    def test_cr1_token_width_rejects_short_version(self):
+        """CR1 datalogger version rejects 4-digit token in strict mode."""
+        result = clean_value_quality("0123,1,0", "CR1", strict_mode=True)
+        assert result["CR1__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["CT1", "CT2", "CT3"])
+    def test_ct_token_width_accepts_signed_temperature(self, prefix: str):
+        """CT1-CT3 average temperature accepts signed token with expected width."""
+        result = clean_value_quality("+0123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(12.3)
+
+    @pytest.mark.parametrize("prefix", ["CT1", "CT2", "CT3"])
+    def test_ct_token_width_rejects_unsigned_temperature(self, prefix: str):
+        """CT1-CT3 average temperature rejects unsigned token in strict mode."""
+        result = clean_value_quality("0123,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["CU1", "CU2", "CU3"])
+    def test_cu_token_width_accepts_signed_avg_and_four_digit_std(self, prefix: str):
+        """CU1-CU3 accepts signed avg token and 4-digit std token."""
+        result = clean_value_quality("+0123,1,0,0100,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(12.3)
+        assert result[f"{prefix}__part4"] == pytest.approx(10.0)
+
+    @pytest.mark.parametrize("prefix", ["CU1", "CU2", "CU3"])
+    def test_cu_token_width_rejects_unsigned_avg_temperature(self, prefix: str):
+        """CU1-CU3 rejects unsigned avg token in strict mode."""
+        result = clean_value_quality("0123,1,0,0100,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["CU1", "CU2", "CU3"])
+    def test_cu_token_width_rejects_short_std_temperature(self, prefix: str):
+        """CU1-CU3 rejects short std token in strict mode."""
+        result = clean_value_quality("+0123,1,0,100,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part4"] is None
+
+    @pytest.mark.parametrize("prefix", ["CV1", "CV2", "CV3"])
+    def test_cv_token_width_accepts_signed_min_and_max_temperature(self, prefix: str):
+        """CV1-CV3 accepts signed min/max temperature tokens."""
+        result = clean_value_quality("+0123,1,0,1200,1,0,+0234,1,0,1300,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(12.3)
+        assert result[f"{prefix}__part7"] == pytest.approx(23.4)
+
+    @pytest.mark.parametrize("prefix", ["CV1", "CV2", "CV3"])
+    def test_cv_token_width_rejects_unsigned_min_temperature(self, prefix: str):
+        """CV1-CV3 rejects unsigned min temperature token in strict mode."""
+        result = clean_value_quality("0123,1,0,1200,1,0,+0234,1,0,1300,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+
+    def test_cw_token_width_rejects_short_wet_token(self):
+        """CW1 rejects short wetness token in strict mode."""
+        result = clean_value_quality("0010,1,0,00020,1,0", "CW1", strict_mode=True)
+        assert result["CW1__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["CX1", "CX2", "CX3"])
+    def test_cx_token_width_accepts_signed_precipitation(self, prefix: str):
+        """CX1-CX3 accepts signed precipitation token with expected width."""
+        result = clean_value_quality("+00100,1,0,1000,1,0,1000,1,0,1000,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == pytest.approx(10.0)
+
+    @pytest.mark.parametrize("prefix", ["CX1", "CX2", "CX3"])
+    def test_cx_token_width_rejects_unsigned_precipitation(self, prefix: str):
+        """CX1-CX3 rejects unsigned precipitation token in strict mode."""
+        result = clean_value_quality("00100,1,0,1000,1,0,1000,1,0,1000,1,0", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["GA1", "GA2", "GA3", "GA4", "GA5", "GA6"])
+    def test_ga_token_width_accepts_signed_base_height(self, prefix: str):
+        """GA1-GA6 accepts signed 6-char base-height token."""
+        result = clean_value_quality("05,1,+01000,1,01,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] == pytest.approx(1000.0)
+
+    @pytest.mark.parametrize("prefix", ["GA1", "GA2", "GA3", "GA4", "GA5", "GA6"])
+    def test_ga_token_width_rejects_unsigned_base_height(self, prefix: str):
+        """GA1-GA6 rejects unsigned base-height token in strict mode."""
+        result = clean_value_quality("05,1,0100,1,01,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part3"] is None
+
+    @pytest.mark.parametrize("prefix", ["GD1", "GD2", "GD3", "GD4", "GD5", "GD6"])
+    def test_gd_token_width_accepts_signed_height(self, prefix: str):
+        """GD1-GD6 accepts signed 6-char height token."""
+        result = clean_value_quality("1,01,1,+01000,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part4"] == pytest.approx(1000.0)
+
+    @pytest.mark.parametrize("prefix", ["GD1", "GD2", "GD3", "GD4", "GD5", "GD6"])
+    def test_gd_token_width_rejects_unsigned_height(self, prefix: str):
+        """GD1-GD6 rejects unsigned height token in strict mode."""
+        result = clean_value_quality("1,01,1,0100,1,1", prefix, strict_mode=True)
+        assert result[f"{prefix}__part4"] is None
+
+    def test_co1_token_width_accepts_signed_utc_offset(self):
+        """CO1 UTC offset accepts signed 3-char token."""
+        result = clean_value_quality("05,+12", "CO1", strict_mode=True)
+        assert result["CO1__part1"] == pytest.approx(5.0)
+        assert result["CO1__part2"] == pytest.approx(12.0)
+
+    def test_co1_token_width_rejects_unsigned_utc_offset(self):
+        """CO1 UTC offset rejects unsigned 2-char token in strict mode."""
+        result = clean_value_quality("05,12", "CO1", strict_mode=True)
+        assert result["CO1__part2"] is None
+
+    @pytest.mark.parametrize("prefix", ["CO2", "CO3", "CO4", "CO5", "CO6", "CO7", "CO8", "CO9"])
+    def test_co_repeated_token_width_accepts_signed_offsets(self, prefix: str):
+        """CO2-CO9 offsets accept signed 5-char tokens."""
+        result = clean_value_quality("TMP,+0010", prefix, strict_mode=True)
+        assert result[f"{prefix}__part1"] == "TMP"
+        assert result[f"{prefix}__part2"] == pytest.approx(1.0)
+
+    @pytest.mark.parametrize("prefix", ["CO2", "CO3", "CO4", "CO5", "CO6", "CO7", "CO8", "CO9"])
+    def test_co_repeated_token_width_rejects_unsigned_offsets(self, prefix: str):
+        """CO2-CO9 offsets reject unsigned 4-char tokens in strict mode."""
+        result = clean_value_quality("TMP,0010", prefix, strict_mode=True)
+        assert result[f"{prefix}__part2"] is None
 
     def test_token_width_permissive_mode(self):
         """Invalid token widths allowed in permissive mode."""
