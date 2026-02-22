@@ -3446,6 +3446,16 @@ class TestTopStrictCoverageGapFixes:
         result = clean_value_quality("010,0123,1,011200,1", prefix)
         assert result[f"{prefix}__part1"] == pytest.approx(10.0)
 
+    @pytest.mark.parametrize("prefix", ["AI2", "AI3", "AI4", "AI5", "AI6"])
+    def test_ai_repeated_sentinel_rejects_missing_period_token(self, prefix: str):
+        result = clean_value_quality("999,0123,1,011200,1", prefix)
+        assert result[f"{prefix}__part1"] is None
+
+    @pytest.mark.parametrize("prefix", ["AI2", "AI3", "AI4", "AI5", "AI6"])
+    def test_ai_repeated_sentinel_accepts_non_sentinel_period_token(self, prefix: str):
+        result = clean_value_quality("060,0123,1,011200,1", prefix)
+        assert result[f"{prefix}__part1"] == pytest.approx(60.0)
+
     def test_ab1_width_accepts_expected_part_widths(self):
         result = clean_value_quality("01000,1,1", "AB1")
         assert result["AB1__part1"] is not None
