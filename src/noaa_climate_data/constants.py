@@ -4687,6 +4687,7 @@ _REPEATED_IDENTIFIER_RANGES: dict[str, range] = {
     "AU": range(1, 10),
     "AW": range(1, 5),
     "AX": range(1, 7),
+    "AY": range(1, 3),
     "AZ": range(1, 3),
     "CO": range(1, 10),
     "CT": range(1, 4),

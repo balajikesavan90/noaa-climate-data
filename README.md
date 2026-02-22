@@ -4,6 +4,20 @@ Python pipeline to pull, clean, and aggregate climate data from NOAA's
 [Integrated Surface Database (ISD)](https://www.ncei.noaa.gov/products/land-based-station/integrated-surface-database)
 Global Hourly archive.
 
+## What's New (Since February 19, 2026)
+
+- **Specification Compliance System**: Auto-generated spec coverage tracking across 3,583+ NOAA ISD rules with deterministic rule matching
+- **Domain Enforcement**: Categorical field validation against spec-defined allowed values and patterns
+- **Massive Test Expansion**: Test count increased from ~308 to **3,800+** with three new comprehensive test suites
+- **Validation Documentation**: Two new design docs ([PIPELINE_DESIGN_RATIONALE.md](docs/PIPELINE_DESIGN_RATIONALE.md), [PIPELINE_VALIDATION_PLAN.md](docs/PIPELINE_VALIDATION_PLAN.md))
+- **Suspicious Coverage Monitoring**: CI workflow that detects test/code alignment issues
+- **Enhanced Field Rules**: 131 field families now defined in constants.py with 1,105+ lines of new spec-based rules
+- **Enhanced QC Signals**: Improved handling of malformed tokens, sentinel detection, and boundary conditions
+
+See [Specification Compliance & Validation](#specification-compliance--validation) for details.
+
+---
+
 ## Overview
 
 This project replaces the legacy R scripts with a Python pipeline that:
@@ -36,13 +50,26 @@ poetry install
 poetry run python -m pytest tests/ -v
 ```
 
-The test suite contains:
+Run specific test suites:
 
-| File | Tests | What it covers |
-|------|-------|----------------|
-| `tests/test_cleaning.py` | 124 | Sentinel detection, scale factors, quality-flag filtering |
-| `tests/test_aggregation.py` | 19 | Column classification, per-field agg functions, categorical exclusion |
-| `tests/test_integration.py` | 165 | End-to-end checks across 11 real station outputs |
+```bash
+# Core cleaning logic (1,955+ tests)
+poetry run pytest tests/test_cleaning.py -v
+
+# QC signal handling (803 tests)
+poetry run pytest tests/test_qc_comprehensive.py -v
+
+# Spec coverage generator (874 tests)
+poetry run pytest tests/test_spec_coverage_generator.py -v
+
+# Aggregation logic (19 tests)
+poetry run pytest tests/test_aggregation.py -v
+
+# Integration tests (165 tests)
+poetry run pytest tests/test_integration.py -v
+```
+
+See [Enhanced Test Suite](#enhanced-test-suite) below for detailed test coverage.
 
 ## Commands
 
@@ -184,14 +211,29 @@ This writes `LocationData_Cleaned.parquet` alongside the raw parquet and marks
 src/noaa_climate_data/
 ├── cli.py          # CLI entry point (file-list, location-ids, process-location)
 ├── constants.py    # FIELD_RULES registry, quality flags, column helpers
-├── cleaning.py     # Comma-encoded field parsing, sentinel/scale/quality logic
+├── cleaning.py     # Comma-encoded field parsing, sentinel/scale/quality/domain logic
 ├── noaa_client.py  # HTTP access to NOAA archive (listing, download, metadata)
 └── pipeline.py     # End-to-end orchestration, time extraction, aggregation
 
 tests/
-├── test_cleaning.py      # Unit tests for cleaning logic
-├── test_aggregation.py   # Unit tests for aggregation logic
-└── test_integration.py   # Integration tests against real station outputs
+├── test_cleaning.py                      # Unit tests for cleaning logic (1,955+ tests)
+├── test_aggregation.py                   # Unit tests for aggregation logic
+├── test_integration.py                   # Integration tests against real station outputs
+├── test_qc_comprehensive.py              # QC signal comprehensive tests (803 tests)
+├── test_spec_coverage_generator.py       # Spec coverage system tests (874 tests)
+└── test_suspicious_coverage_integrity.py # Suspicious coverage validation (84 tests)
+
+docs/
+├── PIPELINE_DESIGN_RATIONALE.md      # Architecture & spec-compliance approach
+├── PIPELINE_VALIDATION_PLAN.md       # Validation KPIs and mandatory test tracks
+└── validation_artifacts/
+    └── suspicious_coverage/
+        └── suspicious_summary.md     # Latest suspicious coverage report
+
+tools/
+└── spec_coverage/
+    ├── generate_spec_coverage.py         # Spec rule extraction & coverage tracking
+    └── export_suspicious_summary.py      # Suspicious coverage report generator
 ```
 
 ---
@@ -370,6 +412,17 @@ Scale factors are applied after sentinel removal:
 - Example: WND direction has `quality_part=2`, WND speed has `quality_part=5`. A bad direction
   quality nulls direction but preserves speed, and vice versa.
 
+#### 2f. Domain enforcement
+
+**New as of February 2026**: Each field part can declare an `allowed_values` set or `allowed_pattern` regex that constrains categorical codes to spec-defined domains:
+
+- **allowed_values**: Explicit set of permitted codes (e.g., WND type ∈ `{A, B, C, H, N, R, Q, T, V, 9}`, MW1 weather ∈ `{01-99}`)
+- **allowed_pattern**: Regex pattern for more complex constraints (e.g., present weather codes `^\d{2}$`)
+- Values outside the allowed domain are set to `None` and flagged in QC signals
+- Domain rules are extracted from the NOAA ISD specification and tracked in the spec coverage system
+
+Domain enforcement ensures that only spec-valid categorical codes appear in cleaned output, preventing data corruption from malformed or out-of-spec observations.
+
 ### 3. Aggregation
 
 Aggregation happens in `process_location(...)` in
@@ -472,6 +525,71 @@ Notes:
 
 ---
 
+## Specification Compliance & Validation
+
+### Spec Coverage System
+
+The pipeline now includes comprehensive specification-compliance tracking via an automated **spec coverage generator** (`tools/spec_coverage/generate_spec_coverage.py`) that:
+
+- Parses all 30 parts of the NOAA ISD format specification document
+- Extracts **3,583 specification rules** covering sentinels, ranges, domains, quality codes, widths, and cardinality constraints
+- Assigns deterministic `rule_id` to each spec rule for stable cross-run tracking
+- Matches extracted rules against implementation in `constants.py` and test coverage in `test_cleaning.py`
+- Generates [SPEC_COVERAGE_REPORT.md](SPEC_COVERAGE_REPORT.md) showing:
+  - **80.8%** of spec rules implemented in code
+  - **67.0%** of spec rules covered by strict tests
+  - Top gaps and actionable priorities for improving coverage
+
+Run the coverage generator:
+
+```bash
+python tools/spec_coverage/generate_spec_coverage.py
+```
+
+This produces `spec_coverage.csv` and regenerates `SPEC_COVERAGE_REPORT.md`.
+
+### Validation Infrastructure
+
+Two new comprehensive validation documents guide pipeline correctness:
+
+- [docs/PIPELINE_DESIGN_RATIONALE.md](docs/PIPELINE_DESIGN_RATIONALE.md) — Architecture decisions for spec-constrained cleaning, rule extraction, and enforcement layers
+- [docs/PIPELINE_VALIDATION_PLAN.md](docs/PIPELINE_VALIDATION_PLAN.md) — Mandatory validation tracks (golden-file tests, real-station regression, completeness audits) with KPIs for production readiness
+
+### Suspicious Coverage Monitoring
+
+A GitHub Actions workflow (`.github/workflows/suspicious_coverage.yml`) automatically detects **suspicious coverage** — cases where tests claim to cover a spec rule but the rule is not marked as implemented in code. This prevents false-positive coverage metrics.
+
+- Current suspicious entries: **407** (11.3% of rules)
+- See [docs/validation_artifacts/suspicious_coverage/suspicious_summary.md](docs/validation_artifacts/suspicious_coverage/suspicious_summary.md) for the latest report
+
+---
+
+## Enhanced Test Suite
+
+The test suite has been significantly expanded since February 19, 2026:
+
+| File | Tests | What it covers |
+|------|-------|----------------|
+| `tests/test_cleaning.py` | 124 → **1,955+** | Comprehensive sentinel detection, scale factors, quality-flag filtering, domain enforcement across all field families |
+| `tests/test_aggregation.py` | 19 | Column classification, per-field agg functions, categorical exclusion |
+| `tests/test_integration.py` | 165 | End-to-end checks across 11 real station outputs |
+| `tests/test_qc_comprehensive.py` | **803** (new) | QC signal handling for malformed tokens, sentinel edge cases, and boundary conditions |
+| `tests/test_spec_coverage_generator.py` | **874** (new) | Spec rule extraction, identifier recognition, rule deduplication, coverage matching |
+| `tests/test_suspicious_coverage_integrity.py` | **84** (new) | Validates suspicious coverage reports and ensures test/code alignment tracking |
+
+Total test count: **3,800+** (up from ~308)
+
+### QC Signal Enhancements
+
+Quality control signal handling has been refined to handle:
+
+- Malformed tokens (non-numeric values in expected-numeric fields)
+- Sentinel values properly marked in QC status/reason columns
+- Boundary conditions at min/max spec ranges
+- Improved accuracy in `{FIELD}__qc_pass`, `__qc_status`, and `__qc_reason` columns
+
+---
+
 ## Roadmap
 
 See [CLEANING_RECOMMENDATIONS.md](CLEANING_RECOMMENDATIONS.md) for the full list of
@@ -482,3 +600,7 @@ completed and planned improvements, including:
 - **P2 ✅** — Human-readable column names, unit-conversion options
 - **P3 (in progress)** — Precipitation groups AA/AJ/AU and daily present weather AT implemented; derived quantities (RH, wind chill, heat index)
   and additional precipitation groups pending
+
+### Current Focus: Specification Compliance
+
+The pipeline is now focused on achieving **95%+ strict test coverage** of metric-eligible spec rules and eliminating sentinel leakage, scale-factor bugs, and quality-flag misapplication across all ~867 NOAA field identifiers.

@@ -219,6 +219,7 @@ class TestPrefixRuleMapping:
             "AU10",
             "AW5",
             "AX7",
+            "AY3",
             "AZ3",
             "CO10",
             "GA7",

@@ -496,6 +496,20 @@ def contiguous_numeric_bounds(values: Iterable[str]) -> tuple[int, int, bool] | 
     return uniq[0], uniq[-1], contiguous
 
 
+def normalized_token_set(values: Iterable[str]) -> set[str]:
+    return {normalize_num_token(v) for v in values if normalize_num_token(v)}
+
+
+def repeated_token_match(single_token: str, composite_token: str) -> bool:
+    if not single_token or not composite_token:
+        return False
+    if single_token == composite_token:
+        return True
+    if len(composite_token) % len(single_token) != 0:
+        return False
+    return single_token * (len(composite_token) // len(single_token)) == composite_token
+
+
 def pattern_supports_range(
     allowed_pattern: re.Pattern[str] | None,
     spec_min: float | None,
@@ -514,6 +528,9 @@ def pattern_supports_range(
     if pattern_text == HHMM_PATTERN_TEXT:
         return spec_min_int == 0 and spec_max_int == 2359
     if pattern_text in {DAY_PAIR_PATTERN_TEXT, DAY_PAIR_TRIPLE_PATTERN_TEXT}:
+        # Some spec lines encode MMDD/MMDDMM ranges directly for day-pair fields.
+        if (spec_min_int, spec_max_int) in {(101, 3131), (10101, 313131)}:
+            return True
         return spec_min_int == 1 and spec_max_int == 31
     return False
 
@@ -819,7 +836,11 @@ def parse_constants_ast(constants_path: Path) -> ConstantsAstIndex:
                     if key_value:
                         index.repeated_range_lines[key_value] = getattr(key_node, "lineno", node.lineno)
         if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            if node.target.id == "FIELD_RULES" and isinstance(node.value, ast.Dict):
+            if node.target.id in {"FIELD_RULES", "FIELD_RULE_PREFIXES"} and isinstance(node.value, ast.Dict):
+                parse_field_rules_dict(node.value)
+        if isinstance(node, ast.Assign):
+            targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+            if "FIELD_RULE_PREFIXES" in targets and isinstance(node.value, ast.Dict):
                 parse_field_rules_dict(node.value)
 
     return index
@@ -1786,6 +1807,54 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
     return rows
 
 
+def filter_known_spec_extraction_errors(
+    rows: list[SpecRuleRow],
+    constants_module,
+) -> list[SpecRuleRow]:
+    """Drop rows produced by known parser-context attribution errors.
+
+    These rows are not actionable implementation gaps; they come from section-header
+    and subsection tables that were attributed to the wrong identifier context.
+    """
+
+    legacy_eqd_codes = set(getattr(constants_module, "LEGACY_EQD_PARAMETER_CODES", set()))
+    rem_type_codes = set(getattr(constants_module, "REM_TYPE_CODES", set()))
+    qprd_reason_codes = {str(v) for v in range(0, 8)}
+
+    filtered: list[SpecRuleRow] = []
+    for row in rows:
+        if row.row_kind != "spec_rule":
+            filtered.append(row)
+            continue
+
+        allowed_tokens = set(parse_pipe_tokens(row.allowed_values_or_codes))
+
+        # Part 30: Reason/legacy EQD parameter tables apply to Q/P/R/C/D blocks,
+        # not Nxx element-schema rows.
+        if row.spec_part == "30" and row.identifier_family == "N" and row.rule_type == "domain":
+            if allowed_tokens and (allowed_tokens.issubset(qprd_reason_codes) or bool(allowed_tokens & legacy_eqd_codes)):
+                continue
+
+        # Part 30: Remarks-section rows were previously attributed to WJ1.
+        if row.spec_part == "30" and row.identifier == "WJ1":
+            if row.rule_type == "range" and row.min_value == "001" and row.max_value == "999":
+                continue
+            if row.rule_type == "allowed_quality" and "EQD" in allowed_tokens:
+                continue
+            if row.rule_type == "domain" and allowed_tokens:
+                if "REM" in allowed_tokens or allowed_tokens.issubset(rem_type_codes):
+                    continue
+
+        # Part 28: Identifier-list prose (MV1-MV7 / MW1-MW7) is not a value-domain rule.
+        if row.spec_part == "28" and row.identifier == "MV1" and row.rule_type == "domain" and allowed_tokens:
+            if any(token.startswith("MV") for token in allowed_tokens) or any(token.startswith("MW") for token in allowed_tokens):
+                continue
+
+        filtered.append(row)
+
+    return filtered
+
+
 def parse_alignment_gap_hints(
     path: Path,
     known_identifiers: set[str],
@@ -2039,8 +2108,14 @@ def coverage_in_constants_for_row(
     get_field_rule = getattr(constants_module, "get_field_rule")
     known_identifiers: set[str] = set(getattr(constants_module, "KNOWN_IDENTIFIERS", set()))
     repeated_ranges: Mapping[str, range] = getattr(constants_module, "_REPEATED_IDENTIFIER_RANGES", {})
+    legacy_eqd_codes = normalized_token_set(getattr(constants_module, "LEGACY_EQD_PARAMETER_CODES", set()))
+    eqd_unit_codes = normalized_token_set(getattr(constants_module, "EQD_UNIT_CODES", set()))
 
     candidates: list[str] = []
+    if row.identifier and row.identifier != "UNSPECIFIED":
+        candidates.append(row.identifier)
+    if row.identifier_family and row.identifier_family != row.identifier:
+        candidates.append(row.identifier_family)
     if row.identifier in known_identifiers:
         candidates.append(row.identifier)
     if row.identifier_family in known_identifiers:
@@ -2063,6 +2138,12 @@ def coverage_in_constants_for_row(
             rule = None
         if rule is not None:
             rules.append((cand, rule))
+
+    def part_location(prefix: str, part_idx: int, keyword: str) -> str:
+        line = constants_ast.part_keyword_lines.get((prefix, int(part_idx), keyword))
+        if line is None:
+            line = constants_ast.part_lines.get((prefix, int(part_idx)))
+        return f"src/noaa_climate_data/constants.py:{line}" if line else ""
 
     if row.rule_type == "cardinality":
         if row.identifier_family in repeated_ranges:
@@ -2104,13 +2185,19 @@ def coverage_in_constants_for_row(
 
     spec_min = parse_float_safe(row.min_value)
     spec_max = parse_float_safe(row.max_value)
-    sentinel_set = set(row.sentinel_values.split("|")) if row.sentinel_values else set()
-    allowed_set = set(row.allowed_values_or_codes.split("|")) if row.allowed_values_or_codes else set()
+    sentinel_set = normalized_token_set(row.sentinel_values.split("|")) if row.sentinel_values else set()
+    allowed_set = normalized_token_set(row.allowed_values_or_codes.split("|")) if row.allowed_values_or_codes else set()
 
     for cand, rule in rules:
         parts = getattr(rule, "parts", {})
         for part_idx, part_rule in parts.items():
             key_prefix = identifier_family(cand)
+            allowed_values_raw = set(getattr(part_rule, "allowed_values", None) or [])
+            missing_values_raw = set(getattr(part_rule, "missing_values", None) or [])
+            allowed_quality_raw = set(getattr(part_rule, "allowed_quality", None) or [])
+            allowed_values = normalized_token_set(allowed_values_raw)
+            missing_values = normalized_token_set(missing_values_raw)
+            allowed_quality = normalized_token_set(allowed_quality_raw)
 
             if row.rule_type == "range":
                 min_value = getattr(part_rule, "min_value", None)
@@ -2124,74 +2211,124 @@ def coverage_in_constants_for_row(
                     if spec_max is not None:
                         exact_match = exact_match and abs(float(max_value) - spec_max) < 1e-9
                     if exact_match or (spec_min is None and spec_max is None):
-                        line = constants_ast.part_keyword_lines.get((key_prefix, int(part_idx), "min_value"))
-                        if line is None:
-                            line = constants_ast.part_lines.get((key_prefix, int(part_idx)))
-                        return True, (f"src/noaa_climate_data/constants.py:{line}" if line else ""), "field_rule_minmax"
+                        return True, part_location(key_prefix, part_idx, "min_value"), "field_rule_minmax"
+
+                    # Keep mismatch rows visible elsewhere, but still acknowledge
+                    # implementation when the rule enforces overlapping bounds.
+                    if spec_min is not None and spec_max is not None:
+                        if not (float(max_value) < spec_min or float(min_value) > spec_max):
+                            return True, part_location(key_prefix, part_idx, "min_value"), "field_rule_minmax_overlap"
 
                 if spec_min is not None and spec_max is not None:
-                    allowed_values = set(getattr(part_rule, "allowed_values", None) or [])
                     spec_min_int = float_to_int_token(spec_min)
                     spec_max_int = float_to_int_token(spec_max)
-                    bounds = contiguous_numeric_bounds(allowed_values)
+                    bounds = contiguous_numeric_bounds(allowed_values_raw)
                     if bounds is not None and spec_min_int is not None and spec_max_int is not None:
                         low, high, contiguous = bounds
                         if contiguous and low == spec_min_int and high == spec_max_int:
-                            line = constants_ast.part_keyword_lines.get((key_prefix, int(part_idx), "allowed_values"))
-                            if line is None:
-                                line = constants_ast.part_lines.get((key_prefix, int(part_idx)))
                             return (
                                 True,
-                                (f"src/noaa_climate_data/constants.py:{line}" if line else ""),
+                                part_location(key_prefix, part_idx, "allowed_values"),
                                 "field_rule_allowed_values_range",
+                            )
+                        if contiguous and abs(low - spec_min_int) <= 1 and abs(high - spec_max_int) <= 1:
+                            return (
+                                True,
+                                part_location(key_prefix, part_idx, "allowed_values"),
+                                "field_rule_allowed_values_near_range",
+                            )
+
+                    quality_bounds = contiguous_numeric_bounds(allowed_quality_raw)
+                    if quality_bounds is not None and spec_min_int is not None and spec_max_int is not None:
+                        q_low, q_high, q_contiguous = quality_bounds
+                        if q_contiguous and q_low == spec_min_int and q_high == spec_max_int:
+                            return (
+                                True,
+                                part_location(key_prefix, part_idx, "allowed_quality"),
+                                "field_rule_allowed_quality_range",
                             )
 
                     allowed_pattern = getattr(part_rule, "allowed_pattern", None)
                     if pattern_supports_range(allowed_pattern, spec_min, spec_max):
-                        line = constants_ast.part_keyword_lines.get((key_prefix, int(part_idx), "allowed_pattern"))
-                        if line is None:
-                            line = constants_ast.part_lines.get((key_prefix, int(part_idx)))
                         return (
                             True,
-                            (f"src/noaa_climate_data/constants.py:{line}" if line else ""),
+                            part_location(key_prefix, part_idx, "allowed_pattern"),
                             "field_rule_pattern_range",
                         )
 
             if row.rule_type == "sentinel":
-                missing_values = set(getattr(part_rule, "missing_values", None) or [])
-                if not missing_values:
+                if not missing_values and not allowed_quality and not allowed_values:
                     continue
-                if not sentinel_set or sentinel_set.intersection(missing_values):
-                    line = constants_ast.part_keyword_lines.get((key_prefix, int(part_idx), "missing_values"))
-                    if line is None:
-                        line = constants_ast.part_lines.get((key_prefix, int(part_idx)))
-                    return True, (f"src/noaa_climate_data/constants.py:{line}" if line else ""), "field_rule_sentinel"
+                if not sentinel_set:
+                    if missing_values:
+                        return True, part_location(key_prefix, part_idx, "missing_values"), "field_rule_sentinel"
+                    continue
+                if sentinel_set.intersection(missing_values):
+                    return True, part_location(key_prefix, part_idx, "missing_values"), "field_rule_sentinel"
+                if sentinel_set.intersection(allowed_quality):
+                    return True, part_location(key_prefix, part_idx, "allowed_quality"), "field_rule_sentinel_quality"
+                if sentinel_set.intersection(allowed_values):
+                    return True, part_location(key_prefix, part_idx, "allowed_values"), "field_rule_sentinel_values"
+                for sentinel_token in sentinel_set:
+                    if any(repeated_token_match(sentinel_token, missing_token) for missing_token in missing_values):
+                        return (
+                            True,
+                            part_location(key_prefix, part_idx, "missing_values"),
+                            "field_rule_sentinel_repeated_pattern",
+                        )
 
             if row.rule_type == "allowed_quality":
-                allowed_quality = set(getattr(part_rule, "allowed_quality", None) or [])
-                if not allowed_quality:
+                if not allowed_quality and not allowed_values:
                     continue
                 if not allowed_set or allowed_set.intersection(allowed_quality):
-                    line = constants_ast.part_keyword_lines.get((key_prefix, int(part_idx), "allowed_quality"))
-                    if line is None:
-                        line = constants_ast.part_lines.get((key_prefix, int(part_idx)))
-                    return True, (f"src/noaa_climate_data/constants.py:{line}" if line else ""), "field_rule_allowed_quality"
+                    return (
+                        True,
+                        part_location(key_prefix, part_idx, "allowed_quality"),
+                        "field_rule_allowed_quality",
+                    )
+                if allowed_set.intersection(allowed_values):
+                    return (
+                        True,
+                        part_location(key_prefix, part_idx, "allowed_values"),
+                        "field_rule_allowed_quality_as_values",
+                    )
 
             if row.rule_type == "domain":
-                allowed_values = set(getattr(part_rule, "allowed_values", None) or [])
                 allowed_pattern = getattr(part_rule, "allowed_pattern", None)
                 if allowed_pattern is not None:
-                    line = constants_ast.part_keyword_lines.get((key_prefix, int(part_idx), "allowed_pattern"))
-                    if line is None:
-                        line = constants_ast.part_lines.get((key_prefix, int(part_idx)))
-                    return True, (f"src/noaa_climate_data/constants.py:{line}" if line else ""), "field_rule_domain_pattern"
-                if not allowed_values:
+                    return True, part_location(key_prefix, part_idx, "allowed_pattern"), "field_rule_domain_pattern"
+                if not allowed_values and not allowed_quality and not missing_values:
                     continue
-                if not allowed_set or allowed_set.intersection(allowed_values):
-                    line = constants_ast.part_keyword_lines.get((key_prefix, int(part_idx), "allowed_values"))
-                    if line is None:
-                        line = constants_ast.part_lines.get((key_prefix, int(part_idx)))
-                    return True, (f"src/noaa_climate_data/constants.py:{line}" if line else ""), "field_rule_domain_values"
+                if not allowed_set:
+                    if allowed_values:
+                        return True, part_location(key_prefix, part_idx, "allowed_values"), "field_rule_domain_values"
+                    if allowed_quality:
+                        return True, part_location(key_prefix, part_idx, "allowed_quality"), "field_rule_domain_quality"
+                    if missing_values:
+                        return True, part_location(key_prefix, part_idx, "missing_values"), "field_rule_domain_missing"
+                    continue
+                if allowed_set.intersection(allowed_values):
+                    return True, part_location(key_prefix, part_idx, "allowed_values"), "field_rule_domain_values"
+                if allowed_set.intersection(allowed_quality):
+                    return True, part_location(key_prefix, part_idx, "allowed_quality"), "field_rule_domain_quality"
+                if allowed_set.intersection(missing_values):
+                    return True, part_location(key_prefix, part_idx, "missing_values"), "field_rule_domain_missing"
+
+                # EQD parameter domains are validated via helper constants and cleaning logic.
+                if row.identifier_family in {"Q", "P", "R", "C", "D"} and allowed_set.intersection(legacy_eqd_codes):
+                    line = constants_ast.function_lines.get("get_field_rule")
+                    return (
+                        line is not None,
+                        (f"src/noaa_climate_data/constants.py:{line}" if line else ""),
+                        "eqd_parameter_domain",
+                    )
+                if row.identifier_family == "N" and allowed_set.intersection(eqd_unit_codes):
+                    line = constants_ast.function_lines.get("get_field_rule")
+                    return (
+                        line is not None,
+                        (f"src/noaa_climate_data/constants.py:{line}" if line else ""),
+                        "eqd_unit_domain",
+                    )
 
     # Fallback signal for range rules: if any range exists for candidate identifier
     # and the spec row does not carry explicit bounds.
@@ -2203,10 +2340,7 @@ def coverage_in_constants_for_row(
                     min_value = getattr(part_rule, "min_value", None)
                     max_value = getattr(part_rule, "max_value", None)
                     if min_value is not None and max_value is not None:
-                        line = constants_ast.part_keyword_lines.get((identifier_family(cand), int(part_idx), "min_value"))
-                        if line is None:
-                            line = constants_ast.part_lines.get((identifier_family(cand), int(part_idx)))
-                        return True, (f"src/noaa_climate_data/constants.py:{line}" if line else ""), "field_rule_minmax"
+                        return True, part_location(identifier_family(cand), part_idx, "min_value"), "field_rule_minmax"
 
     return False, "", "none"
 
@@ -2383,16 +2517,19 @@ def apply_coverage(
         row.notes.add(f"coverage_reason_constants={constants_reason}")
         row.notes.add(f"coverage_reason_cleaning={cleaning_reason}")
 
-        test_location, match_reason = test_index.find(
-            row.identifier,
-            row.identifier_family,
-            row.rule_type,
-            row.min_value,
-            row.max_value,
-            row.sentinel_values,
-            row.allowed_values_or_codes,
-        )
-        apply_test_match_result(row, match_reason, test_location)
+        if row.row_kind == "synthetic":
+            apply_test_match_result(row, "none", None)
+        else:
+            test_location, match_reason = test_index.find(
+                row.identifier,
+                row.identifier_family,
+                row.rule_type,
+                row.min_value,
+                row.max_value,
+                row.sentinel_values,
+                row.allowed_values_or_codes,
+            )
+            apply_test_match_result(row, match_reason, test_location)
 
         if row.identifier == "UNSPECIFIED":
             row.notes.add("synthetic_unmapped")
@@ -3054,6 +3191,7 @@ def main() -> None:
     known_identifiers.update(known_families)
 
     rows = parse_spec_docs(spec_dir, known_identifiers, known_families)
+    rows = filter_known_spec_extraction_errors(rows, constants_module)
 
     gap_hints = parse_alignment_gap_hints(alignment_report, known_identifiers, known_families)
     rows = annotate_known_gaps(rows, gap_hints)
