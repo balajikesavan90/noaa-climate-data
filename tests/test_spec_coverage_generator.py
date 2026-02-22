@@ -81,6 +81,132 @@ def test_rule_ids_differ_by_line_range_and_are_not_merged() -> None:
     assert len(merged) == 2, "Rows with identical payload but different line ranges must remain separate"
 
 
+def _fixture_row(module, identifier: str, rule_type: str = "range"):
+    return module.SpecRuleRow(
+        spec_part="99",
+        spec_doc="part-99-fixture.md",
+        spec_file="part-99-fixture.md",
+        spec_line_start=1,
+        spec_line_end=1,
+        identifier=identifier,
+        identifier_family=module.identifier_family(identifier),
+        rule_type=rule_type,
+        spec_rule_text=f"{identifier} {rule_type} fixture",
+    )
+
+
+def test_wildcard_match_is_any_but_not_strict() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    row = _fixture_row(module, "TMP")
+    test_index = module.TestEvidenceIndex()
+    test_index.add_wildcard_assertion("range", ("tests/test_cleaning.py", 123))
+
+    location, strength = test_index.find(
+        row.identifier,
+        row.identifier_family,
+        row.rule_type,
+        row.min_value,
+        row.max_value,
+        row.sentinel_values,
+        row.allowed_values_or_codes,
+    )
+    module.apply_test_match_result(row, strength, location)
+
+    assert row.test_match_strength == "wildcard_assertion"
+    assert row.test_covered_any is True
+    assert row.test_covered_strict is False
+    assert row.test_covered is True
+    assert row.test_location == "tests/test_cleaning.py:123"
+
+
+def test_exact_match_is_strict() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    row = _fixture_row(module, "TMP")
+    test_index = module.TestEvidenceIndex()
+    test_index.add_exact_assertion("TMP", "range", ("tests/test_cleaning.py", 222))
+
+    location, strength = test_index.find(
+        row.identifier,
+        row.identifier_family,
+        row.rule_type,
+        row.min_value,
+        row.max_value,
+        row.sentinel_values,
+        row.allowed_values_or_codes,
+    )
+    module.apply_test_match_result(row, strength, location)
+
+    assert row.test_match_strength == "exact_assertion"
+    assert row.test_covered_any is True
+    assert row.test_covered_strict is True
+    assert row.test_covered is True
+    assert row.test_location == "tests/test_cleaning.py:222"
+
+
+def test_no_test_match_sets_none_and_false() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    row = _fixture_row(module, "TMP")
+    test_index = module.TestEvidenceIndex()
+
+    location, strength = test_index.find(
+        row.identifier,
+        row.identifier_family,
+        row.rule_type,
+        row.min_value,
+        row.max_value,
+        row.sentinel_values,
+        row.allowed_values_or_codes,
+    )
+    module.apply_test_match_result(row, strength, location)
+
+    assert row.test_match_strength == "none"
+    assert row.test_covered_any is False
+    assert row.test_covered_strict is False
+    assert row.test_covered is False
+    assert row.test_location == ""
+
+
+def test_strict_coverage_guard_wildcards_cannot_make_full_strict_coverage() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    rows = [
+        _fixture_row(module, "TMP1"),
+        _fixture_row(module, "TMP2"),
+        _fixture_row(module, "TMP3"),
+        _fixture_row(module, "TMP4"),
+    ]
+    for row in rows:
+        row.code_implemented = False
+
+    test_index = module.TestEvidenceIndex()
+    test_index.add_wildcard_assertion("range", ("tests/test_cleaning.py", 300))
+    test_index.add_exact_assertion("TMP1", "range", ("tests/test_cleaning.py", 301))
+
+    for row in rows:
+        location, strength = test_index.find(
+            row.identifier,
+            row.identifier_family,
+            row.rule_type,
+            row.min_value,
+            row.max_value,
+            row.sentinel_values,
+            row.allowed_values_or_codes,
+        )
+        module.apply_test_match_result(row, strength, location)
+
+    strict_tested_pct = 100.0 * sum(1 for row in rows if row.test_covered_strict) / len(rows)
+    any_tested_pct = 100.0 * sum(1 for row in rows if row.test_covered_any) / len(rows)
+    assert strict_tested_pct < 100.0
+    assert any_tested_pct == 100.0
+
+
 def test_spec_coverage_generator_smoke() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     module = _load_generator_module(repo_root)
@@ -101,9 +227,13 @@ def test_spec_coverage_generator_smoke() -> None:
     assert "Overall coverage" in report_text
     assert "Enforcement layer breakdown" in report_text
     assert "Confidence breakdown" in report_text
+    assert "Match quality" in report_text
+    assert "Suspicious coverage" in report_text
     assert "Precision warnings" in report_text
     assert "Rule Identity & Provenance" in report_text
     assert "identical payloads at different ranges remain separate" in report_text
+    assert "Tested (strict)" in report_text
+    assert "Tested (any)" in report_text
 
     metric_rows = [
         row
@@ -125,6 +255,10 @@ def test_spec_coverage_generator_smoke() -> None:
         "implementation_confidence",
         "enforcement_layer",
         "code_implemented",
+        "test_covered",
+        "test_covered_any",
+        "test_covered_strict",
+        "test_match_strength",
     }
     missing_columns = required_columns - set(rows[0].keys())
     assert not missing_columns, f"Missing expected CSV columns: {sorted(missing_columns)}"
@@ -141,6 +275,25 @@ def test_spec_coverage_generator_smoke() -> None:
         assert row["implemented_in_cleaning"] in {"TRUE", "FALSE"}
         assert row["implementation_confidence"] in {"high", "medium", "low"}
         assert row["enforcement_layer"] in {"constants_only", "cleaning_only", "both", "neither"}
+        assert row["test_covered"] in {"TRUE", "FALSE"}
+        assert row["test_covered_any"] in {"TRUE", "FALSE"}
+        assert row["test_covered_strict"] in {"TRUE", "FALSE"}
+        assert row["test_match_strength"] in {
+            "exact_signature",
+            "exact_assertion",
+            "family_assertion",
+            "wildcard_assertion",
+            "none",
+        }
+        assert row["test_covered"] == row["test_covered_any"]
+        if row["test_covered_strict"] == "TRUE":
+            assert row["test_covered_any"] == "TRUE"
+        if row["test_match_strength"] == "wildcard_assertion":
+            assert row["test_covered_any"] == "TRUE"
+            assert row["test_covered_strict"] == "FALSE"
+        if row["test_match_strength"] == "none":
+            assert row["test_covered_any"] == "FALSE"
+            assert row["test_covered_strict"] == "FALSE"
         if row["row_kind"] == "spec_rule":
             assert row["rule_id"].count("::") >= 3
             assert row["spec_file"] not in {"", "N/A"}
@@ -173,12 +326,15 @@ def test_spec_coverage_generator_smoke() -> None:
 
     range_rows = [row for row in metric_rows if row.get("rule_type") == "range"]
     assert range_rows, "Expected at least one range rule row"
-    range_tested_count = sum(1 for row in range_rows if row.get("test_covered") == "TRUE")
+    range_tested_count = sum(1 for row in range_rows if row.get("test_covered_strict") == "TRUE")
     range_tested_pct = (100.0 * range_tested_count / len(range_rows)) if range_rows else 0.0
-    assert range_tested_pct < 95.0, f"Range tested% too high ({range_tested_pct:.2f}%), likely overmatching"
+    assert (
+        range_tested_pct < 95.0
+    ), f"Range strict tested% too high ({range_tested_pct:.2f}%), likely overmatching"
 
     arity_rows = [row for row in metric_rows if row.get("rule_type") == "arity"]
-    arity_tested_count = sum(1 for row in arity_rows if row.get("test_covered") == "TRUE")
+    arity_tested_any_count = sum(1 for row in arity_rows if row.get("test_covered_any") == "TRUE")
+    arity_tested_strict_count = sum(1 for row in arity_rows if row.get("test_covered_strict") == "TRUE")
     tests_cleaning_text = (repo_root / "tests" / "test_cleaning.py").read_text(encoding="utf-8")
     arity_tests_detected = bool(
         re.search(r"\barity\b", tests_cleaning_text, re.IGNORECASE)
@@ -187,7 +343,8 @@ def test_spec_coverage_generator_smoke() -> None:
     )
     if arity_tests_detected:
         assert arity_rows, "Arity tests detected in tests/test_cleaning.py but no arity rows were extracted"
-        assert arity_tested_count > 0, "Arity tests are present but arity tested coverage is 0"
+        assert arity_tested_any_count > 0, "Arity tests are present but arity tested-any coverage is 0"
+        assert arity_tested_strict_count <= arity_tested_any_count
     else:
         assert (
             "Arity tests not detected; arity tested% may be 0." in report_text
@@ -236,7 +393,7 @@ def test_spec_coverage_generator_smoke() -> None:
     uncovered_expected_gap_rows = [
         row
         for row in expected_gap_rows
-        if row.get("code_implemented") == "FALSE" or row.get("test_covered") == "FALSE"
+        if row.get("code_implemented") == "FALSE" or row.get("test_covered_strict") == "FALSE"
     ]
 
     assert (

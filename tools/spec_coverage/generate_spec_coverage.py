@@ -5,6 +5,13 @@ Outputs:
 - spec_coverage.csv
 - SPEC_COVERAGE_REPORT.md
 
+Test-coverage semantics:
+- `test_covered_any` is TRUE for any non-`none` test match strength.
+- `test_covered_strict` is TRUE only for exact/family matches:
+  `exact_signature`, `exact_assertion`, or `family_assertion`.
+- `wildcard_assertion` remains visible as weak coverage and does not count as strict.
+- `test_covered` is kept for compatibility and mirrors `test_covered_any`.
+
 This script is deterministic and uses local files only.
 """
 
@@ -47,6 +54,9 @@ OUTPUT_COLUMNS = [
     "code_implemented",
     "code_location",
     "test_covered",
+    "test_covered_any",
+    "test_covered_strict",
+    "test_match_strength",
     "test_location",
     "notes",
 ]
@@ -66,6 +76,15 @@ METRIC_RULE_TYPES = [rule_type for rule_type in RULE_TYPE_ORDER if rule_type != 
 IMPLEMENTATION_CONFIDENCE_ORDER = {"high": 3, "medium": 2, "low": 1}
 IMPLEMENTATION_CONFIDENCE_VALUES = set(IMPLEMENTATION_CONFIDENCE_ORDER)
 ENFORCEMENT_LAYER_VALUES = {"constants_only", "cleaning_only", "both", "neither"}
+TEST_MATCH_STRENGTH_ORDER = [
+    "exact_signature",
+    "exact_assertion",
+    "family_assertion",
+    "wildcard_assertion",
+    "none",
+]
+TEST_MATCH_STRENGTH_SET = set(TEST_MATCH_STRENGTH_ORDER)
+STRICT_TEST_MATCH_STRENGTHS = {"exact_signature", "exact_assertion", "family_assertion"}
 
 IDENTIFIER_RE = re.compile(r"\b[A-Z][A-Z0-9]{1,5}\b")
 IDENTIFIER_WITH_DIGIT_RE = re.compile(r"\b([A-Z]{1,4})(\d{1,2})\b")
@@ -143,6 +162,9 @@ class SpecRuleRow:
     code_implemented: bool = False
     code_location: str = ""
     test_covered: bool = False
+    test_covered_any: bool = False
+    test_covered_strict: bool = False
+    test_match_strength: str = "none"
     test_location: str = ""
     notes: set[str] = field(default_factory=set)
 
@@ -195,6 +217,9 @@ class SpecRuleRow:
             "code_implemented": "TRUE" if self.code_implemented else "FALSE",
             "code_location": self.code_location,
             "test_covered": "TRUE" if self.test_covered else "FALSE",
+            "test_covered_any": "TRUE" if self.test_covered_any else "FALSE",
+            "test_covered_strict": "TRUE" if self.test_covered_strict else "FALSE",
+            "test_match_strength": self.test_match_strength,
             "test_location": self.test_location,
             "notes": ";".join(sorted(self.notes)),
         }
@@ -2209,6 +2234,31 @@ def enforcement_layer(
     return "neither"
 
 
+def normalize_test_match_strength(match_strength: str) -> str:
+    return match_strength if match_strength in TEST_MATCH_STRENGTH_SET else "none"
+
+
+def apply_test_match_result(
+    row: SpecRuleRow,
+    match_strength: str,
+    match_location: tuple[str, int] | None,
+) -> None:
+    strength = normalize_test_match_strength(match_strength)
+    row.test_match_strength = strength
+    row.test_covered_any = strength != "none"
+    row.test_covered_strict = strength in STRICT_TEST_MATCH_STRENGTHS
+    # Backward-compatible alias for existing consumers.
+    row.test_covered = row.test_covered_any
+
+    if row.test_covered_any and match_location:
+        test_path, line = match_location
+        row.test_location = f"{test_path}:{line}"
+    else:
+        row.test_location = ""
+
+    row.notes.add(f"test_match={strength}")
+
+
 def apply_coverage(
     rows: list[SpecRuleRow],
     constants_module,
@@ -2250,14 +2300,7 @@ def apply_coverage(
             row.sentinel_values,
             row.allowed_values_or_codes,
         )
-        if test_location:
-            test_path, line = test_location
-            row.test_covered = True
-            row.test_location = f"{test_path}:{line}"
-        else:
-            row.test_covered = False
-            row.test_location = ""
-        row.notes.add(f"test_match={match_reason}")
+        apply_test_match_result(row, match_reason, test_location)
 
         if row.identifier == "UNSPECIFIED":
             row.notes.add("synthetic_unmapped")
@@ -2298,7 +2341,7 @@ def row_gap_score(row: SpecRuleRow) -> int:
         score += 40
     if not row.code_implemented:
         score += 20
-    if not row.test_covered:
+    if not row.test_covered_strict:
         score += 10
     if row.rule_type in {"range", "cardinality", "arity", "width"}:
         score += 3
@@ -2349,7 +2392,8 @@ def build_report(
     total_metric = len(metric_rows)
     unknown_excluded = len(spec_rows) - total_metric
     implemented = sum(1 for r in metric_rows if r.code_implemented)
-    tested = sum(1 for r in metric_rows if r.test_covered)
+    tested_any = sum(1 for r in metric_rows if r.test_covered_any)
+    tested_strict = sum(1 for r in metric_rows if r.test_covered_strict)
     layer_counter = Counter(r.enforcement_layer for r in metric_rows)
     cleaning_implemented_rows = [r for r in metric_rows if r.implemented_in_cleaning]
     cleaning_confidence_counter = Counter(
@@ -2357,6 +2401,9 @@ def build_report(
         for r in cleaning_implemented_rows
         if r.implementation_confidence in IMPLEMENTATION_CONFIDENCE_VALUES
     )
+    tested_any_rows = [r for r in metric_rows if r.test_covered_any]
+    tested_match_counter = Counter(r.test_match_strength for r in tested_any_rows)
+    match_strength_counter = Counter(normalize_test_match_strength(r.test_match_strength) for r in metric_rows)
 
     by_part: dict[str, list[SpecRuleRow]] = defaultdict(list)
     by_family: dict[str, list[SpecRuleRow]] = defaultdict(list)
@@ -2371,15 +2418,20 @@ def build_report(
     for part in [f"{i:02d}" for i in range(1, 31)]:
         group = by_part.get(part, [])
         metric_group = [r for r in group if r.rule_type in METRIC_RULE_TYPES]
+        part_implemented = sum(1 for r in metric_group if r.code_implemented)
+        part_tested_strict = sum(1 for r in metric_group if r.test_covered_strict)
+        part_tested_any = sum(1 for r in metric_group if r.test_covered_any)
         part_rows.append(
             [
                 part,
                 str(len(group)),
                 str(len(metric_group)),
-                str(sum(1 for r in metric_group if r.code_implemented)),
-                str(sum(1 for r in metric_group if r.test_covered)),
-                pct(sum(1 for r in metric_group if r.code_implemented), len(metric_group)),
-                pct(sum(1 for r in metric_group if r.test_covered), len(metric_group)),
+                str(part_implemented),
+                str(part_tested_strict),
+                str(part_tested_any),
+                pct(part_implemented, len(metric_group)),
+                pct(part_tested_strict, len(metric_group)),
+                pct(part_tested_any, len(metric_group)),
             ]
         )
 
@@ -2387,30 +2439,40 @@ def build_report(
     for family in sorted(by_family, key=natural_key):
         group = by_family[family]
         metric_group = [r for r in group if r.rule_type in METRIC_RULE_TYPES]
+        family_implemented = sum(1 for r in metric_group if r.code_implemented)
+        family_tested_strict = sum(1 for r in metric_group if r.test_covered_strict)
+        family_tested_any = sum(1 for r in metric_group if r.test_covered_any)
         family_rows.append(
             [
                 family,
                 str(len(group)),
                 str(len(metric_group)),
-                str(sum(1 for r in metric_group if r.code_implemented)),
-                str(sum(1 for r in metric_group if r.test_covered)),
-                pct(sum(1 for r in metric_group if r.code_implemented), len(metric_group)),
-                pct(sum(1 for r in metric_group if r.test_covered), len(metric_group)),
+                str(family_implemented),
+                str(family_tested_strict),
+                str(family_tested_any),
+                pct(family_implemented, len(metric_group)),
+                pct(family_tested_strict, len(metric_group)),
+                pct(family_tested_any, len(metric_group)),
             ]
         )
 
     type_rows: list[list[str]] = []
     for rule_type in RULE_TYPE_ORDER:
         group = by_type.get(rule_type, [])
+        type_implemented = sum(1 for r in group if r.code_implemented)
+        type_tested_strict = sum(1 for r in group if r.test_covered_strict)
+        type_tested_any = sum(1 for r in group if r.test_covered_any)
         if rule_type in METRIC_RULE_TYPES:
             type_rows.append(
                 [
                     rule_type,
                     str(len(group)),
-                    str(sum(1 for r in group if r.code_implemented)),
-                    str(sum(1 for r in group if r.test_covered)),
-                    pct(sum(1 for r in group if r.code_implemented), len(group)),
-                    pct(sum(1 for r in group if r.test_covered), len(group)),
+                    str(type_implemented),
+                    str(type_tested_strict),
+                    str(type_tested_any),
+                    pct(type_implemented, len(group)),
+                    pct(type_tested_strict, len(group)),
+                    pct(type_tested_any, len(group)),
                 ]
             )
         else:
@@ -2418,14 +2480,16 @@ def build_report(
                 [
                     rule_type,
                     str(len(group)),
-                    str(sum(1 for r in group if r.code_implemented)),
-                    str(sum(1 for r in group if r.test_covered)),
+                    str(type_implemented),
+                    str(type_tested_strict),
+                    str(type_tested_any),
+                    "excluded",
                     "excluded",
                     "excluded",
                 ]
             )
 
-    gaps = [r for r in metric_rows if (not r.code_implemented or not r.test_covered)]
+    gaps = [r for r in metric_rows if (not r.code_implemented or not r.test_covered_strict)]
     sorted_gaps = sorted(
         gaps,
         key=lambda r: (
@@ -2470,7 +2534,8 @@ def build_report(
                 row.rule_type,
                 short_text(row.spec_rule_text, 80),
                 "TRUE" if row.code_implemented else "FALSE",
-                "TRUE" if row.test_covered else "FALSE",
+                "TRUE" if row.test_covered_strict else "FALSE",
+                "TRUE" if row.test_covered_any else "FALSE",
                 pointer_for_gap(row, cleaning_index),
                 ";".join(sorted(row.notes)),
             ]
@@ -2506,15 +2571,42 @@ def build_report(
                 row.identifier,
                 row.rule_type,
                 "TRUE" if row.code_implemented else "FALSE",
-                "TRUE" if row.test_covered else "FALSE",
+                "TRUE" if row.test_covered_strict else "FALSE",
+                "TRUE" if row.test_covered_any else "FALSE",
                 ";".join(sorted(row.notes)),
             ]
         )
 
+    match_quality_rows: list[list[str]] = []
+    for strength in TEST_MATCH_STRENGTH_ORDER:
+        count = match_strength_counter.get(strength, 0)
+        match_quality_rows.append([strength, str(count), pct(count, total_metric)])
+
+    suspicious_any_not_implemented = [
+        row for row in metric_rows if row.test_covered_any and not row.code_implemented
+    ]
+    suspicious_wildcard_any = [
+        row for row in metric_rows if row.test_covered_any and row.test_match_strength == "wildcard_assertion"
+    ]
+
+    def suspicious_rows_table(group: list[SpecRuleRow]) -> list[list[str]]:
+        sample = sorted(group, key=lambda r: r.sort_key())[:10]
+        rows_out: list[list[str]] = []
+        for row in sample:
+            rows_out.append(
+                [
+                    row.rule_id,
+                    row.identifier_family,
+                    row.rule_type,
+                    ";".join(sorted(row.notes)),
+                ]
+            )
+        if not rows_out:
+            rows_out.append(["(none)", "-", "-", "-"])
+        return rows_out
+
     unresolved_count = sum(1 for r in spec_rows if "unresolved_in_next_steps" in r.notes)
     arch_unchecked = sum(1 for line in architecture_text.splitlines() if line.strip().startswith("- [ ]"))
-    tested_rows = [r for r in metric_rows if r.test_covered]
-    tested_match_counter = Counter(note_value(r, "test_match=") for r in tested_rows)
     exact_signature_count = tested_match_counter.get("exact_signature", 0)
     exact_assertion_count = tested_match_counter.get("exact_assertion", 0)
     family_assertion_count = tested_match_counter.get("family_assertion", 0)
@@ -2522,7 +2614,8 @@ def build_report(
     synthetic_rows = len(synthetic_rows_list)
     synthetic_gap_rows = sum(1 for r in synthetic_rows_list if "synthetic_gap_row" in r.notes)
     arity_rows = [r for r in metric_rows if r.rule_type == "arity"]
-    arity_tested = sum(1 for r in arity_rows if r.test_covered)
+    arity_tested_strict = sum(1 for r in arity_rows if r.test_covered_strict)
+    arity_tested_any = sum(1 for r in arity_rows if r.test_covered_any)
 
     lines: list[str] = []
     lines.append("# SPEC Coverage Report")
@@ -2542,7 +2635,9 @@ def build_report(
     lines.append(f"- Metric-eligible rules (excluding `unknown`): **{total_metric}**")
     lines.append(f"- Unknown/noisy rows excluded from %: **{unknown_excluded}**")
     lines.append(f"- Rules implemented in code: **{implemented}** ({pct(implemented, total_metric)})")
-    lines.append(f"- Rules with explicit tests: **{tested}** ({pct(tested, total_metric)})")
+    lines.append(f"- Tested (strict): **{tested_strict}** ({pct(tested_strict, total_metric)})")
+    lines.append(f"- Tested (any): **{tested_any}** ({pct(tested_any, total_metric)})")
+    lines.append("- `test_covered` in CSV mirrors `test_covered_any` for backward compatibility.")
     lines.append(f"- Expected-gap tagged rules: **{len(known_gap_rows_full)}**")
     lines.append(f"- Rows linked to unresolved `NEXT_STEPS.md` items: **{unresolved_count}**")
     lines.append(f"- Open checklist items in `ARCHITECTURE_NEXT_STEPS.md`: **{arch_unchecked}**")
@@ -2568,25 +2663,80 @@ def build_report(
         count = cleaning_confidence_counter.get(confidence, 0)
         lines.append(f"- {confidence}: **{count}** ({pct(count, len(cleaning_implemented_rows))})")
     lines.append("")
+    lines.append("## Match quality")
+    lines.append("")
+    lines.append(
+        format_table(
+            ["Match strength", "Count", "% of metric rules"],
+            match_quality_rows,
+        )
+    )
+    lines.append("")
     lines.append("## Precision warnings")
     lines.append("")
-    lines.append(f"- Tested rows matched by `exact_signature`: **{exact_signature_count}** ({pct(exact_signature_count, len(tested_rows))})")
-    lines.append(f"- Tested rows matched by `exact_assertion`: **{exact_assertion_count}** ({pct(exact_assertion_count, len(tested_rows))})")
-    lines.append(f"- Tested rows matched by `family_assertion`: **{family_assertion_count}** ({pct(family_assertion_count, len(tested_rows))})")
-    lines.append(f"- Tested rows matched by `wildcard_assertion`: **{wildcard_assertion_count}** ({pct(wildcard_assertion_count, len(tested_rows))})")
+    lines.append("- Wildcard policy: `wildcard_assertion` counts as tested-any only; it never counts as strict.")
+    lines.append(
+        f"- Tested-any rows matched by `exact_signature`: **{exact_signature_count}** ({pct(exact_signature_count, len(tested_any_rows))})"
+    )
+    lines.append(
+        f"- Tested-any rows matched by `exact_assertion`: **{exact_assertion_count}** ({pct(exact_assertion_count, len(tested_any_rows))})"
+    )
+    lines.append(
+        f"- Tested-any rows matched by `family_assertion`: **{family_assertion_count}** ({pct(family_assertion_count, len(tested_any_rows))})"
+    )
+    lines.append(
+        f"- Tested-any rows matched by `wildcard_assertion`: **{wildcard_assertion_count}** ({pct(wildcard_assertion_count, len(tested_any_rows))})"
+    )
     lines.append(f"- Synthetic rows in CSV: **{synthetic_rows}**")
     lines.append(f"- Synthetic gap rows in CSV: **{synthetic_gap_rows}**")
     lines.append(f"- Unknown rule rows excluded from percentages: **{unknown_excluded}**")
-    lines.append(f"- Arity rules tested: **{arity_tested}/{len(arity_rows)}** ({pct(arity_tested, len(arity_rows))})")
+    lines.append(
+        f"- Arity rules tested (strict): **{arity_tested_strict}/{len(arity_rows)}** ({pct(arity_tested_strict, len(arity_rows))})"
+    )
+    lines.append(
+        f"- Arity rules tested (any): **{arity_tested_any}/{len(arity_rows)}** ({pct(arity_tested_any, len(arity_rows))})"
+    )
     lines.append(f"- Arity tests detected in `tests/test_cleaning.py`: **{'YES' if arity_tests_detected else 'NO'}**")
     if not arity_tests_detected:
         lines.append("- Arity tests not detected; arity tested% may be 0.")
+    lines.append("")
+    lines.append("## Suspicious coverage")
+    lines.append("")
+    lines.append(
+        f"- tested_any=TRUE and code_implemented=FALSE: **{len(suspicious_any_not_implemented)}** ({pct(len(suspicious_any_not_implemented), total_metric)})"
+    )
+    lines.append(
+        format_table(
+            ["Rule ID", "Identifier family", "Rule type", "Notes"],
+            suspicious_rows_table(suspicious_any_not_implemented),
+        )
+    )
+    lines.append("")
+    lines.append(
+        f"- tested_any=TRUE and match_strength=`wildcard_assertion`: **{len(suspicious_wildcard_any)}** ({pct(len(suspicious_wildcard_any), total_metric)})"
+    )
+    lines.append(
+        format_table(
+            ["Rule ID", "Identifier family", "Rule type", "Notes"],
+            suspicious_rows_table(suspicious_wildcard_any),
+        )
+    )
     lines.append("")
     lines.append("## Breakdown by ISD part")
     lines.append("")
     lines.append(
         format_table(
-            ["Part", "Rules", "Metric rules", "Implemented", "Tested", "Implemented %", "Tested %"],
+            [
+                "Part",
+                "Rules",
+                "Metric rules",
+                "Implemented",
+                "Tested strict",
+                "Tested any",
+                "Implemented %",
+                "Tested strict %",
+                "Tested any %",
+            ],
             part_rows,
         )
     )
@@ -2595,7 +2745,17 @@ def build_report(
     lines.append("")
     lines.append(
         format_table(
-            ["Identifier family", "Rules", "Metric rules", "Implemented", "Tested", "Implemented %", "Tested %"],
+            [
+                "Identifier family",
+                "Rules",
+                "Metric rules",
+                "Implemented",
+                "Tested strict",
+                "Tested any",
+                "Implemented %",
+                "Tested strict %",
+                "Tested any %",
+            ],
             family_rows,
         )
     )
@@ -2604,7 +2764,16 @@ def build_report(
     lines.append("")
     lines.append(
         format_table(
-            ["Rule type", "Rules", "Implemented", "Tested", "Implemented %", "Tested %"],
+            [
+                "Rule type",
+                "Rules",
+                "Implemented",
+                "Tested strict",
+                "Tested any",
+                "Implemented %",
+                "Tested strict %",
+                "Tested any %",
+            ],
             type_rows,
         )
     )
@@ -2619,7 +2788,8 @@ def build_report(
                 "Rule type",
                 "Spec rule",
                 "Code impl",
-                "Tested",
+                "Tested strict",
+                "Tested any",
                 "Implementation pointer",
                 "Notes",
             ],
@@ -2635,7 +2805,7 @@ def build_report(
     lines.append("")
     lines.append(
         format_table(
-            ["Part", "Identifier", "Rule type", "Code impl", "Tested", "Notes"],
+            ["Part", "Identifier", "Rule type", "Code impl", "Tested strict", "Tested any", "Notes"],
             trace_rows,
         )
     )
@@ -2699,8 +2869,9 @@ def main() -> None:
     metric_rows = [r for r in rows if r.row_kind == "spec_rule" and r.rule_type in METRIC_RULE_TYPES]
     metric_total = len(metric_rows)
     impl = sum(1 for r in metric_rows if r.code_implemented)
-    tested = sum(1 for r in metric_rows if r.test_covered)
-    gaps = [r for r in metric_rows if (not r.code_implemented or not r.test_covered)]
+    tested_strict = sum(1 for r in metric_rows if r.test_covered_strict)
+    tested_any = sum(1 for r in metric_rows if r.test_covered_any)
+    gaps = [r for r in metric_rows if (not r.code_implemented or not r.test_covered_strict)]
     sorted_gaps = sorted(gaps, key=lambda r: (-row_gap_score(r), r.sort_key()))
     top_gaps: list[SpecRuleRow] = []
     seen_gap_keys: set[tuple[str, str, str]] = set()
@@ -2728,12 +2899,15 @@ def main() -> None:
     print(f"total_rules={total}")
     print(f"metric_rules={metric_total}")
     print(f"implemented_rules={impl} ({pct(impl, metric_total)})")
-    print(f"tested_rules={tested} ({pct(tested, metric_total)})")
+    print(f"tested_rules_strict={tested_strict} ({pct(tested_strict, metric_total)})")
+    print(f"tested_rules_any={tested_any} ({pct(tested_any, metric_total)})")
     print("top_gap_sample=")
     for row in top_gaps:
         print(
             f"  part={row.spec_part} id={row.identifier} type={row.rule_type} "
-            f"code={row.code_implemented} test={row.test_covered} notes={';'.join(sorted(row.notes))}"
+            f"code={row.code_implemented} test_strict={row.test_covered_strict} "
+            f"test_any={row.test_covered_any} match={row.test_match_strength} "
+            f"notes={';'.join(sorted(row.notes))}"
         )
 
 
