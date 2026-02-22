@@ -116,13 +116,21 @@ DAY_PAIR_TRIPLE_PATTERN_TEXT = r"^(?:0[1-9]|[12][0-9]|3[01]|99){3}$"
 
 CONTROL_CONTEXT_MAP = {
     "date of observation": "DATE",
+    "geophysical-point-observation date": "DATE",
     "time of observation": "TIME",
+    "geophysical-point-observation time": "TIME",
     "latitude coordinate": "LATITUDE",
+    "geophysical-point-observation latitude coordinate": "LATITUDE",
     "longitude coordinate": "LONGITUDE",
+    "geophysical-point-observation longitude coordinate": "LONGITUDE",
     "elevation dimension": "ELEVATION",
+    "geophysical-point-observation elevation dimension": "ELEVATION",
     "call letter identifier": "CALL_SIGN",
+    "fixed-weather-station call letter identifier": "CALL_SIGN",
     "report type code": "REPORT_TYPE",
+    "geophysical-report-type code": "REPORT_TYPE",
     "quality control process name": "QC_PROCESS",
+    "meteorological-point-observation quality control process name": "QC_PROCESS",
 }
 
 MANDATORY_CONTEXT_MAP = {
@@ -361,6 +369,24 @@ class TestEvidenceIndex:
             deduped.append(key)
         return deduped
 
+    def _requires_exact_test_evidence(
+        self,
+        rule_type: str,
+        min_value: str,
+        max_value: str,
+        sentinel_values: str,
+        allowed_values_or_codes: str,
+    ) -> bool:
+        if rule_type == "range" and bool(min_value or max_value):
+            return True
+        if rule_type in {"width", "arity"} and bool(allowed_values_or_codes):
+            return True
+        if rule_type == "sentinel" and bool(sentinel_values):
+            return True
+        if rule_type in {"domain", "allowed_quality"} and bool(allowed_values_or_codes):
+            return True
+        return False
+
     def find(
         self,
         identifier: str,
@@ -377,8 +403,13 @@ class TestEvidenceIndex:
         elif rule_type == "domain":
             alt_rule_types.append("allowed_quality")
 
-        # For range rows with explicit bounds, only exact-identifier evidence counts.
-        exact_only = rule_type == "range" and bool(min_value or max_value)
+        exact_only = self._requires_exact_test_evidence(
+            rule_type,
+            min_value,
+            max_value,
+            sentinel_values,
+            allowed_values_or_codes,
+        )
 
         for rt in alt_rule_types:
             for signature_key in self._signature_keys_for_row(
@@ -1320,7 +1351,7 @@ def infer_context_from_line(
 
     # Avoid replacing active context with enum-value lines (e.g., "ST: Spring tide").
     if current_identifiers:
-        enum_like = re.match(r"^[A-Z0-9]{1,6}\s*[:=]\s+.+$", line)
+        enum_like = re.match(r"^[A-Z0-9][A-Z0-9-]{0,11}\s*[:=]\s+.+$", line)
         if enum_like and "identifier" not in lower and "indicator" not in lower:
             return current_identifiers
 
@@ -1424,6 +1455,7 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
         pending_min_token = ""
         pending_min_identifiers: list[str] = []
         pending_min_line = 0
+        part02_pending_pos_row_indices: list[int] = []
 
         def evidence(line_start: int, line_end: int) -> str:
             return build_spec_evidence(lines, line_start, line_end)
@@ -1470,6 +1502,26 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
             current_identifiers = new_context
 
             lower = line.lower()
+            if spec_part == "02" and line.startswith("POS:"):
+                current_identifiers = []
+                part02_pending_pos_row_indices = []
+
+            if spec_part == "02":
+                for phrase, ident in CONTROL_CONTEXT_MAP.items():
+                    if lower.startswith(phrase):
+                        current_identifiers = [ident]
+                        if part02_pending_pos_row_indices:
+                            for row_idx in part02_pending_pos_row_indices:
+                                if row_idx < 0 or row_idx >= len(rows):
+                                    continue
+                                row = rows[row_idx]
+                                if row.identifier != "UNSPECIFIED":
+                                    continue
+                                row.identifier = ident
+                                row.identifier_family = identifier_family(ident)
+                            part02_pending_pos_row_indices = []
+                        break
+
             if pending_min_token and idx - pending_min_line > 3:
                 pending_min_token = ""
                 pending_min_identifiers = []
@@ -1615,6 +1667,7 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                 start_pos = int(pos.group(1))
                 end_pos = int(pos.group(2))
                 width = end_pos - start_pos + 1
+                start_idx = len(rows)
                 add_row(
                     rows,
                     spec_part,
@@ -1628,6 +1681,10 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                     f"POS {start_pos}-{end_pos} width {width}",
                     allowed_values_or_codes=str(width),
                 )
+                if spec_part == "02" and not current_identifiers:
+                    for row_idx in range(start_idx, len(rows)):
+                        if rows[row_idx].identifier == "UNSPECIFIED":
+                            part02_pending_pos_row_indices.append(row_idx)
 
             if current_identifiers and "indicator" in lower and ("up to" in lower or "-" in line):
                 up_to_match = UP_TO_RE.search(line)
@@ -2378,6 +2435,61 @@ def format_table(headers: list[str], rows: list[list[str]]) -> str:
     return "\n".join(out)
 
 
+def bool_flag(value: bool) -> str:
+    return "TRUE" if value else "FALSE"
+
+
+def is_wildcard_only_row(row: SpecRuleRow) -> bool:
+    return row.test_covered_any and not row.test_covered_strict
+
+
+def is_real_gap_row(row: SpecRuleRow) -> bool:
+    return not row.code_implemented or not row.test_covered_strict
+
+
+def is_actionable_real_gap_row(row: SpecRuleRow) -> bool:
+    if row.identifier == "UNSPECIFIED":
+        return False
+    if "synthetic_unmapped" in row.notes:
+        return False
+    return True
+
+
+def real_gap_sort_key(row: SpecRuleRow) -> tuple[object, ...]:
+    return (
+        0 if row.enforcement_layer == "neither" else 1,
+        0 if not row.code_implemented else 1,
+        -row_gap_score(row),
+        row.sort_key(),
+    )
+
+
+def short_notes(row: SpecRuleRow, limit: int = 140) -> str:
+    return short_text(";".join(sorted(row.notes)), limit=limit)
+
+
+def ranked_real_gap_table_rows(group: list[SpecRuleRow]) -> list[list[str]]:
+    rows_out: list[list[str]] = []
+    for rank, row in enumerate(group, start=1):
+        rows_out.append(
+            [
+                str(rank),
+                row.spec_part,
+                row.identifier,
+                row.rule_type,
+                row.enforcement_layer,
+                bool_flag(row.code_implemented),
+                bool_flag(row.test_covered_strict),
+                bool_flag(row.test_covered_any),
+                normalize_test_match_strength(row.test_match_strength),
+                short_notes(row),
+            ]
+        )
+    if not rows_out:
+        rows_out.append(["-", "-", "-", "-", "-", "-", "-", "-", "-", "(none)"])
+    return rows_out
+
+
 def build_report(
     rows: list[SpecRuleRow],
     report_path: Path,
@@ -2394,6 +2506,15 @@ def build_report(
     implemented = sum(1 for r in metric_rows if r.code_implemented)
     tested_any = sum(1 for r in metric_rows if r.test_covered_any)
     tested_strict = sum(1 for r in metric_rows if r.test_covered_strict)
+    strict_count = tested_strict
+    wildcard_only_rows = [r for r in metric_rows if is_wildcard_only_row(r)]
+    wildcard_only_count = len(wildcard_only_rows)
+    any_non_wild_count = sum(
+        1
+        for r in metric_rows
+        if r.test_covered_any and normalize_test_match_strength(r.test_match_strength) != "wildcard_assertion"
+    )
+
     layer_counter = Counter(r.enforcement_layer for r in metric_rows)
     cleaning_implemented_rows = [r for r in metric_rows if r.implemented_in_cleaning]
     cleaning_confidence_counter = Counter(
@@ -2402,8 +2523,10 @@ def build_report(
         if r.implementation_confidence in IMPLEMENTATION_CONFIDENCE_VALUES
     )
     tested_any_rows = [r for r in metric_rows if r.test_covered_any]
-    tested_match_counter = Counter(r.test_match_strength for r in tested_any_rows)
+    tested_match_counter = Counter(normalize_test_match_strength(r.test_match_strength) for r in tested_any_rows)
     match_strength_counter = Counter(normalize_test_match_strength(r.test_match_strength) for r in metric_rows)
+    wildcard_only_by_part = Counter(r.spec_part for r in wildcard_only_rows)
+    wildcard_only_by_rule_type = Counter(r.rule_type for r in wildcard_only_rows)
 
     by_part: dict[str, list[SpecRuleRow]] = defaultdict(list)
     by_family: dict[str, list[SpecRuleRow]] = defaultdict(list)
@@ -2489,57 +2612,31 @@ def build_report(
                 ]
             )
 
-    gaps = [r for r in metric_rows if (not r.code_implemented or not r.test_covered_strict)]
-    sorted_gaps = sorted(
-        gaps,
-        key=lambda r: (
-            -row_gap_score(r),
-            r.spec_part,
-            r.identifier_family,
-            r.identifier,
-            r.rule_type,
-            r.spec_rule_text,
-        ),
-    )
-    top_gaps: list[SpecRuleRow] = []
-    seen_gap_keys: set[tuple[str, str, str]] = set()
-    for row in sorted_gaps:
-        key = (row.spec_part, row.identifier, row.rule_type)
-        if key in seen_gap_keys:
-            continue
-        # Prefer concrete, actionable rules before synthetic placeholders.
-        if "synthetic_unmapped" in row.notes or row.identifier == "UNSPECIFIED":
-            continue
-        seen_gap_keys.add(key)
-        top_gaps.append(row)
-        if len(top_gaps) >= 10:
-            break
+    strict_gap_rows = [r for r in metric_rows if is_real_gap_row(r)]
+    actionable_strict_gap_rows = [r for r in strict_gap_rows if is_actionable_real_gap_row(r)]
+    ranked_real_gaps = sorted(actionable_strict_gap_rows, key=real_gap_sort_key)
+    top_50_real_gaps = ranked_real_gaps[:50]
 
-    if len(top_gaps) < 10:
-        for row in sorted_gaps:
-            key = (row.spec_part, row.identifier, row.rule_type)
-            if key in seen_gap_keys:
-                continue
-            seen_gap_keys.add(key)
-            top_gaps.append(row)
-            if len(top_gaps) >= 10:
-                break
+    implementation_gaps_top_25 = [
+        row for row in ranked_real_gaps if (not row.code_implemented and not row.test_covered_strict)
+    ][:25]
+    missing_tests_top_25 = [
+        row for row in ranked_real_gaps if (row.code_implemented and not row.test_covered_strict)
+    ][:25]
 
-    gap_rows: list[list[str]] = []
-    for row in top_gaps:
-        gap_rows.append(
-            [
-                row.spec_part,
-                row.identifier,
-                row.rule_type,
-                short_text(row.spec_rule_text, 80),
-                "TRUE" if row.code_implemented else "FALSE",
-                "TRUE" if row.test_covered_strict else "FALSE",
-                "TRUE" if row.test_covered_any else "FALSE",
-                pointer_for_gap(row, cleaning_index),
-                ";".join(sorted(row.notes)),
-            ]
-        )
+    wildcard_part_rows: list[list[str]] = []
+    for part in [f"{i:02d}" for i in range(1, 31)]:
+        count = wildcard_only_by_part.get(part, 0)
+        if count == 0:
+            continue
+        wildcard_part_rows.append([part, str(count), pct(count, total_metric)])
+    if not wildcard_part_rows:
+        wildcard_part_rows.append(["(none)", "0", "0.0%"])
+
+    wildcard_rule_rows: list[list[str]] = []
+    for rule_type in METRIC_RULE_TYPES:
+        count = wildcard_only_by_rule_type.get(rule_type, 0)
+        wildcard_rule_rows.append([rule_type, str(count), pct(count, total_metric)])
 
     known_gap_rows_full = [r for r in rows if "expected_gap_from_alignment_report" in r.notes]
     known_gap_rows_sorted = sorted(
@@ -2598,7 +2695,7 @@ def build_report(
                     row.rule_id,
                     row.identifier_family,
                     row.rule_type,
-                    ";".join(sorted(row.notes)),
+                    short_notes(row),
                 ]
             )
         if not rows_out:
@@ -2635,12 +2732,88 @@ def build_report(
     lines.append(f"- Metric-eligible rules (excluding `unknown`): **{total_metric}**")
     lines.append(f"- Unknown/noisy rows excluded from %: **{unknown_excluded}**")
     lines.append(f"- Rules implemented in code: **{implemented}** ({pct(implemented, total_metric)})")
-    lines.append(f"- Tested (strict): **{tested_strict}** ({pct(tested_strict, total_metric)})")
-    lines.append(f"- Tested (any): **{tested_any}** ({pct(tested_any, total_metric)})")
+    lines.append(f"- Progress KPI (`tested_strict`): **{strict_count}** ({pct(strict_count, total_metric)})")
+    lines.append(
+        f"- Weak coverage (`tested_any`, includes wildcard): **{tested_any}** ({pct(tested_any, total_metric)})"
+    )
+    lines.append(
+        f"- tested_any from non-wild matches only: **{any_non_wild_count}** ({pct(any_non_wild_count, total_metric)})"
+    )
+    lines.append(
+        f"- Wildcard-only tested_any (not counted toward progress): **{wildcard_only_count}** ({pct(wildcard_only_count, total_metric)})"
+    )
+    lines.append("- Coverage progress is measured with `tested_strict` only.")
     lines.append("- `test_covered` in CSV mirrors `test_covered_any` for backward compatibility.")
     lines.append(f"- Expected-gap tagged rules: **{len(known_gap_rows_full)}**")
     lines.append(f"- Rows linked to unresolved `NEXT_STEPS.md` items: **{unresolved_count}**")
     lines.append(f"- Open checklist items in `ARCHITECTURE_NEXT_STEPS.md`: **{arch_unchecked}**")
+    lines.append("")
+    lines.append("## Top 50 real gaps (strict)")
+    lines.append("")
+    lines.append(
+        "Strict gaps are metric spec-rule rows where `code_implemented=FALSE` or `test_covered_strict=FALSE`."
+    )
+    lines.append(
+        "Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded from this actionable list."
+    )
+    lines.append("")
+    lines.append(
+        format_table(
+            [
+                "rank",
+                "spec_part",
+                "identifier",
+                "rule_type",
+                "enforcement_layer",
+                "implemented",
+                "test_strict",
+                "test_any",
+                "match_strength",
+                "notes",
+            ],
+            ranked_real_gap_table_rows(top_50_real_gaps),
+        )
+    )
+    lines.append("")
+    lines.append("### Implementation gaps (strict): Not implemented + not tested_strict")
+    lines.append("")
+    lines.append(
+        format_table(
+            [
+                "rank",
+                "spec_part",
+                "identifier",
+                "rule_type",
+                "enforcement_layer",
+                "implemented",
+                "test_strict",
+                "test_any",
+                "match_strength",
+                "notes",
+            ],
+            ranked_real_gap_table_rows(implementation_gaps_top_25),
+        )
+    )
+    lines.append("")
+    lines.append("### Missing tests (strict): Implemented + not tested_strict")
+    lines.append("")
+    lines.append(
+        format_table(
+            [
+                "rank",
+                "spec_part",
+                "identifier",
+                "rule_type",
+                "enforcement_layer",
+                "implemented",
+                "test_strict",
+                "test_any",
+                "match_strength",
+                "notes",
+            ],
+            ranked_real_gap_table_rows(missing_tests_top_25),
+        )
+    )
     lines.append("")
     lines.append("## Rule Identity & Provenance")
     lines.append("")
@@ -2732,10 +2905,10 @@ def build_report(
                 "Metric rules",
                 "Implemented",
                 "Tested strict",
-                "Tested any",
+                "Tested any (weak)",
                 "Implemented %",
                 "Tested strict %",
-                "Tested any %",
+                "Tested any (weak) %",
             ],
             part_rows,
         )
@@ -2751,10 +2924,10 @@ def build_report(
                 "Metric rules",
                 "Implemented",
                 "Tested strict",
-                "Tested any",
+                "Tested any (weak)",
                 "Implemented %",
                 "Tested strict %",
-                "Tested any %",
+                "Tested any (weak) %",
             ],
             family_rows,
         )
@@ -2769,38 +2942,39 @@ def build_report(
                 "Rules",
                 "Implemented",
                 "Tested strict",
-                "Tested any",
+                "Tested any (weak)",
                 "Implemented %",
                 "Tested strict %",
-                "Tested any %",
+                "Tested any (weak) %",
             ],
             type_rows,
         )
     )
     lines.append("")
-    lines.append("## Top gaps")
+    lines.append("## Wildcard-only coverage (not counted toward progress)")
+    lines.append("")
+    lines.append(
+        f"- Wildcard-only rows (`test_covered_any=TRUE` and `test_covered_strict=FALSE`): **{wildcard_only_count}** ({pct(wildcard_only_count, total_metric)})"
+    )
     lines.append("")
     lines.append(
         format_table(
-            [
-                "Part",
-                "Identifier",
-                "Rule type",
-                "Spec rule",
-                "Code impl",
-                "Tested strict",
-                "Tested any",
-                "Implementation pointer",
-                "Notes",
-            ],
-            gap_rows,
+            ["Part", "Wildcard-only rows", "% of metric rules"],
+            wildcard_part_rows,
+        )
+    )
+    lines.append("")
+    lines.append(
+        format_table(
+            ["Rule type", "Wildcard-only rows", "% of metric rules"],
+            wildcard_rule_rows,
         )
     )
     lines.append("")
     lines.append("## Known-gap traceability")
     lines.append("")
     lines.append(
-        f"Showing top {len(known_gap_rows)} expected-gap rows (full list is in `spec_coverage.csv`)."
+            f"Showing top {len(known_gap_rows)} expected-gap rows (full list is in `spec_coverage.csv`)."
     )
     lines.append("")
     lines.append(

@@ -207,6 +207,259 @@ def test_strict_coverage_guard_wildcards_cannot_make_full_strict_coverage() -> N
     assert any_tested_pct == 100.0
 
 
+def test_exact_only_width_and_arity_ignore_family_and_wildcard() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    test_index = module.TestEvidenceIndex()
+    test_index.add_family_assertion("TMP", "width", ("tests/test_cleaning.py", 401))
+    test_index.add_wildcard_assertion("width", ("tests/test_cleaning.py", 402))
+    test_index.add_family_assertion("TMP", "arity", ("tests/test_cleaning.py", 403))
+    test_index.add_wildcard_assertion("arity", ("tests/test_cleaning.py", 404))
+
+    width_row = _fixture_row(module, "TMP1", "width")
+    width_row.allowed_values_or_codes = "5"
+    width_loc, width_strength = test_index.find(
+        width_row.identifier,
+        width_row.identifier_family,
+        width_row.rule_type,
+        width_row.min_value,
+        width_row.max_value,
+        width_row.sentinel_values,
+        width_row.allowed_values_or_codes,
+    )
+    assert width_loc is None
+    assert width_strength == "none"
+
+    arity_row = _fixture_row(module, "TMP1", "arity")
+    arity_row.allowed_values_or_codes = "3"
+    arity_loc, arity_strength = test_index.find(
+        arity_row.identifier,
+        arity_row.identifier_family,
+        arity_row.rule_type,
+        arity_row.min_value,
+        arity_row.max_value,
+        arity_row.sentinel_values,
+        arity_row.allowed_values_or_codes,
+    )
+    assert arity_loc is None
+    assert arity_strength == "none"
+
+
+def test_exact_only_explicit_token_sets_ignore_family_and_wildcard() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    test_index = module.TestEvidenceIndex()
+    test_index.add_family_assertion("TMP", "sentinel", ("tests/test_cleaning.py", 451))
+    test_index.add_wildcard_assertion("sentinel", ("tests/test_cleaning.py", 452))
+    test_index.add_family_assertion("TMP", "domain", ("tests/test_cleaning.py", 453))
+    test_index.add_wildcard_assertion("domain", ("tests/test_cleaning.py", 454))
+    test_index.add_family_assertion("TMP", "allowed_quality", ("tests/test_cleaning.py", 455))
+    test_index.add_wildcard_assertion("allowed_quality", ("tests/test_cleaning.py", 456))
+
+    sentinel_row = _fixture_row(module, "TMP1", "sentinel")
+    sentinel_row.sentinel_values = "9999"
+    sentinel_loc, sentinel_strength = test_index.find(
+        sentinel_row.identifier,
+        sentinel_row.identifier_family,
+        sentinel_row.rule_type,
+        sentinel_row.min_value,
+        sentinel_row.max_value,
+        sentinel_row.sentinel_values,
+        sentinel_row.allowed_values_or_codes,
+    )
+    assert sentinel_loc is None
+    assert sentinel_strength == "none"
+
+    domain_row = _fixture_row(module, "TMP1", "domain")
+    domain_row.allowed_values_or_codes = "A|B"
+    domain_loc, domain_strength = test_index.find(
+        domain_row.identifier,
+        domain_row.identifier_family,
+        domain_row.rule_type,
+        domain_row.min_value,
+        domain_row.max_value,
+        domain_row.sentinel_values,
+        domain_row.allowed_values_or_codes,
+    )
+    assert domain_loc is None
+    assert domain_strength == "none"
+
+    quality_row = _fixture_row(module, "TMP1", "allowed_quality")
+    quality_row.allowed_values_or_codes = "V01|V02"
+    quality_loc, quality_strength = test_index.find(
+        quality_row.identifier,
+        quality_row.identifier_family,
+        quality_row.rule_type,
+        quality_row.min_value,
+        quality_row.max_value,
+        quality_row.sentinel_values,
+        quality_row.allowed_values_or_codes,
+    )
+    assert quality_loc is None
+    assert quality_strength == "none"
+
+
+def test_report_uses_strict_kpi_and_quarantines_wildcard_only(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    strict_row = _fixture_row(module, "AA1", "range")
+    strict_row.spec_part = "01"
+    strict_row.code_implemented = True
+    module.apply_test_match_result(strict_row, "exact_assertion", ("tests/test_cleaning.py", 500))
+
+    wildcard_row = _fixture_row(module, "AA2", "width")
+    wildcard_row.spec_part = "02"
+    wildcard_row.code_implemented = False
+    module.apply_test_match_result(wildcard_row, "wildcard_assertion", ("tests/test_cleaning.py", 501))
+
+    none_row = _fixture_row(module, "AA3", "domain")
+    none_row.spec_part = "03"
+    none_row.code_implemented = False
+    module.apply_test_match_result(none_row, "none", None)
+
+    report_path = tmp_path / "SPEC_COVERAGE_REPORT.md"
+    module.build_report(
+        [strict_row, wildcard_row, none_row],
+        report_path,
+        architecture_text="",
+        cleaning_index=module.CleaningIndex(),
+        arity_tests_detected=True,
+    )
+    report_text = report_path.read_text(encoding="utf-8")
+
+    assert "Progress KPI (`tested_strict`): **1** (33.3%)" in report_text
+    assert "Weak coverage (`tested_any`, includes wildcard): **2** (66.7%)" in report_text
+    assert "Wildcard-only tested_any (not counted toward progress): **1** (33.3%)" in report_text
+    assert "## Wildcard-only coverage (not counted toward progress)" in report_text
+    assert "| width | 1 | 33.3% |" in report_text
+
+
+def test_top_50_real_gaps_ranking_priority_is_stable(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    top_row = _fixture_row(module, "AA1", "range")
+    top_row.spec_part = "01"
+    top_row.enforcement_layer = "neither"
+    top_row.code_implemented = False
+    top_row.test_covered_any = False
+    top_row.test_covered_strict = False
+    top_row.test_match_strength = "none"
+
+    second_row = _fixture_row(module, "AA2", "range")
+    second_row.spec_line_start = 2
+    second_row.spec_line_end = 2
+    second_row.enforcement_layer = "neither"
+    second_row.code_implemented = True
+    second_row.test_covered_any = True
+    second_row.test_covered_strict = False
+    second_row.test_match_strength = "family_assertion"
+
+    third_row = _fixture_row(module, "AA3", "range")
+    third_row.spec_line_start = 3
+    third_row.spec_line_end = 3
+    third_row.enforcement_layer = "both"
+    third_row.code_implemented = False
+    third_row.test_covered_any = False
+    third_row.test_covered_strict = False
+    third_row.test_match_strength = "none"
+
+    excluded_unspecified = _fixture_row(module, "UNSPECIFIED", "range")
+    excluded_unspecified.spec_line_start = 4
+    excluded_unspecified.spec_line_end = 4
+    excluded_unspecified.enforcement_layer = "neither"
+    excluded_unspecified.code_implemented = False
+    excluded_unspecified.test_covered_any = False
+    excluded_unspecified.test_covered_strict = False
+    excluded_unspecified.test_match_strength = "none"
+
+    report_path = tmp_path / "SPEC_COVERAGE_REPORT.md"
+    module.build_report(
+        [top_row, second_row, third_row, excluded_unspecified],
+        report_path,
+        architecture_text="",
+        cleaning_index=module.CleaningIndex(),
+        arity_tests_detected=True,
+    )
+    report_text = report_path.read_text(encoding="utf-8")
+
+    section = report_text.split("## Top 50 real gaps (strict)", 1)[1]
+    table_lines = [line for line in section.splitlines() if line.startswith("| ")]
+    data_lines = table_lines[2:5]
+    identifiers = [line.split("|")[3].strip() for line in data_lines]
+    assert identifiers == ["AA1", "AA2", "AA3"]
+    assert "UNSPECIFIED" not in "\n".join(data_lines)
+
+
+def test_parse_spec_docs_part02_backfills_pos_identifier_and_keeps_unknowns(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    spec_dir = tmp_path / "spec"
+    spec_dir.mkdir()
+    fixture_path = spec_dir / "part-02-control-fixture.md"
+    fixture_path.write_text(
+        "\n".join(
+            [
+                "POS: 24-27",
+                "GEOPHYSICAL-POINT-OBSERVATION time",
+                "MIN: 0000 MAX: 2359",
+                "",
+                "POS: 42-46",
+                "GEOPHYSICAL-REPORT-TYPE code",
+                "SY-AU = Synoptic and auto merged report",
+                "99999 = Missing",
+                "",
+                "POS: 1-4",
+                "TOTAL-VARIABLE-CHARACTERS",
+                "MIN: 0000 MAX: 9999",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    known_identifiers = {
+        "DATE",
+        "TIME",
+        "LATITUDE",
+        "LONGITUDE",
+        "ELEVATION",
+        "CALL_SIGN",
+        "REPORT_TYPE",
+        "QC_PROCESS",
+        "AU",
+        "SA",
+    }
+    known_families = {module.identifier_family(value) for value in known_identifiers}
+
+    rows = module.parse_spec_docs(spec_dir, known_identifiers, known_families)
+
+    width_24_27 = [r for r in rows if r.rule_type == "width" and r.spec_line_start == 1]
+    assert width_24_27, "Expected width row for POS: 24-27"
+    assert all(r.identifier == "TIME" for r in width_24_27)
+
+    range_24_27 = [r for r in rows if r.rule_type == "range" and r.spec_line_start == 3]
+    assert range_24_27, "Expected range row for the time block"
+    assert all(r.identifier == "TIME" for r in range_24_27)
+
+    sentinel_rows = [r for r in rows if r.rule_type == "sentinel" and r.spec_line_start == 8]
+    assert sentinel_rows, "Expected sentinel row from 99999 = Missing"
+    assert all(r.identifier == "REPORT_TYPE" for r in sentinel_rows)
+
+    domain_rows = [r for r in rows if r.rule_type == "domain"]
+    assert domain_rows, "Expected domain row for report type codes"
+    assert all(r.identifier == "REPORT_TYPE" for r in domain_rows)
+    assert all(r.identifier != "AU" for r in domain_rows), "Hyphenated enum line must not hijack context"
+
+    unknown_width_rows = [r for r in rows if r.rule_type == "width" and r.spec_line_start == 10]
+    assert unknown_width_rows, "Expected width row for POS: 1-4 block"
+    assert all(r.identifier == "UNSPECIFIED" for r in unknown_width_rows)
+
+
 def test_spec_coverage_generator_smoke() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     module = _load_generator_module(repo_root)
@@ -231,9 +484,13 @@ def test_spec_coverage_generator_smoke() -> None:
     assert "Suspicious coverage" in report_text
     assert "Precision warnings" in report_text
     assert "Rule Identity & Provenance" in report_text
+    assert "Top 50 real gaps (strict)" in report_text
+    assert "Implementation gaps (strict): Not implemented + not tested_strict" in report_text
+    assert "Missing tests (strict): Implemented + not tested_strict" in report_text
+    assert "Wildcard-only coverage (not counted toward progress)" in report_text
     assert "identical payloads at different ranges remain separate" in report_text
-    assert "Tested (strict)" in report_text
-    assert "Tested (any)" in report_text
+    assert "Progress KPI (`tested_strict`)" in report_text
+    assert "Weak coverage (`tested_any`, includes wildcard)" in report_text
 
     metric_rows = [
         row
