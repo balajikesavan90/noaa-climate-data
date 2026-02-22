@@ -1,0 +1,38 @@
+# Reproducibility
+
+This folder contains a minimal, deterministic cleaning example plus a pipeline snapshot artifact.
+
+## Run cleaning pipeline (example)
+
+```bash
+poetry run python reproducibility/run_pipeline_example.py
+```
+
+This reads reproducibility/sample_station_raw.txt and overwrites reproducibility/sample_station_cleaned.csv.
+
+## Run coverage generator
+
+```bash
+poetry run python tools/spec_coverage/generate_spec_coverage.py
+```
+
+## Run tests
+
+```bash
+poetry run pytest tests/ -v
+```
+
+## Data provenance
+
+The sample station data is a synthetic, minimal extract based on the NOAA ISD
+Global Hourly CSV schema. It uses a placeholder station ID and two rows of
+well-formed TMP, DEW, and SLP fields to exercise scaling, quality parsing, and
+QC signal generation without relying on external data downloads.
+
+Pipeline transformations applied by the example script:
+
+- Read the raw CSV into a DataFrame.
+- Parse comma-encoded fields (TMP, DEW, SLP) in strict mode.
+- Apply missing-value checks, quality filtering, and min/max range enforcement.
+- Scale numeric values per field rules and emit QC columns.
+- Produce row-level usability summaries.

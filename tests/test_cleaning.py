@@ -4409,6 +4409,94 @@ class TestA4TokenWidthValidation:
         assert result["OB2__part1"] is None
         assert result["OB2__part1__qc_reason"] == "MALFORMED_TOKEN"
 
+    def test_oc1_token_width_accepts_exact_tokens(self):
+        """OC1 accepts canonical 4/1 token widths."""
+        result = clean_value_quality(
+            "0500,1",
+            "OC1",
+            strict_mode=True,
+        )
+        assert result["OC1__value"] == pytest.approx(50.0)
+        assert result["OC1__quality"] == "1"
+        assert result["OC1__qc_reason"] is None
+
+    def test_oc1_token_width_rejects_short_speed_rate(self):
+        """OC1 rejects short speed-rate token in strict mode."""
+        result = clean_value_quality(
+            "500,1",
+            "OC1",
+            strict_mode=True,
+        )
+        assert result["OC1__value"] is None
+        assert result["OC1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_od1_token_width_accepts_exact_tokens(self):
+        """OD1 accepts canonical 1/2/3/4/1 token widths."""
+        result = clean_value_quality(
+            "1,01,090,0005,1",
+            "OD1",
+            strict_mode=True,
+        )
+        assert result["OD1__part1"] == pytest.approx(1.0)
+        assert result["OD1__part2"] == pytest.approx(1.0)
+        assert result["OD1__part3"] == pytest.approx(90.0)
+        assert result["OD1__part4"] == pytest.approx(0.5)
+        assert result["OD1__part5"] == pytest.approx(1.0)
+
+    def test_od1_token_width_rejects_space_padded_type_code(self):
+        """OD1 rejects space-padded type-code token in strict mode."""
+        result = clean_value_quality(
+            "1 ,01,090,0005,1",
+            "OD1",
+            strict_mode=True,
+        )
+        assert result["OD1__part1"] is None
+
+    def test_od2_token_width_accepts_exact_tokens(self):
+        """OD2 accepts canonical 1/2/3/4/1 token widths."""
+        result = clean_value_quality(
+            "1,01,090,0005,1",
+            "OD2",
+            strict_mode=True,
+        )
+        assert result["OD2__part1"] == pytest.approx(1.0)
+        assert result["OD2__part2"] == pytest.approx(1.0)
+        assert result["OD2__part3"] == pytest.approx(90.0)
+        assert result["OD2__part4"] == pytest.approx(0.5)
+        assert result["OD2__part5"] == pytest.approx(1.0)
+
+    def test_od2_token_width_rejects_space_padded_period_quantity(self):
+        """OD2 rejects space-padded period-quantity token in strict mode."""
+        result = clean_value_quality(
+            "1,01 ,090,0005,1",
+            "OD2",
+            strict_mode=True,
+        )
+        assert result["OD2__part2"] is None
+
+    def test_od3_token_width_accepts_exact_tokens(self):
+        """OD3 accepts canonical 1/2/3/4/1 token widths."""
+        result = clean_value_quality(
+            "1,01,090,0005,1",
+            "OD3",
+            strict_mode=True,
+        )
+        assert result["OD3__part1"] == pytest.approx(1.0)
+        assert result["OD3__part2"] == pytest.approx(1.0)
+        assert result["OD3__part3"] == pytest.approx(90.0)
+        assert result["OD3__part4"] == pytest.approx(0.5)
+        assert result["OD3__part5"] == pytest.approx(1.0)
+
+    def test_od3_token_width_rejects_short_speed_rate(self):
+        """OD3 rejects short speed-rate token in strict mode."""
+        result = clean_value_quality(
+            "1,01,090,005,1",
+            "OD3",
+            strict_mode=True,
+        )
+        assert result["OD3__part4"] is None
+        assert result["OD3__part4__qc_reason"] == "MALFORMED_TOKEN"
+
     def test_token_width_permissive_mode(self):
         """Invalid token widths allowed in permissive mode."""
         df = pd.DataFrame({
