@@ -75,6 +75,23 @@ def _is_missing_value(value: str, rule: FieldPartRule | None) -> bool:
     return _is_missing_numeric(value)
 
 
+def enforce_domain(value: str, part_rule: FieldPartRule | None) -> str | None:
+    normalized = value.strip()
+    if part_rule is None:
+        return normalized
+    if part_rule.allowed_values:
+        normalized_upper = normalized.upper()
+        if normalized_upper not in part_rule.allowed_values:
+            return None
+    if part_rule.allowed_pattern:
+        pattern = part_rule.allowed_pattern
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+        if not pattern.fullmatch(normalized):
+            return None
+    return normalized
+
+
 def _quality_for_part(prefix: str, part_index: int, parts: list[str]) -> str | None:
     rule = get_field_rule(prefix)
     if not rule:
@@ -378,21 +395,17 @@ def _expand_parsed(
             if not normalized.isdigit() or len(normalized) != fixed_width:
                 payload[key] = None
                 continue
-        if part_rule and part_rule.allowed_values:
-            if part.strip().upper() not in part_rule.allowed_values:
-                payload[key] = None
-                continue
-        if part_rule and part_rule.allowed_pattern:
-            if not part_rule.allowed_pattern.fullmatch(part.strip()):
-                payload[key] = None
-                continue
+        domain_value = enforce_domain(part, part_rule)
+        if domain_value is None:
+            payload[key] = None
+            continue
         if is_eqd and idx == 3:
-            param_code = part.strip()
+            param_code = domain_value
             if param_code != "" and not _is_valid_eqd_parameter_code(prefix, param_code):
                 payload[key] = None
                 continue
         if value is None:
-            payload[key] = part
+            payload[key] = domain_value
             continue
         if part_rule and part_rule.kind == "numeric":
             if part_rule.min_value is not None and value < part_rule.min_value:
@@ -656,7 +669,11 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
     if is_sentinel:
         value = None
     else:
-        value = parsed.values[0]
+        domain_value = enforce_domain(raw_part, part_rule)
+        if domain_value is None:
+            value = None
+        else:
+            value = parsed.values[0]
     
     # Check if quality is bad
     bad_quality = quality is not None and quality not in allowed_quality

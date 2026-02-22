@@ -28,24 +28,24 @@ python3 tools/spec_coverage/generate_spec_coverage.py
 
 ## Enforcement layer breakdown
 
-- constants_only: **1666** (46.4%)
+- constants_only: **1241** (34.5%)
 - cleaning_only: **21** (0.6%)
-- both: **30** (0.8%)
+- both: **455** (12.7%)
 - neither: **1875** (52.2%)
 
 ## Confidence breakdown
 
-- Cleaning-implemented metric rules: **51** (1.4%)
+- Cleaning-implemented metric rules: **476** (13.3%)
 - high: **0** (0.0%)
-- medium: **51** (100.0%)
+- medium: **476** (100.0%)
 - low: **0** (0.0%)
 
 ## Precision warnings
 
-- Tested rows matched by `exact_signature`: **275** (8.4%)
-- Tested rows matched by `exact_assertion`: **376** (11.5%)
-- Tested rows matched by `family_assertion`: **784** (23.9%)
-- Tested rows matched by `wildcard_assertion`: **1842** (56.2%)
+- Tested rows matched by `exact_signature`: **289** (8.8%)
+- Tested rows matched by `exact_assertion`: **375** (11.4%)
+- Tested rows matched by `family_assertion`: **779** (23.8%)
+- Tested rows matched by `wildcard_assertion`: **1834** (56.0%)
 - Synthetic rows in CSV: **29**
 - Synthetic gap rows in CSV: **29**
 - Unknown rule rows excluded from percentages: **0**
@@ -198,7 +198,7 @@ python3 tools/spec_coverage/generate_spec_coverage.py
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 11 | CV2 | range | MIN 0000 MAX 2359 | FALSE | FALSE | src/noaa_climate_data/constants.py (FIELD_RULES for CV) | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
 | 11 | CV3 | range | MIN 0000 MAX 2359 | FALSE | FALSE | src/noaa_climate_data/constants.py (FIELD_RULES for CV) | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
-| 02 | AU | width | POS 47-51 width 5 | FALSE | TRUE | src/noaa_climate_data/cleaning.py:603 | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=wildcard_assertion;unresolved_in_next_steps |
+| 02 | AU | width | POS 47-51 width 5 | FALSE | TRUE | src/noaa_climate_data/cleaning.py:616 | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=wildcard_assertion;unresolved_in_next_steps |
 | 11 | CV1 | range | MIN 0000 MAX 2359 | FALSE | TRUE | src/noaa_climate_data/constants.py (FIELD_RULES for CV) | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 | 26 | ST1 | range | MIN 01 MAX 99 | FALSE | TRUE | src/noaa_climate_data/constants.py (FIELD_RULES for ST) | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_next_steps |
 | 02 | AU | domain | Enumerated codes near line 154 | FALSE | TRUE | src/noaa_climate_data/constants.py (FIELD_RULES for AU) | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=family_assertion;unresolved_in_next_steps |
@@ -225,7 +225,7 @@ Showing top 30 expected-gap rows (full list is in `spec_coverage.csv`).
 | 23 | IA2 | domain | FALSE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=family_assertion;unresolved_in_next_steps |
 | 23 | IB1 | domain | FALSE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=wildcard_assertion;unresolved_in_next_steps |
 | 23 | IB1 | sentinel | FALSE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=wildcard_assertion;unresolved_in_next_steps |
-| 26 | ST1 | domain | FALSE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=wildcard_assertion;unresolved_in_next_steps |
+| 26 | ST1 | domain | FALSE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 | 09 | CT2 | range | TRUE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
 | 09 | CT3 | range | TRUE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |
 | 10 | CU2 | range | TRUE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=none;unresolved_in_next_steps |

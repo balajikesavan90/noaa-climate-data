@@ -224,6 +224,7 @@ class CleaningIndex:
     function_lines: dict[str, int] = field(default_factory=dict)
     strict_arity_line: int | None = None
     strict_width_line: int | None = None
+    generic_domain_line: int | None = None
     evidence: list[CleaningEvidence] = field(default_factory=list)
     _evidence_seen: set[tuple[str, str, str, str, str, str]] = field(default_factory=set)
 
@@ -853,6 +854,8 @@ def parse_cleaning_index(cleaning_path: Path) -> CleaningIndex:
                     index.add_evidence("", fam, "cardinality", "parse_reject", node.lineno, "medium")
             elif call_name == "is_valid_repeated_identifier":
                 index.add_evidence("", "", "cardinality", "parse_reject", node.lineno, "low")
+            elif call_name == "enforce_domain" and index.generic_domain_line is None:
+                index.generic_domain_line = node.lineno
 
         if isinstance(node, ast.If):
             prefix_value = ""
@@ -2151,6 +2154,7 @@ def best_cleaning_evidence(candidates: list[CleaningEvidence]) -> CleaningEviden
 def coverage_in_cleaning_for_row(
     row: SpecRuleRow,
     cleaning_index: CleaningIndex,
+    constants_implemented: bool,
 ) -> tuple[bool, str, str, str]:
     if row.identifier == "UNSPECIFIED":
         return False, "", "low", "none"
@@ -2176,6 +2180,18 @@ def coverage_in_cleaning_for_row(
     selected = best_cleaning_evidence(family_candidates)
     if selected is not None:
         return True, selected.location, selected.confidence, f"family_{selected.evidence_kind}"
+
+    if (
+        row.rule_type == "domain"
+        and constants_implemented
+        and cleaning_index.generic_domain_line is not None
+    ):
+        return (
+            True,
+            f"src/noaa_climate_data/cleaning.py:{cleaning_index.generic_domain_line}",
+            "medium",
+            "global_domain_gate",
+        )
 
     return False, "", "low", "none"
 
@@ -2209,6 +2225,7 @@ def apply_coverage(
         cleaning_implemented, cleaning_location, cleaning_confidence, cleaning_reason = coverage_in_cleaning_for_row(
             row,
             cleaning_index,
+            constants_implemented,
         )
 
         row.implemented_in_constants = constants_implemented

@@ -8,6 +8,8 @@ Covers the three P0 fixes:
 
 from __future__ import annotations
 
+import re
+
 import pandas as pd
 import pytest
 
@@ -17,6 +19,7 @@ from noaa_climate_data.cleaning import (
     _quality_for_part,
     clean_noaa_dataframe,
     clean_value_quality,
+    enforce_domain,
     parse_field,
 )
 from noaa_climate_data.constants import (
@@ -88,6 +91,74 @@ class TestIsMissingValue:
     def test_ge1_vertical_datum_missing(self):
         rule = get_field_rule("GE1").parts[2]
         assert _is_missing_value("999999", rule)
+
+
+class TestEnforceDomain:
+    """enforce_domain should normalize and validate allowed code domains."""
+
+    def test_trims_whitespace_before_membership_check(self):
+        rule = FieldPartRule(kind="categorical", agg="drop", allowed_values={"A", "B"})
+        assert enforce_domain("  A  ", rule) == "A"
+
+    def test_preserves_leading_zero_codes(self):
+        rule = FieldPartRule(kind="categorical", agg="drop", allowed_values={"01", "02"})
+        assert enforce_domain("01", rule) == "01"
+        assert enforce_domain("1", rule) is None
+
+    def test_pattern_uses_fullmatch(self):
+        rule = FieldPartRule(kind="categorical", agg="drop", allowed_pattern=re.compile(r"\d{4}"))
+        assert enforce_domain("1234", rule) == "1234"
+        assert enforce_domain("AA1234ZZ", rule) is None
+
+    def test_string_pattern_is_supported(self):
+        rule = FieldPartRule(kind="categorical", agg="drop", allowed_pattern=r"\d{2}")
+        assert enforce_domain("09", rule) == "09"
+        assert enforce_domain("X09", rule) is None
+
+
+class TestDomainRuleEnforcement:
+    @pytest.mark.parametrize(
+        ("prefix", "invalid_raw", "valid_raw", "part_key"),
+        [
+            ("AC1", "4,C,1", "1,C,1", "AC1__part1"),
+            ("AD1", "01000,2,3201,0102,0102,1", "01000,2,0102,0102,0102,1", "AD1__part3"),
+            ("AH1", "015,0123,3,051010,1", "015,0123,1,051010,1", "AH1__part3"),
+            ("AI1", "060,0123,3,051010,1", "060,0123,1,051010,1", "AI1__part3"),
+            ("AK1", "0100,5,010203,1", "0100,1,010203,1", "AK1__part2"),
+            ("AU1", "1,1,10,1,1,1,1", "1,1,01,1,1,1,1", "AU1__part3"),
+            ("GG1", "11,1,01000,1,01,1,01,1", "01,1,01000,1,01,1,01,1", "GG1__part1"),
+            ("WD1", "01,050,06,1,1,1,10,1,050,010,1", "01,050,06,1,1,1,01,1,050,010,1", "WD1__part7"),
+            ("WJ1", "010,01000,74,00,0100,1,B", "010,01000,73,00,0100,1,B", "WJ1__part3"),
+            ("ST1", "5,0123,4,0050,4,01,4,2,4", "1,0123,4,0050,4,01,4,2,4", "ST1__part1"),
+        ],
+    )
+    def test_invalid_and_valid_domain_codes(self, prefix: str, invalid_raw: str, valid_raw: str, part_key: str):
+        invalid = clean_value_quality(invalid_raw, prefix)
+        assert invalid[part_key] is None
+
+        valid = clean_value_quality(valid_raw, prefix)
+        assert valid[part_key] is not None
+
+    @pytest.mark.parametrize(
+        ("prefix", "raw", "part_key", "expect_missing"),
+        [
+            ("AC1", "4,C,1", "AC1__part1", True),
+            ("AH1", "015,0123,1,051010,1", "AH1__part3", False),
+            ("AU1", "1,1,10,1,1,1,1", "AU1__part3", True),
+        ],
+    )
+    def test_domain_enforcement_same_in_strict_and_permissive_modes(
+        self,
+        prefix: str,
+        raw: str,
+        part_key: str,
+        expect_missing: bool,
+    ):
+        strict = clean_value_quality(raw, prefix, strict_mode=True)
+        permissive = clean_value_quality(raw, prefix, strict_mode=False)
+
+        assert (strict[part_key] is None) is expect_missing
+        assert (permissive[part_key] is None) is expect_missing
 
 
 class TestPrefixRuleMapping:
