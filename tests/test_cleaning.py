@@ -3689,6 +3689,49 @@ class TestA4TokenWidthValidation:
         assert result["GO1__part2"] is None
         assert result["GO1__part2__qc_reason"] == "MALFORMED_TOKEN"
 
+    def test_gp1_token_width_accepts_exact_tokens(self):
+        """GP1 accepts canonical widths across all 10 parts."""
+        result = clean_value_quality(
+            "0060,0123,01,100,0456,02,050,0789,03,025",
+            "GP1",
+            strict_mode=True,
+        )
+        assert result["GP1__part1"] == pytest.approx(60.0)
+        assert result["GP1__part2"] == pytest.approx(123.0)
+        assert result["GP1__part4"] == pytest.approx(100.0)
+        assert result["GP1__part8"] == pytest.approx(789.0)
+
+    def test_gp1_token_width_rejects_short_modeled_global(self):
+        """GP1 rejects short modeled-global token in strict mode."""
+        result = clean_value_quality(
+            "0060,123,01,100,0456,02,050,0789,03,025",
+            "GP1",
+            strict_mode=True,
+        )
+        assert result["GP1__part2"] is None
+        assert result["GP1__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_gq1_token_width_accepts_exact_tokens(self):
+        """GQ1 accepts canonical widths across all 5 parts."""
+        result = clean_value_quality(
+            "0060,0123,1,2345,1",
+            "GQ1",
+            strict_mode=True,
+        )
+        assert result["GQ1__part1"] == pytest.approx(60.0)
+        assert result["GQ1__part2"] == pytest.approx(12.3)
+        assert result["GQ1__part4"] == pytest.approx(234.5)
+
+    def test_gq1_token_width_rejects_short_zenith_angle(self):
+        """GQ1 rejects short zenith-angle token in strict mode."""
+        result = clean_value_quality(
+            "0060,123,1,2345,1",
+            "GQ1",
+            strict_mode=True,
+        )
+        assert result["GQ1__part2"] is None
+        assert result["GQ1__part2__qc_reason"] == "MALFORMED_TOKEN"
+
     def test_token_width_permissive_mode(self):
         """Invalid token widths allowed in permissive mode."""
         df = pd.DataFrame({
