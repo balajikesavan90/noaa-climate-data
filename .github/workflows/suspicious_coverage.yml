@@ -1,0 +1,192 @@
+name: Suspicious Coverage Monitor
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  check-suspicious-coverage:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for comparison
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+      
+      - name: Install project
+        run: poetry install --no-interaction
+      
+      - name: Generate suspicious coverage summary
+        run: |
+          poetry run python tools/spec_coverage/export_suspicious_summary.py
+          echo "📊 Suspicious coverage summary generated"
+      
+      - name: Extract current count
+        id: current
+        run: |
+          COUNT=$(poetry run python -c "
+          import csv
+          from pathlib import Path
+          
+          spec_coverage = Path('spec_coverage.csv')
+          if not spec_coverage.exists():
+              print('0')
+              exit(0)
+          
+          count = 0
+          with open(spec_coverage, 'r') as f:
+              reader = csv.DictReader(f)
+              for row in reader:
+                  if row.get('test_covered_any', '').strip().upper() == 'TRUE' and \
+                     row.get('code_implemented', '').strip().upper() == 'FALSE':
+                      count += 1
+          
+          print(count)
+          ")
+          echo "count=${COUNT}" >> $GITHUB_OUTPUT
+          echo "📈 Current suspicious coverage count: ${COUNT}"
+      
+      - name: Extract previous count (from base branch)
+        id: previous
+        if: github.event_name == 'pull_request'
+        run: |
+          git checkout origin/${{ github.base_ref }} -- spec_coverage.csv 2>/dev/null || echo "No previous spec_coverage.csv"
+          
+          if [ -f spec_coverage.csv ]; then
+            PREV_COUNT=$(poetry run python -c "
+            import csv
+            from pathlib import Path
+            
+            spec_coverage = Path('spec_coverage.csv')
+            count = 0
+            with open(spec_coverage, 'r') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row.get('test_covered_any', '').strip().upper() == 'TRUE' and \
+                       row.get('code_implemented', '').strip().upper() == 'FALSE':
+                        count += 1
+            
+            print(count)
+            ")
+          else
+            PREV_COUNT=0
+          fi
+          
+          echo "count=${PREV_COUNT}" >> $GITHUB_OUTPUT
+          echo "📊 Previous suspicious coverage count: ${PREV_COUNT}"
+          
+          # Restore current version
+          git checkout HEAD -- spec_coverage.csv 2>/dev/null || true
+      
+      - name: Check for increase
+        if: github.event_name == 'pull_request'
+        run: |
+          CURRENT=${{ steps.current.outputs.count }}
+          PREVIOUS=${{ steps.previous.outputs.count }}
+          
+          echo "🔍 Comparing counts:"
+          echo "   Previous: ${PREVIOUS}"
+          echo "   Current:  ${CURRENT}"
+          
+          if [ "${CURRENT}" -gt "${PREVIOUS}" ]; then
+            INCREASE=$((CURRENT - PREVIOUS))
+            echo "❌ FAIL: Suspicious coverage increased by ${INCREASE}"
+            echo ""
+            echo "New suspicious entries detected!"
+            echo "These are rules with test_covered_any=TRUE but code_implemented=FALSE"
+            echo ""
+            echo "Please review and fix before merging."
+            exit 1
+          elif [ "${CURRENT}" -lt "${PREVIOUS}" ]; then
+            DECREASE=$((PREVIOUS - CURRENT))
+            echo "✅ Great! Suspicious coverage decreased by ${DECREASE}"
+          else
+            echo "✅ No change in suspicious coverage count"
+          fi
+      
+      - name: Run suspicious coverage integrity test
+        run: |
+          poetry run pytest tests/test_suspicious_coverage_integrity.py -v
+      
+      - name: Upload suspicious coverage summary
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: suspicious-coverage-summary
+          path: docs/validation_artifacts/suspicious_coverage/suspicious_summary.md
+          retention-days: 30
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const current = ${{ steps.current.outputs.count }};
+            const previous = ${{ steps.previous.outputs.count || 0 }};
+            
+            let emoji = '✅';
+            let status = 'No change';
+            let color = '🟢';
+            
+            if (current > previous) {
+              emoji = '❌';
+              status = `Increased by ${current - previous}`;
+              color = '🔴';
+            } else if (current < previous) {
+              emoji = '🎉';
+              status = `Decreased by ${previous - current}`;
+              color = '🟢';
+            }
+            
+            const comment = `## ${emoji} Suspicious Coverage Monitor
+            
+            ${color} **Status**: ${status}
+            
+            | Metric | Count |
+            |--------|-------|
+            | Previous (base) | ${previous} |
+            | Current (PR) | ${current} |
+            | Change | ${current - previous > 0 ? '+' : ''}${current - previous} |
+            
+            **Suspicious Coverage** = test_covered_any=TRUE but code_implemented=FALSE
+            
+            ${current > 0 ? '⚠️ There are suspicious coverage entries. See [suspicious_summary.md](../docs/validation_artifacts/suspicious_coverage/suspicious_summary.md) for details.' : '✅ No suspicious coverage detected!'}
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

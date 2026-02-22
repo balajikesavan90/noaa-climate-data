@@ -3228,6 +3228,76 @@ class TestA2MalformedIdentifierFormat:
         # Check for either value column or part columns
         assert "CO1__value" in result.columns or "CO1" in result.columns
 
+    @pytest.mark.parametrize("prefix", ["KA1", "KA2", "KA3", "KA4"])
+    def test_valid_repeated_identifier_ka_family(self, prefix: str):
+        """Repeated identifier KA1-KA4 accepted within cardinality bounds."""
+        df = pd.DataFrame({prefix: ["005,N,0123,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert f"{prefix}__quality" in result.columns
+
+    def test_repeated_identifier_ka5_rejected(self, caplog):
+        """Repeated identifier KA5 rejected (KA cardinality is 1-4)."""
+        df = pd.DataFrame({"KA5": ["005,N,0123,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert "KA5__quality" not in result.columns
+        assert "[PARSE_STRICT]" in caplog.text and "KA5" in caplog.text
+
+    @pytest.mark.parametrize("prefix", ["KB1", "KB2", "KB3"])
+    def test_valid_repeated_identifier_kb_family(self, prefix: str):
+        """Repeated identifier KB1-KB3 accepted within cardinality bounds."""
+        df = pd.DataFrame({prefix: ["024,A,0100,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert f"{prefix}__quality" in result.columns
+
+    def test_repeated_identifier_kb4_rejected(self, caplog):
+        """Repeated identifier KB4 rejected (KB cardinality is 1-3)."""
+        df = pd.DataFrame({"KB4": ["024,A,0100,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert "KB4__quality" not in result.columns
+        assert "[PARSE_STRICT]" in caplog.text and "KB4" in caplog.text
+
+    @pytest.mark.parametrize("prefix", ["KC1", "KC2"])
+    def test_valid_repeated_identifier_kc_family(self, prefix: str):
+        """Repeated identifier KC1-KC2 accepted within cardinality bounds."""
+        df = pd.DataFrame({prefix: ["N,1,0123,010203,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert f"{prefix}__quality" in result.columns
+
+    def test_repeated_identifier_kc3_rejected(self, caplog):
+        """Repeated identifier KC3 rejected (KC cardinality is 1-2)."""
+        df = pd.DataFrame({"KC3": ["N,1,0123,010203,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert "KC3__quality" not in result.columns
+        assert "[PARSE_STRICT]" in caplog.text and "KC3" in caplog.text
+
+    @pytest.mark.parametrize("prefix", ["KD1", "KD2"])
+    def test_valid_repeated_identifier_kd_family(self, prefix: str):
+        """Repeated identifier KD1-KD2 accepted within cardinality bounds."""
+        df = pd.DataFrame({prefix: ["024,H,0100,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert f"{prefix}__quality" in result.columns
+
+    def test_repeated_identifier_kd3_rejected(self, caplog):
+        """Repeated identifier KD3 rejected (KD cardinality is 1-2)."""
+        df = pd.DataFrame({"KD3": ["024,H,0100,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert "KD3__quality" not in result.columns
+        assert "[PARSE_STRICT]" in caplog.text and "KD3" in caplog.text
+
+    @pytest.mark.parametrize("prefix", ["KG1", "KG2"])
+    def test_valid_repeated_identifier_kg_family(self, prefix: str):
+        """Repeated identifier KG1-KG2 accepted within cardinality bounds."""
+        df = pd.DataFrame({prefix: ["024,D,0123,D,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert f"{prefix}__quality" in result.columns
+
+    def test_repeated_identifier_kg3_rejected(self, caplog):
+        """Repeated identifier KG3 rejected (KG cardinality is 1-2)."""
+        df = pd.DataFrame({"KG3": ["024,D,0123,D,1"]})
+        result = clean_noaa_dataframe(df, strict_mode=True)
+        assert "KG3__quality" not in result.columns
+        assert "[PARSE_STRICT]" in caplog.text and "KG3" in caplog.text
+
 
 class TestA3ArityValidation:
     """A3: Enforce per-identifier arity (part count).
@@ -3796,6 +3866,547 @@ class TestA4TokenWidthValidation:
         )
         assert result["IB1__part10"] is None
         assert result["IB1__part10__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_ic1_token_width_accepts_exact_tokens(self):
+        """IC1 accepts canonical 2/4/1/1/3/1/1/4/1/1/4/1/1 token widths."""
+        result = clean_value_quality(
+            "24,0100,1,4,050,1,4,+050,1,4,+040,1,4",
+            "IC1",
+            strict_mode=True,
+        )
+        assert result["IC1__part1"] == pytest.approx(24.0)
+        assert result["IC1__part2"] == pytest.approx(100.0)
+        assert result["IC1__part5"] == pytest.approx(0.5)
+        assert result["IC1__part8"] == pytest.approx(5.0)
+        assert result["IC1__part11"] == pytest.approx(4.0)
+
+    def test_ic1_token_width_rejects_short_snow_depth(self):
+        """IC1 rejects short snow-depth token in strict mode."""
+        result = clean_value_quality(
+            "24,100,1,4,050,1,4,+050,1,4,+040,1,4",
+            "IC1",
+            strict_mode=True,
+        )
+        assert result["IC1__part2"] is None
+        assert result["IC1__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["KA1", "KA2", "KA3", "KA4"])
+    def test_ka_token_width_accepts_exact_tokens(self, prefix: str):
+        """KA1-KA4 accept canonical 3/1/4/1 token widths."""
+        result = clean_value_quality(
+            "005,N,0123,1",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part1"] == pytest.approx(0.5)
+        assert result[f"{prefix}__part2"] == "N"
+        assert result[f"{prefix}__part3"] == pytest.approx(12.3)
+
+    @pytest.mark.parametrize("prefix", ["KA1", "KA2", "KA3", "KA4"])
+    def test_ka_token_width_rejects_short_period(self, prefix: str):
+        """KA1-KA4 reject short period tokens in strict mode."""
+        result = clean_value_quality(
+            "05,N,0123,1",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["KB1", "KB2", "KB3"])
+    def test_kb_token_width_accepts_exact_tokens(self, prefix: str):
+        """KB1-KB3 accept canonical 3/1/4/1 token widths."""
+        result = clean_value_quality(
+            "024,A,0100,1",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part1"] == pytest.approx(24.0)
+        assert result[f"{prefix}__part2"] == "A"
+        assert result[f"{prefix}__part3"] == pytest.approx(1.0)
+
+    @pytest.mark.parametrize("prefix", ["KB1", "KB2", "KB3"])
+    def test_kb_token_width_rejects_short_period(self, prefix: str):
+        """KB1-KB3 reject short period tokens in strict mode."""
+        result = clean_value_quality(
+            "24,A,0100,1",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["KC1", "KC2"])
+    def test_kc_token_width_accepts_exact_tokens(self, prefix: str):
+        """KC1-KC2 accept canonical 1/1/4/6/1 token widths."""
+        result = clean_value_quality(
+            "N,1,0123,010203,1",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part1"] == "N"
+        assert result[f"{prefix}__part2"] == pytest.approx(1.0)
+        assert result[f"{prefix}__part3"] == pytest.approx(12.3)
+        assert result[f"{prefix}__part4"] == pytest.approx(10203.0)
+
+    @pytest.mark.parametrize("prefix", ["KC1", "KC2"])
+    def test_kc_token_width_rejects_short_temperature(self, prefix: str):
+        """KC1-KC2 reject short temperature tokens in strict mode."""
+        result = clean_value_quality(
+            "N,1,123,010203,1",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part3"] is None
+        assert result[f"{prefix}__part3__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["KD1", "KD2"])
+    def test_kd_token_width_accepts_exact_tokens(self, prefix: str):
+        """KD1-KD2 accept canonical 3/1/4/1 token widths."""
+        result = clean_value_quality(
+            "024,H,0100,1",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part1"] == pytest.approx(24.0)
+        assert result[f"{prefix}__part2"] == "H"
+        assert result[f"{prefix}__part3"] == pytest.approx(100.0)
+
+    @pytest.mark.parametrize("prefix", ["KD1", "KD2"])
+    def test_kd_token_width_rejects_short_period(self, prefix: str):
+        """KD1-KD2 reject short period tokens in strict mode."""
+        result = clean_value_quality(
+            "24,H,0100,1",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_ke1_token_width_accepts_exact_tokens(self):
+        """KE1 accepts canonical 2/1/2/1/2/1/2/1 token widths."""
+        result = clean_value_quality(
+            "01,1,02,1,03,1,04,1",
+            "KE1",
+            strict_mode=True,
+        )
+        assert result["KE1__part1"] == pytest.approx(1.0)
+        assert result["KE1__part3"] == pytest.approx(2.0)
+        assert result["KE1__part5"] == pytest.approx(3.0)
+        assert result["KE1__part7"] == pytest.approx(4.0)
+
+    def test_ke1_token_width_rejects_short_day(self):
+        """KE1 rejects short day token in strict mode."""
+        result = clean_value_quality(
+            "1,1,02,1,03,1,04,1",
+            "KE1",
+            strict_mode=True,
+        )
+        assert result["KE1__part1"] is None
+        assert result["KE1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_kf1_token_width_accepts_exact_tokens(self):
+        """KF1 accepts canonical 4/1 token widths."""
+        result = clean_value_quality(
+            "+0123,1",
+            "KF1",
+            strict_mode=True,
+        )
+        assert result["KF1__part1"] == pytest.approx(12.3)
+        assert result["KF1__part2"] == pytest.approx(1.0)
+
+    def test_kf1_token_width_rejects_short_temperature(self):
+        """KF1 rejects short temperature token in strict mode."""
+        result = clean_value_quality(
+            "123,1",
+            "KF1",
+            strict_mode=True,
+        )
+        assert result["KF1__part1"] is None
+        assert result["KF1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    @pytest.mark.parametrize("prefix", ["KG1", "KG2"])
+    def test_kg_token_width_accepts_exact_tokens(self, prefix: str):
+        """KG1-KG2 accept canonical 3/1/4/1/1 token widths."""
+        result = clean_value_quality(
+            "024,D,0123,D,1",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part1"] == pytest.approx(24.0)
+        assert result[f"{prefix}__part2"] == "D"
+        assert result[f"{prefix}__part3"] == pytest.approx(12.3)
+        assert result[f"{prefix}__part4"] == "D"
+
+    @pytest.mark.parametrize("prefix", ["KG1", "KG2"])
+    def test_kg_token_width_rejects_short_period(self, prefix: str):
+        """KG1-KG2 reject short period token in strict mode."""
+        result = clean_value_quality(
+            "24,D,0123,D,1",
+            prefix,
+            strict_mode=True,
+        )
+        assert result[f"{prefix}__part1"] is None
+        assert result[f"{prefix}__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_sa1_token_width_accepts_exact_tokens(self):
+        """SA1 accepts canonical 4/1 token widths."""
+        result = clean_value_quality(
+            "0215,1",
+            "SA1",
+            strict_mode=True,
+        )
+        assert result["SA1__value"] == pytest.approx(21.5)
+        assert result["SA1__quality"] == "1"
+
+    def test_sa1_token_width_rejects_short_temperature(self):
+        """SA1 rejects short temperature token in strict mode."""
+        result = clean_value_quality(
+            "215,1",
+            "SA1",
+            strict_mode=True,
+        )
+        assert result["SA1__value"] is None
+        assert result["SA1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_st1_token_width_accepts_exact_tokens(self):
+        """ST1 accepts canonical 1/4/1/4/1/2/1/1/1 token widths."""
+        result = clean_value_quality(
+            "1,0123,4,0050,4,01,4,2,4",
+            "ST1",
+            strict_mode=True,
+        )
+        assert result["ST1__part2"] == pytest.approx(12.3)
+        assert result["ST1__part4"] == pytest.approx(5.0)
+        assert result["ST1__part6"] == pytest.approx(1.0)
+
+    def test_st1_token_width_rejects_short_temperature(self):
+        """ST1 rejects short temperature token in strict mode."""
+        result = clean_value_quality(
+            "1,123,4,0050,4,01,4,2,4",
+            "ST1",
+            strict_mode=True,
+        )
+        assert result["ST1__part2"] is None
+        assert result["ST1__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_ma1_token_width_accepts_exact_tokens(self):
+        """MA1 accepts canonical 5/1/5/1 token widths."""
+        result = clean_value_quality(
+            "10132,1,09876,1",
+            "MA1",
+            strict_mode=True,
+        )
+        assert result["MA1__part1"] == pytest.approx(1013.2)
+        assert result["MA1__part3"] == pytest.approx(987.6)
+
+    def test_ma1_token_width_rejects_short_altimeter(self):
+        """MA1 rejects short altimeter token in strict mode."""
+        result = clean_value_quality(
+            "1013,1,09876,1",
+            "MA1",
+            strict_mode=True,
+        )
+        assert result["MA1__part1"] is None
+        assert result["MA1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_md1_token_width_accepts_exact_tokens(self):
+        """MD1 accepts canonical 1/1/3/1/4/1 token widths."""
+        result = clean_value_quality(
+            "5,1,045,1,0123,1",
+            "MD1",
+            strict_mode=True,
+        )
+        assert result["MD1__part3"] == pytest.approx(4.5)
+        assert result["MD1__part5"] == pytest.approx(12.3)
+
+    def test_md1_token_width_rejects_short_three_hour_change(self):
+        """MD1 rejects short 3-hour pressure-change token in strict mode."""
+        result = clean_value_quality(
+            "5,1,45,1,0123,1",
+            "MD1",
+            strict_mode=True,
+        )
+        assert result["MD1__part3"] is None
+        assert result["MD1__part3__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_me1_token_width_accepts_exact_tokens(self):
+        """ME1 accepts canonical 1/4/1 token widths."""
+        result = clean_value_quality(
+            "1,0123,1",
+            "ME1",
+            strict_mode=True,
+        )
+        assert result["ME1__part1"] == pytest.approx(1.0)
+        assert result["ME1__part2"] == pytest.approx(123.0)
+        assert result["ME1__part3"] == pytest.approx(1.0)
+
+    def test_me1_token_width_rejects_short_height(self):
+        """ME1 rejects short geopotential-height token in strict mode."""
+        result = clean_value_quality(
+            "1,123,1",
+            "ME1",
+            strict_mode=True,
+        )
+        assert result["ME1__part2"] is None
+        assert result["ME1__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_mf1_token_width_accepts_exact_tokens(self):
+        """MF1 accepts canonical 5/1/5/1 token widths."""
+        result = clean_value_quality(
+            "10132,1,09876,1",
+            "MF1",
+            strict_mode=True,
+        )
+        assert result["MF1__part1"] == pytest.approx(1013.2)
+        assert result["MF1__part3"] == pytest.approx(987.6)
+
+    def test_mf1_token_width_rejects_short_station_pressure(self):
+        """MF1 rejects short station-pressure token in strict mode."""
+        result = clean_value_quality(
+            "9999,1,09876,1",
+            "MF1",
+            strict_mode=True,
+        )
+        assert result["MF1__part1"] is None
+        assert result["MF1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_mg1_token_width_accepts_exact_tokens(self):
+        """MG1 accepts canonical 5/1/5/1 token widths."""
+        result = clean_value_quality(
+            "10132,4,09876,4",
+            "MG1",
+            strict_mode=True,
+        )
+        assert result["MG1__part1"] == pytest.approx(1013.2)
+        assert result["MG1__part3"] == pytest.approx(987.6)
+
+    def test_mg1_token_width_rejects_short_sea_level_pressure(self):
+        """MG1 rejects short sea-level-pressure token in strict mode."""
+        result = clean_value_quality(
+            "10132,4,9999,4",
+            "MG1",
+            strict_mode=True,
+        )
+        assert result["MG1__part3"] is None
+        assert result["MG1__part3__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_mh1_token_width_accepts_exact_tokens(self):
+        """MH1 accepts canonical 5/1/5/1 token widths."""
+        result = clean_value_quality(
+            "10132,1,09876,1",
+            "MH1",
+            strict_mode=True,
+        )
+        assert result["MH1__part1"] == pytest.approx(1013.2)
+        assert result["MH1__part3"] == pytest.approx(987.6)
+
+    def test_mh1_token_width_rejects_short_sea_level_pressure(self):
+        """MH1 rejects short sea-level-pressure token in strict mode."""
+        result = clean_value_quality(
+            "10132,1,9999,1",
+            "MH1",
+            strict_mode=True,
+        )
+        assert result["MH1__part3"] is None
+        assert result["MH1__part3__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_mk1_token_width_accepts_exact_tokens(self):
+        """MK1 accepts canonical 5/6/1/5/6/1 token widths."""
+        result = clean_value_quality(
+            "08600,051500,1,08650,311259,1",
+            "MK1",
+            strict_mode=True,
+        )
+        assert result["MK1__part1"] == pytest.approx(860.0)
+        assert result["MK1__part2"] == pytest.approx(51500.0)
+        assert result["MK1__part4"] == pytest.approx(865.0)
+        assert result["MK1__part5"] == pytest.approx(311259.0)
+
+    def test_mk1_token_width_rejects_short_month_max_pressure(self):
+        """MK1 rejects short month-max pressure token in strict mode."""
+        result = clean_value_quality(
+            "9999,051500,1,08650,311259,1",
+            "MK1",
+            strict_mode=True,
+        )
+        assert result["MK1__part1"] is None
+        assert result["MK1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_mv1_token_width_accepts_exact_tokens(self):
+        """MV1 accepts canonical 2/1 token widths."""
+        result = clean_value_quality(
+            "05,4",
+            "MV1",
+            strict_mode=True,
+        )
+        assert result["MV1__part1"] == pytest.approx(5.0)
+        assert result["MV1__part2"] == pytest.approx(4.0)
+
+    def test_mv1_token_width_rejects_space_padded_code(self):
+        """MV1 rejects space-padded present-weather code in strict mode."""
+        result = clean_value_quality(
+            "05 ,4",
+            "MV1",
+            strict_mode=True,
+        )
+        assert result["MV1__part1"] is None
+
+    def test_mw1_token_width_accepts_exact_tokens(self):
+        """MW1 accepts canonical 2/1 token widths."""
+        result = clean_value_quality(
+            "12,4",
+            "MW1",
+            strict_mode=True,
+        )
+        assert result["MW1__part1"] == pytest.approx(12.0)
+        assert result["MW1__part2"] == pytest.approx(4.0)
+
+    def test_mw1_token_width_rejects_space_padded_code(self):
+        """MW1 rejects space-padded present-weather code in strict mode."""
+        result = clean_value_quality(
+            "12 ,4",
+            "MW1",
+            strict_mode=True,
+        )
+        assert result["MW1__part1"] is None
+
+    def test_oa1_token_width_accepts_exact_tokens(self):
+        """OA1 accepts canonical 1/2/4/1 token widths."""
+        result = clean_value_quality(
+            "1,01,0005,1",
+            "OA1",
+            strict_mode=True,
+        )
+        assert result["OA1__part1"] == pytest.approx(1.0)
+        assert result["OA1__part2"] == pytest.approx(1.0)
+        assert result["OA1__part3"] == pytest.approx(0.5)
+        assert result["OA1__part4"] == pytest.approx(1.0)
+
+    def test_oa1_token_width_rejects_space_padded_type(self):
+        """OA1 rejects space-padded type code in strict mode."""
+        result = clean_value_quality(
+            "1 ,01,0005,1",
+            "OA1",
+            strict_mode=True,
+        )
+        assert result["OA1__part1"] is None
+
+    def test_oa2_token_width_accepts_exact_tokens(self):
+        """OA2 accepts canonical 1/2/4/1 token widths."""
+        result = clean_value_quality(
+            "1,01,0005,1",
+            "OA2",
+            strict_mode=True,
+        )
+        assert result["OA2__part1"] == pytest.approx(1.0)
+        assert result["OA2__part2"] == pytest.approx(1.0)
+        assert result["OA2__part3"] == pytest.approx(0.5)
+        assert result["OA2__part4"] == pytest.approx(1.0)
+
+    def test_oa2_token_width_rejects_space_padded_period_quantity(self):
+        """OA2 rejects space-padded period-quantity token in strict mode."""
+        result = clean_value_quality(
+            "1,01 ,0005,1",
+            "OA2",
+            strict_mode=True,
+        )
+        assert result["OA2__part2"] is None
+
+    def test_oa3_token_width_accepts_exact_tokens(self):
+        """OA3 accepts canonical 1/2/4/1 token widths."""
+        result = clean_value_quality(
+            "1,01,0005,1",
+            "OA3",
+            strict_mode=True,
+        )
+        assert result["OA3__part1"] == pytest.approx(1.0)
+        assert result["OA3__part2"] == pytest.approx(1.0)
+        assert result["OA3__part3"] == pytest.approx(0.5)
+        assert result["OA3__part4"] == pytest.approx(1.0)
+
+    def test_oa3_token_width_rejects_short_speed_rate(self):
+        """OA3 rejects short speed-rate token in strict mode."""
+        result = clean_value_quality(
+            "1,01,5,1",
+            "OA3",
+            strict_mode=True,
+        )
+        assert result["OA3__part3"] is None
+        assert result["OA3__part3__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_ob1_token_width_accepts_exact_tokens(self):
+        """OB1 accepts canonical 3/4/1/1/3/1/1/5/1/1/5/1/1 token widths."""
+        result = clean_value_quality(
+            "060,0050,1,0,090,1,0,00010,1,0,00020,1,0",
+            "OB1",
+            strict_mode=True,
+        )
+        assert result["OB1__part1"] == pytest.approx(60.0)
+        assert result["OB1__part2"] == pytest.approx(5.0)
+        assert result["OB1__part8"] == pytest.approx(0.1)
+        assert result["OB1__part11"] == pytest.approx(0.2)
+
+    def test_ob1_token_width_rejects_short_period_minutes(self):
+        """OB1 rejects short period-minutes token in strict mode."""
+        result = clean_value_quality(
+            "60,0050,1,0,090,1,0,00010,1,0,00020,1,0",
+            "OB1",
+            strict_mode=True,
+        )
+        assert result["OB1__part1"] is None
+        assert result["OB1__part1__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_ob1_token_width_rejects_short_max_gust(self):
+        """OB1 rejects short max-gust token in strict mode."""
+        result = clean_value_quality(
+            "060,050,1,0,090,1,0,00010,1,0,00020,1,0",
+            "OB1",
+            strict_mode=True,
+        )
+        assert result["OB1__part2"] is None
+        assert result["OB1__part2__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_ob1_token_width_rejects_short_speed_std(self):
+        """OB1 rejects short speed-standard-deviation token in strict mode."""
+        result = clean_value_quality(
+            "060,0050,1,0,090,1,0,0010,1,0,00020,1,0",
+            "OB1",
+            strict_mode=True,
+        )
+        assert result["OB1__part8"] is None
+        assert result["OB1__part8__qc_reason"] == "MALFORMED_TOKEN"
+
+    def test_ob1_token_width_rejects_space_padded_quality(self):
+        """OB1 rejects space-padded quality token in strict mode."""
+        result = clean_value_quality(
+            "060,0050,1 ,0,090,1,0,00010,1,0,00020,1,0",
+            "OB1",
+            strict_mode=True,
+        )
+        assert result["OB1__part3"] is None
+
+    def test_ob2_token_width_accepts_exact_tokens(self):
+        """OB2 accepts canonical 3/4/1/1/3/1/1/5/1/1/5/1/1 token widths."""
+        result = clean_value_quality(
+            "060,0050,1,0,090,1,0,00010,1,0,00020,1,0",
+            "OB2",
+            strict_mode=True,
+        )
+        assert result["OB2__part1"] == pytest.approx(60.0)
+        assert result["OB2__part2"] == pytest.approx(5.0)
+        assert result["OB2__part8"] == pytest.approx(0.1)
+        assert result["OB2__part11"] == pytest.approx(0.2)
+
+    def test_ob2_token_width_rejects_short_period_minutes(self):
+        """OB2 rejects short period-minutes token in strict mode."""
+        result = clean_value_quality(
+            "60,0050,1,0,090,1,0,00010,1,0,00020,1,0",
+            "OB2",
+            strict_mode=True,
+        )
+        assert result["OB2__part1"] is None
+        assert result["OB2__part1__qc_reason"] == "MALFORMED_TOKEN"
 
     def test_token_width_permissive_mode(self):
         """Invalid token widths allowed in permissive mode."""
