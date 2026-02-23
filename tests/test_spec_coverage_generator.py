@@ -451,6 +451,10 @@ def test_parse_spec_docs_part02_backfills_pos_identifier_and_assigns_control_pos
                 "TOTAL-VARIABLE-CHARACTERS",
                 "MIN: 0000 MAX: 9999",
                 "",
+                "POS: 29-34",
+                "GEOPHYSICAL-POINT-OBSERVATION latitude coordinate",
+                "MIN: -90000 MAX: +90000",
+                "",
             ]
         ),
         encoding="utf-8",
@@ -474,7 +478,7 @@ def test_parse_spec_docs_part02_backfills_pos_identifier_and_assigns_control_pos
 
     width_24_27 = [r for r in rows if r.rule_type == "width" and r.spec_line_start == 1]
     assert width_24_27, "Expected width row for POS: 24-27"
-    assert all(r.identifier == "TIME" for r in width_24_27)
+    assert all(r.identifier == "CONTROL_POS_24_27" for r in width_24_27)
 
     range_24_27 = [r for r in rows if r.rule_type == "range" and r.spec_line_start == 3]
     assert range_24_27, "Expected range row for the time block"
@@ -498,6 +502,11 @@ def test_parse_spec_docs_part02_backfills_pos_identifier_and_assigns_control_pos
     assert control_pos_range_rows, "Expected range row for POS: 1-4 block"
     assert all(r.identifier == "CONTROL_POS_1_4" for r in control_pos_range_rows)
     assert all(r.identifier_family == "CONTROL" for r in control_pos_range_rows)
+
+    control_pos_29_34_width_rows = [r for r in rows if r.rule_type == "width" and r.spec_line_start == 14]
+    assert control_pos_29_34_width_rows, "Expected width row for POS: 29-34 block"
+    assert all(r.identifier == "CONTROL_POS_29_34" for r in control_pos_29_34_width_rows)
+    assert all(r.identifier_family == "CONTROL" for r in control_pos_29_34_width_rows)
 
 
 def test_parse_spec_docs_part03_reanchors_context_between_mandatory_sections(tmp_path: Path) -> None:

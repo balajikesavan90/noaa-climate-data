@@ -1641,6 +1641,9 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                                 row = rows[row_idx]
                                 if not row.identifier.startswith("CONTROL_POS_"):
                                     continue
+                                # Keep POS-derived width rows structural in Part 02.
+                                if row.rule_type == "width":
+                                    continue
                                 row.identifier = ident
                                 row.identifier_family = identifier_family(ident)
                             part02_pending_pos_row_indices = []

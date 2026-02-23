@@ -11,19 +11,19 @@ python3 tools/spec_coverage/generate_spec_coverage.py
 ## Overall coverage
 
 - Total spec rules extracted: **3526**
-- Structural rules count: **5**
+- Structural rules count: **13**
 - Documentation rules count (excluded): **0**
-- Synthetic rows excluded from coverage metrics: **28**
+- Synthetic rows excluded from coverage metrics: **29**
 - Metric-eligible rules (excluding `unknown`): **3526**
 - Unknown/noisy rows excluded from %: **0**
-- Rules implemented in code: **3488** (98.9%)
-- Progress KPI (`tested_strict`): **3488** (98.9%)
-- Weak coverage (`tested_any`, includes wildcard): **3488** (98.9%)
-- tested_any from non-wild matches only: **3488** (98.9%)
+- Rules implemented in code: **3480** (98.7%)
+- Progress KPI (`tested_strict`): **3480** (98.7%)
+- Weak coverage (`tested_any`, includes wildcard): **3480** (98.7%)
+- tested_any from non-wild matches only: **3480** (98.7%)
 - Wildcard-only tested_any (not counted toward progress): **0** (0.0%)
 - Coverage progress is measured with `tested_strict` only.
 - `test_covered` in CSV mirrors `test_covered_any` for backward compatibility.
-- Expected-gap tagged rules: **112**
+- Expected-gap tagged rules: **111**
 - Rows linked to unresolved `NEXT_STEPS.md` items: **3526**
 - Open checklist items in `ARCHITECTURE_NEXT_STEPS.md`: **83**
 
@@ -39,10 +39,18 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | 3 | 02 | CONTROL_POS_1_4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 | 4 | 02 | CONTROL_POS_5_10 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 | 5 | 02 | CONTROL_POS_11_15 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 6 | 02 | CONTROL_POS_28_28 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 7 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 8 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 9 | 02 | CONTROL_POS_28_28 | sentinel | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 6 | 02 | CONTROL_POS_16_23 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 7 | 02 | CONTROL_POS_24_27 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 8 | 02 | CONTROL_POS_28_28 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 9 | 02 | CONTROL_POS_29_34 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 10 | 02 | CONTROL_POS_35_41 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 11 | 02 | CONTROL_POS_42_46 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 12 | 02 | CONTROL_POS_47_51 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 13 | 02 | CONTROL_POS_52_56 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 14 | 02 | CONTROL_POS_57_60 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 15 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 16 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 17 | 02 | CONTROL_POS_28_28 | sentinel | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 
 ### Implementation gaps (strict): Not implemented + not tested_strict
 
@@ -53,10 +61,18 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | 3 | 02 | CONTROL_POS_1_4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 | 4 | 02 | CONTROL_POS_5_10 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 | 5 | 02 | CONTROL_POS_11_15 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 6 | 02 | CONTROL_POS_28_28 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 7 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 8 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
-| 9 | 02 | CONTROL_POS_28_28 | sentinel | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 6 | 02 | CONTROL_POS_16_23 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 7 | 02 | CONTROL_POS_24_27 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 8 | 02 | CONTROL_POS_28_28 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 9 | 02 | CONTROL_POS_29_34 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 10 | 02 | CONTROL_POS_35_41 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 11 | 02 | CONTROL_POS_42_46 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 12 | 02 | CONTROL_POS_47_51 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 13 | 02 | CONTROL_POS_52_56 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 14 | 02 | CONTROL_POS_57_60 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 15 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 16 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 17 | 02 | CONTROL_POS_28_28 | sentinel | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 
 ### Missing tests (strict): Implemented + not tested_strict
 
@@ -72,10 +88,10 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 ## Enforcement layer breakdown
 
-- constants_only: **2597** (73.7%)
+- constants_only: **2589** (73.4%)
 - cleaning_only: **4** (0.1%)
 - both: **887** (25.2%)
-- neither: **38** (1.1%)
+- neither: **46** (1.3%)
 
 ## Confidence breakdown
 
@@ -89,20 +105,20 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | Match strength | Count | % of metric rules |
 | --- | --- | --- |
 | exact_signature | 1292 | 36.6% |
-| exact_assertion | 2188 | 62.1% |
+| exact_assertion | 2180 | 61.8% |
 | family_assertion | 8 | 0.2% |
 | wildcard_assertion | 0 | 0.0% |
-| none | 38 | 1.1% |
+| none | 46 | 1.3% |
 
 ## Precision warnings
 
 - Wildcard policy: `wildcard_assertion` counts as tested-any only; it never counts as strict.
-- Tested-any rows matched by `exact_signature`: **1292** (37.0%)
-- Tested-any rows matched by `exact_assertion`: **2188** (62.7%)
+- Tested-any rows matched by `exact_signature`: **1292** (37.1%)
+- Tested-any rows matched by `exact_assertion`: **2180** (62.6%)
 - Tested-any rows matched by `family_assertion`: **8** (0.2%)
 - Tested-any rows matched by `wildcard_assertion`: **0** (0.0%)
-- Synthetic rows in CSV: **28**
-- Synthetic gap rows in CSV: **28**
+- Synthetic rows in CSV: **29**
+- Synthetic gap rows in CSV: **29**
 - Unknown rule rows excluded from percentages: **0**
 - Arity rules tested (strict): **171/171** (100.0%)
 - Arity rules tested (any): **171/171** (100.0%)
@@ -125,7 +141,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | Part | Rules | Metric rules | Implemented | Tested strict | Tested any (weak) | Implemented % | Tested strict % | Tested any (weak) % |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 01 | 0 | 0 | 0 | 0 | 0 | 0.0% | 0.0% | 0.0% |
-| 02 | 31 | 31 | 22 | 22 | 22 | 71.0% | 71.0% | 71.0% |
+| 02 | 31 | 31 | 14 | 14 | 14 | 45.2% | 45.2% | 45.2% |
 | 03 | 53 | 53 | 52 | 52 | 52 | 98.1% | 98.1% | 98.1% |
 | 04 | 603 | 603 | 601 | 601 | 601 | 99.7% | 99.7% | 99.7% |
 | 05 | 450 | 450 | 449 | 449 | 449 | 99.8% | 99.8% | 99.8% |
@@ -180,7 +196,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | AX | 84 | 84 | 84 | 84 | 84 | 100.0% | 100.0% | 100.0% |
 | AY | 26 | 26 | 26 | 26 | 26 | 100.0% | 100.0% | 100.0% |
 | AZ | 26 | 26 | 26 | 26 | 26 | 100.0% | 100.0% | 100.0% |
-| CALL_SIGN | 3 | 3 | 3 | 3 | 3 | 100.0% | 100.0% | 100.0% |
+| CALL_SIGN | 2 | 2 | 2 | 2 | 2 | 100.0% | 100.0% | 100.0% |
 | CB | 28 | 28 | 28 | 28 | 28 | 100.0% | 100.0% | 100.0% |
 | CF | 33 | 33 | 33 | 33 | 33 | 100.0% | 100.0% | 100.0% |
 | CG | 30 | 30 | 30 | 30 | 30 | 100.0% | 100.0% | 100.0% |
@@ -189,17 +205,17 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | CIG | 12 | 12 | 12 | 12 | 12 | 100.0% | 100.0% | 100.0% |
 | CN | 113 | 113 | 113 | 113 | 113 | 100.0% | 100.0% | 100.0% |
 | CO | 73 | 73 | 73 | 73 | 73 | 100.0% | 100.0% | 100.0% |
-| CONTROL | 9 | 9 | 0 | 0 | 0 | 0.0% | 0.0% | 0.0% |
+| CONTROL | 17 | 17 | 0 | 0 | 0 | 0.0% | 0.0% | 0.0% |
 | CR | 10 | 10 | 10 | 10 | 10 | 100.0% | 100.0% | 100.0% |
 | CT | 27 | 27 | 27 | 27 | 27 | 100.0% | 100.0% | 100.0% |
 | CU | 54 | 54 | 54 | 54 | 54 | 100.0% | 100.0% | 100.0% |
 | CV | 108 | 108 | 108 | 108 | 108 | 100.0% | 100.0% | 100.0% |
 | CW | 19 | 19 | 19 | 19 | 19 | 100.0% | 100.0% | 100.0% |
 | CX | 108 | 108 | 108 | 108 | 108 | 100.0% | 100.0% | 100.0% |
-| DATE | 2 | 2 | 2 | 2 | 2 | 100.0% | 100.0% | 100.0% |
+| DATE | 1 | 1 | 1 | 1 | 1 | 100.0% | 100.0% | 100.0% |
 | DEW | 5 | 5 | 5 | 5 | 5 | 100.0% | 100.0% | 100.0% |
 | ED | 14 | 14 | 14 | 14 | 14 | 100.0% | 100.0% | 100.0% |
-| ELEVATION | 3 | 3 | 3 | 3 | 3 | 100.0% | 100.0% | 100.0% |
+| ELEVATION | 2 | 2 | 2 | 2 | 2 | 100.0% | 100.0% | 100.0% |
 | GA | 24 | 24 | 24 | 24 | 24 | 100.0% | 100.0% | 100.0% |
 | GD | 216 | 216 | 216 | 216 | 216 | 100.0% | 100.0% | 100.0% |
 | GE | 11 | 11 | 11 | 11 | 11 | 100.0% | 100.0% | 100.0% |
@@ -226,8 +242,8 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | KE | 26 | 26 | 26 | 26 | 26 | 100.0% | 100.0% | 100.0% |
 | KF | 8 | 8 | 8 | 8 | 8 | 100.0% | 100.0% | 100.0% |
 | KG | 36 | 36 | 36 | 36 | 36 | 100.0% | 100.0% | 100.0% |
-| LATITUDE | 3 | 3 | 3 | 3 | 3 | 100.0% | 100.0% | 100.0% |
-| LONGITUDE | 3 | 3 | 3 | 3 | 3 | 100.0% | 100.0% | 100.0% |
+| LATITUDE | 2 | 2 | 2 | 2 | 2 | 100.0% | 100.0% | 100.0% |
+| LONGITUDE | 2 | 2 | 2 | 2 | 2 | 100.0% | 100.0% | 100.0% |
 | MA | 13 | 13 | 13 | 13 | 13 | 100.0% | 100.0% | 100.0% |
 | MD | 18 | 18 | 18 | 18 | 18 | 100.0% | 100.0% | 100.0% |
 | ME | 10 | 10 | 10 | 10 | 10 | 100.0% | 100.0% | 100.0% |
@@ -243,13 +259,13 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | OC | 8 | 8 | 8 | 8 | 8 | 100.0% | 100.0% | 100.0% |
 | OD | 63 | 63 | 63 | 63 | 63 | 100.0% | 100.0% | 100.0% |
 | OE | 69 | 69 | 69 | 69 | 69 | 100.0% | 100.0% | 100.0% |
-| QC_PROCESS | 2 | 2 | 2 | 2 | 2 | 100.0% | 100.0% | 100.0% |
-| REPORT_TYPE | 4 | 4 | 4 | 4 | 4 | 100.0% | 100.0% | 100.0% |
+| QC_PROCESS | 1 | 1 | 1 | 1 | 1 | 100.0% | 100.0% | 100.0% |
+| REPORT_TYPE | 3 | 3 | 3 | 3 | 3 | 100.0% | 100.0% | 100.0% |
 | RH | 60 | 60 | 60 | 60 | 60 | 100.0% | 100.0% | 100.0% |
 | SA | 12 | 12 | 12 | 12 | 12 | 100.0% | 100.0% | 100.0% |
 | SLP | 5 | 5 | 5 | 5 | 5 | 100.0% | 100.0% | 100.0% |
 | ST | 28 | 28 | 28 | 28 | 28 | 100.0% | 100.0% | 100.0% |
-| TIME | 2 | 2 | 2 | 2 | 2 | 100.0% | 100.0% | 100.0% |
+| TIME | 1 | 1 | 1 | 1 | 1 | 100.0% | 100.0% | 100.0% |
 | TMP | 5 | 5 | 5 | 5 | 5 | 100.0% | 100.0% | 100.0% |
 | UA | 19 | 19 | 19 | 19 | 19 | 100.0% | 100.0% | 100.0% |
 | UG | 30 | 30 | 30 | 30 | 30 | 100.0% | 100.0% | 100.0% |
@@ -270,7 +286,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | allowed_quality | 80 | 80 | 80 | 80 | 100.0% | 100.0% | 100.0% |
 | domain | 890 | 888 | 888 | 888 | 99.8% | 99.8% | 99.8% |
 | cardinality | 128 | 128 | 128 | 128 | 100.0% | 100.0% | 100.0% |
-| width | 1207 | 1174 | 1174 | 1174 | 97.3% | 97.3% | 97.3% |
+| width | 1207 | 1166 | 1166 | 1166 | 96.6% | 96.6% | 96.6% |
 | arity | 171 | 171 | 171 | 171 | 100.0% | 100.0% | 100.0% |
 | unknown | 0 | 0 | 0 | 0 | excluded | excluded | excluded |
 
@@ -302,9 +318,7 @@ Showing top 30 expected-gap rows (full list is in `spec_coverage.csv`).
 | 23 | IA | range | FALSE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;gap_tag_cap_exceeded;gap_tag_overflow=53;synthetic_gap_row;test_match=none;unresolved_in_next_steps |
 | 00 | UA | unknown | FALSE | FALSE | FALSE | coverage_reason_cleaning=none;coverage_reason_constants=none;expected_gap_from_alignment_report;synthetic_gap_row;test_match=none;unresolved_in_next_steps |
 | 02 | DATE | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_next_steps |
-| 02 | DATE | width | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 | 02 | TIME | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=exact_fallback_bounds;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_next_steps |
-| 02 | TIME | width | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=strict_gate_width;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 | 06 | CI1 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 | 07 | CO2 | cardinality | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=repeated_identifier_range;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 | 07 | CO3 | cardinality | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=repeated_identifier_range;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
@@ -328,6 +342,8 @@ Showing top 30 expected-gap rows (full list is in `spec_coverage.csv`).
 | 13 | CX3 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 | 20 | GQ1 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_allowed_values_range;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 | 21 | GR1 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_allowed_values_range;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
+| 23 | IA2 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_signature;unresolved_in_next_steps |
+| 23 | IB1 | range | TRUE | TRUE | TRUE | coverage_reason_cleaning=none;coverage_reason_constants=field_rule_minmax;expected_gap_from_alignment_report;test_match=exact_assertion;unresolved_in_next_steps |
 
 ## How to extend
 
