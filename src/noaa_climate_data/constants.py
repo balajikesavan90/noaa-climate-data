@@ -493,6 +493,162 @@ USABILITY_METRIC_INDICATORS = ["qc_pass"]
 
 
 FIELD_RULES: dict[str, FieldRule] = {
+    "CONTROL_POS_1_4": FieldRule(
+        code="CONTROL_POS_1_4",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                min_value=0,
+                max_value=9999,
+                token_width=4,
+                allowed_pattern=re.compile(r"^\d{4}$"),
+            )
+        },
+    ),
+    "CONTROL_POS_5_10": FieldRule(
+        code="CONTROL_POS_5_10",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                token_width=6,
+                allowed_pattern=re.compile(r"^[\x20-\x7E]{6}$"),
+            )
+        },
+    ),
+    "CONTROL_POS_11_15": FieldRule(
+        code="CONTROL_POS_11_15",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                min_value=0,
+                max_value=99999,
+                token_width=5,
+                allowed_pattern=re.compile(r"^\d{5}$"),
+            )
+        },
+    ),
+    "CONTROL_POS_16_23": FieldRule(
+        code="CONTROL_POS_16_23",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                min_value=101,
+                max_value=99991231,
+                token_width=8,
+                allowed_pattern=re.compile(r"^\d{8}$"),
+            )
+        },
+    ),
+    "CONTROL_POS_24_27": FieldRule(
+        code="CONTROL_POS_24_27",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                min_value=0,
+                max_value=2359,
+                token_width=4,
+                allowed_pattern=HHMM_PATTERN,
+            )
+        },
+    ),
+    "CONTROL_POS_28_28": FieldRule(
+        code="CONTROL_POS_28_28",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9"},
+                allowed_values=DATA_SOURCE_FLAGS,
+                token_width=1,
+                token_pattern=re.compile(r"^[1-9A-O]$"),
+            )
+        },
+    ),
+    "CONTROL_POS_29_34": FieldRule(
+        code="CONTROL_POS_29_34",
+        parts={
+            1: FieldPartRule(
+                kind="numeric",
+                agg="drop",
+                missing_values={"99999"},
+                min_value=-90000,
+                max_value=90000,
+                token_width=6,
+                token_pattern=re.compile(r"^[+-]?\d{5}$"),
+            )
+        },
+    ),
+    "CONTROL_POS_35_41": FieldRule(
+        code="CONTROL_POS_35_41",
+        parts={
+            1: FieldPartRule(
+                kind="numeric",
+                agg="drop",
+                missing_values={"999999"},
+                min_value=-179999,
+                max_value=180000,
+                token_width=7,
+                token_pattern=re.compile(r"^[+-]?\d{6}$"),
+            )
+        },
+    ),
+    "CONTROL_POS_42_46": FieldRule(
+        code="CONTROL_POS_42_46",
+        parts={
+            1: FieldPartRule(
+                kind="numeric",
+                agg="drop",
+                missing_values={"9999"},
+                min_value=-400,
+                max_value=8850,
+                token_width=5,
+                token_pattern=re.compile(r"^[+-]?\d{4}$"),
+            )
+        },
+    ),
+    "CONTROL_POS_47_51": FieldRule(
+        code="CONTROL_POS_47_51",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99999"},
+                allowed_values=REPORT_TYPE_CODES,
+                token_width=5,
+                token_pattern=re.compile(r"^[A-Z0-9-]{5}$"),
+            )
+        },
+    ),
+    "CONTROL_POS_52_56": FieldRule(
+        code="CONTROL_POS_52_56",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"99999"},
+                token_width=5,
+                allowed_pattern=re.compile(r"^[\x20-\x7E]{5}$"),
+            )
+        },
+    ),
+    "CONTROL_POS_57_60": FieldRule(
+        code="CONTROL_POS_57_60",
+        parts={
+            1: FieldPartRule(
+                kind="categorical",
+                agg="drop",
+                missing_values={"9999"},
+                allowed_values={"V01 ", "V02 ", "V03 "},
+                token_width=4,
+                token_pattern=re.compile(r"^(?:V0[1-3]\s|9999)$"),
+            )
+        },
+    ),
     "DATE": FieldRule(
         code="DATE",
         parts={

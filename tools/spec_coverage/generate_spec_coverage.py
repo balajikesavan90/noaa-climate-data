@@ -2187,9 +2187,21 @@ def coverage_in_constants_for_row(
             rules.append((cand, rule))
 
     def part_location(prefix: str, part_idx: int, keyword: str) -> str:
-        line = constants_ast.part_keyword_lines.get((prefix, int(part_idx), keyword))
+        lookup_prefixes = [prefix]
+        family_prefix = identifier_family(prefix)
+        if family_prefix != prefix:
+            lookup_prefixes.append(family_prefix)
+
+        line = None
+        for lookup_prefix in lookup_prefixes:
+            line = constants_ast.part_keyword_lines.get((lookup_prefix, int(part_idx), keyword))
+            if line is not None:
+                break
         if line is None:
-            line = constants_ast.part_lines.get((prefix, int(part_idx)))
+            for lookup_prefix in lookup_prefixes:
+                line = constants_ast.part_lines.get((lookup_prefix, int(part_idx)))
+                if line is not None:
+                    break
         return f"src/noaa_climate_data/constants.py:{line}" if line else ""
 
     if row.rule_type == "cardinality":
@@ -2221,7 +2233,11 @@ def coverage_in_constants_for_row(
                 token_width = getattr(part_rule, "token_width", None)
                 token_pattern = getattr(part_rule, "token_pattern", None)
                 if token_width is not None or token_pattern is not None:
-                    line = constants_ast.part_keyword_lines.get((identifier_family(cand), int(part_idx), "token_width"))
+                    line = constants_ast.part_keyword_lines.get((cand, int(part_idx), "token_width"))
+                    if line is None:
+                        line = constants_ast.part_keyword_lines.get((identifier_family(cand), int(part_idx), "token_width"))
+                    if line is None:
+                        line = constants_ast.part_lines.get((cand, int(part_idx)))
                     if line is None:
                         line = constants_ast.part_lines.get((identifier_family(cand), int(part_idx)))
                     return True, (f"src/noaa_climate_data/constants.py:{line}" if line else ""), "strict_gate_width"
@@ -2238,7 +2254,7 @@ def coverage_in_constants_for_row(
     for cand, rule in rules:
         parts = getattr(rule, "parts", {})
         for part_idx, part_rule in parts.items():
-            key_prefix = identifier_family(cand)
+            key_prefix = cand
             allowed_values_raw = set(getattr(part_rule, "allowed_values", None) or [])
             missing_values_raw = set(getattr(part_rule, "missing_values", None) or [])
             allowed_quality_raw = set(getattr(part_rule, "allowed_quality", None) or [])
@@ -2387,7 +2403,7 @@ def coverage_in_constants_for_row(
                     min_value = getattr(part_rule, "min_value", None)
                     max_value = getattr(part_rule, "max_value", None)
                     if min_value is not None and max_value is not None:
-                        return True, part_location(identifier_family(cand), part_idx, "min_value"), "field_rule_minmax"
+                        return True, part_location(cand, part_idx, "min_value"), "field_rule_minmax"
 
     return False, "", "none"
 

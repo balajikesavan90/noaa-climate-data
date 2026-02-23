@@ -769,6 +769,147 @@ def _record_length_mismatch(raw_line: object) -> bool:
     return actual_length != expected_length
 
 
+def _is_ascii_text(value: str) -> bool:
+    try:
+        value.encode("ascii")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
+def _all_nines(value: str) -> bool:
+    token = value.lstrip("+-")
+    return token != "" and set(token) == {"9"}
+
+
+def _validate_control_header(raw_line: object) -> str | None:
+    """Validate Part 02 control header fields from fixed raw-line positions."""
+    if raw_line is None or (isinstance(raw_line, float) and pd.isna(raw_line)):
+        return None
+
+    text = str(raw_line).rstrip("\r\n")
+    if len(text) < 60:
+        return "control_header_short"
+
+    total_variable_characters = text[0:4]
+    usaf = text[4:10]
+    wban = text[10:15]
+    date = text[15:23]
+    time = text[23:27]
+    source_flag = text[27:28]
+    latitude = text[28:34]
+    longitude = text[34:41]
+    elevation = text[41:46]
+    report_type = text[46:51]
+    call_sign = text[51:56]
+    qc_process = text[56:60]
+
+    fields = (
+        (total_variable_characters, 4),
+        (usaf, 6),
+        (wban, 5),
+        (date, 8),
+        (time, 4),
+        (source_flag, 1),
+        (latitude, 6),
+        (longitude, 7),
+        (elevation, 5),
+        (report_type, 5),
+        (call_sign, 5),
+        (qc_process, 4),
+    )
+    if any(len(value) != width for value, width in fields):
+        return "control_header_invalid_width"
+
+    if not total_variable_characters.isdigit():
+        return "control_header_invalid_width"
+
+    if not wban.isdigit():
+        return "control_header_invalid_width"
+
+    if not date.isdigit() or not time.isdigit():
+        return "control_header_invalid_width"
+
+    if not re.fullmatch(r"[+-]\d{5}", latitude):
+        if _all_nines(latitude) and latitude != "+99999":
+            return "control_header_invalid_sentinel"
+        return "control_header_invalid_width"
+
+    if not re.fullmatch(r"[+-]\d{6}", longitude):
+        if _all_nines(longitude) and longitude != "+999999":
+            return "control_header_invalid_sentinel"
+        return "control_header_invalid_width"
+
+    if not re.fullmatch(r"[+-]\d{4}", elevation):
+        if _all_nines(elevation) and elevation != "+9999":
+            return "control_header_invalid_sentinel"
+        return "control_header_invalid_width"
+
+    if _all_nines(latitude) and latitude != "+99999":
+        return "control_header_invalid_sentinel"
+    if _all_nines(longitude) and longitude != "+999999":
+        return "control_header_invalid_sentinel"
+    if _all_nines(elevation) and elevation != "+9999":
+        return "control_header_invalid_sentinel"
+
+    if source_flag not in DATA_SOURCE_FLAGS:
+        return "control_header_invalid_domain"
+
+    if report_type != "99999" and report_type not in REPORT_TYPE_CODES:
+        return "control_header_invalid_domain"
+
+    if not _is_ascii_text(call_sign):
+        return "control_header_invalid_domain"
+
+    if qc_process != "9999" and qc_process not in {"V01 ", "V02 ", "V03 "}:
+        return "control_header_invalid_domain"
+
+    total_value = int(total_variable_characters)
+    if not (0 <= total_value <= 9999):
+        return "control_header_invalid_domain"
+
+    date_year = int(date[0:4])
+    date_month = int(date[4:6])
+    date_day = int(date[6:8])
+    if not (0 <= date_year <= 9999 and 1 <= date_month <= 12 and 1 <= date_day <= 31):
+        return "control_header_invalid_domain"
+    month_lengths = {
+        1: 31,
+        2: 29 if (date_year % 4 == 0 and (date_year % 100 != 0 or date_year % 400 == 0)) else 28,
+        3: 31,
+        4: 30,
+        5: 31,
+        6: 30,
+        7: 31,
+        8: 31,
+        9: 30,
+        10: 31,
+        11: 30,
+        12: 31,
+    }
+    if date_day > month_lengths[date_month]:
+        return "control_header_invalid_domain"
+
+    time_hour = int(time[0:2])
+    time_minute = int(time[2:4])
+    if not (0 <= time_hour <= 23 and 0 <= time_minute <= 59):
+        return "control_header_invalid_domain"
+
+    lat_value = int(latitude)
+    if latitude != "+99999" and not (-90000 <= lat_value <= 90000):
+        return "control_header_invalid_domain"
+
+    lon_value = int(longitude)
+    if longitude != "+999999" and not (-179999 <= lon_value <= 180000):
+        return "control_header_invalid_domain"
+
+    elev_value = int(elevation)
+    if elevation != "+9999" and not (-400 <= elev_value <= 8850):
+        return "control_header_invalid_domain"
+
+    return None
+
+
 def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
     work = df.copy()
 
@@ -954,14 +1095,26 @@ def clean_noaa_dataframe(
     rejected_mask = pd.Series(False, index=cleaned.index)
     raw_line_col = "raw_line" if "raw_line" in cleaned.columns else ("RAW_LINE" if "RAW_LINE" in cleaned.columns else None)
     if raw_line_col is not None:
+        cleaned["__parse_error"] = pd.Series(pd.NA, index=cleaned.index, dtype="object")
+
+        control_error = cleaned[raw_line_col].apply(_validate_control_header)
+        control_error_mask = control_error.notna()
+        if control_error_mask.any():
+            rejected_mask = rejected_mask | control_error_mask
+            cleaned.loc[control_error_mask, "__parse_error"] = control_error[control_error_mask]
+            for error_name, error_count in control_error[control_error_mask].value_counts().items():
+                logger.warning(
+                    f"[PARSE_STRICT] Rejected {int(error_count)} record(s): {error_name}"
+                )
+
         mismatch_mask = cleaned[raw_line_col].apply(_record_length_mismatch)
         if mismatch_mask.any():
-            rejected_mask = mismatch_mask
+            rejected_mask = rejected_mask | mismatch_mask
+            no_prior_error = mismatch_mask & cleaned["__parse_error"].isna()
+            cleaned.loc[no_prior_error, "__parse_error"] = "record_length_mismatch"
             logger.warning(
                 f"[PARSE_STRICT] Rejected {int(mismatch_mask.sum())} record(s): record_length_mismatch"
             )
-        cleaned["__parse_error"] = pd.Series(pd.NA, index=cleaned.index, dtype="object")
-        cleaned.loc[mismatch_mask, "__parse_error"] = "record_length_mismatch"
 
     if "ADD" in cleaned.columns:
         add_series = cleaned["ADD"].astype(str).str.strip().str.upper()

@@ -4727,8 +4727,23 @@ class TestControlRecordLengthValidation:
 
     @staticmethod
     def _build_raw_line(total_variable_characters: int) -> str:
+        control_header = (
+            f"{total_variable_characters:04d}"  # TOTAL_VARIABLE_CHARACTERS
+            "723150"  # USAF
+            "03812"  # WBAN
+            "20240201"  # DATE
+            "1230"  # TIME
+            "4"  # SOURCE_FLAG
+            "+12345"  # LATITUDE
+            "+123456"  # LONGITUDE
+            "+0123"  # ELEVATION
+            "FM-15"  # REPORT_TYPE
+            "KJFK "  # CALL_SIGN
+            "V02 "  # QC_PROCESS
+        )
+        assert len(control_header) == 60
         expected_length = 105 + total_variable_characters
-        return f"{total_variable_characters:04d}" + ("X" * (expected_length - 4))
+        return control_header + ("X" * (expected_length - 60))
 
     def test_valid_record_length_passes(self):
         valid_raw = self._build_raw_line(4)
@@ -4777,6 +4792,53 @@ class TestControlRecordLengthValidation:
         assert result.loc[0, "temperature_c"] == pytest.approx(1.0)
         assert result.loc[1, "__parse_error"] == "record_length_mismatch"
         assert pd.isna(result.loc[1, "temperature_c"])
+
+    def test_short_control_header_rejected(self):
+        valid_raw = self._build_raw_line(4)
+        short_header_raw = valid_raw[:59]
+        df = pd.DataFrame(
+            {
+                "raw_line": [short_header_raw],
+                "TMP": ["+0010,1"],
+            }
+        )
+
+        result = clean_noaa_dataframe(df, strict_mode=True)
+
+        assert result.loc[0, "__parse_error"] == "control_header_short"
+        assert "temperature_c" not in result.columns
+
+    def test_invalid_control_width_rejected(self):
+        valid_raw = self._build_raw_line(4)
+        # LATITUDE requires [+-]\\d{5}; this replacement makes it invalid width/pattern.
+        invalid_lat_width_raw = valid_raw[:28] + "+12A45" + valid_raw[34:]
+        df = pd.DataFrame(
+            {
+                "raw_line": [invalid_lat_width_raw],
+                "TMP": ["+0010,1"],
+            }
+        )
+
+        result = clean_noaa_dataframe(df, strict_mode=True)
+
+        assert result.loc[0, "__parse_error"] == "control_header_invalid_width"
+        assert "temperature_c" not in result.columns
+
+    def test_invalid_control_sentinel_rejected(self):
+        valid_raw = self._build_raw_line(4)
+        # ELEVATION missing sentinel must be +9999; 99999 is invalid sentinel encoding.
+        invalid_elev_sentinel_raw = valid_raw[:41] + "99999" + valid_raw[46:]
+        df = pd.DataFrame(
+            {
+                "raw_line": [invalid_elev_sentinel_raw],
+                "TMP": ["+0010,1"],
+            }
+        )
+
+        result = clean_noaa_dataframe(df, strict_mode=True)
+
+        assert result.loc[0, "__parse_error"] == "control_header_invalid_sentinel"
+        assert "temperature_c" not in result.columns
 
 
 class TestA2MalformedIdentifierFormat:

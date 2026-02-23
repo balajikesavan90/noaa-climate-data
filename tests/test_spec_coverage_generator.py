@@ -583,6 +583,47 @@ def test_parse_spec_docs_part03_reanchors_context_between_mandatory_sections(tmp
     )
 
 
+def test_constants_coverage_matches_control_pos_identifier_rules() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+    constants_module = module.load_constants_module(repo_root)
+    constants_ast = module.parse_constants_ast(repo_root / "src" / "noaa_climate_data" / "constants.py")
+
+    width_row = _fixture_row(module, "CONTROL_POS_57_60", "width")
+    width_row.spec_rule_text = "POS: 57-60"
+    width_row.allowed_values_or_codes = "4"
+    width_impl, width_location, width_reason = module.coverage_in_constants_for_row(
+        width_row,
+        constants_module,
+        constants_ast,
+    )
+    assert width_impl is True
+    assert width_reason == "strict_gate_width"
+    assert "src/noaa_climate_data/constants.py:" in width_location
+
+    sentinel_row = _fixture_row(module, "CONTROL_POS_28_28", "sentinel")
+    sentinel_row.sentinel_values = "9"
+    sentinel_impl, sentinel_location, sentinel_reason = module.coverage_in_constants_for_row(
+        sentinel_row,
+        constants_module,
+        constants_ast,
+    )
+    assert sentinel_impl is True
+    assert sentinel_reason == "field_rule_sentinel"
+    assert "src/noaa_climate_data/constants.py:" in sentinel_location
+
+    domain_row = _fixture_row(module, "CONTROL_POS_47_51", "domain")
+    domain_row.allowed_values_or_codes = "FM-15|SY-MT"
+    domain_impl, domain_location, domain_reason = module.coverage_in_constants_for_row(
+        domain_row,
+        constants_module,
+        constants_ast,
+    )
+    assert domain_impl is True
+    assert domain_reason in {"field_rule_domain_values", "field_rule_domain_pattern"}
+    assert "src/noaa_climate_data/constants.py:" in domain_location
+
+
 def test_classify_extracted_row_kinds_marks_structural_and_documentation_rows() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     module = _load_generator_module(repo_root)
