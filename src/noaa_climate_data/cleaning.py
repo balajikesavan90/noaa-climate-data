@@ -36,6 +36,7 @@ from .constants import (
     get_token_width_rules,
     is_valid_eqd_identifier,
     is_valid_repeated_identifier,
+    is_valid_section_identifier_token,
     to_friendly_column,
 )
 
@@ -574,6 +575,13 @@ def clean_value_quality(raw: str, prefix: str, strict_mode: bool = True) -> dict
         {'OC1__value': None, 'OC1__qc_pass': False, 'OC1__qc_reason': 'OUT_OF_RANGE', ...}
     """
     field_rule = get_field_rule(prefix)
+    if strict_mode:
+        section_identifier_valid = is_valid_section_identifier_token(prefix)
+        if section_identifier_valid is False:
+            logger.warning(
+                f"[PARSE_STRICT] Rejected {prefix}: malformed section identifier token (expected 3 upper-case alphanumeric chars)"
+            )
+            return {}
     if field_rule is None:
         eqd_valid = is_valid_eqd_identifier(prefix)
         if eqd_valid is False:
@@ -1146,6 +1154,13 @@ def clean_noaa_dataframe(
         # Avoid broad prefix matching here so metadata columns like STATION/DATE
         # are never parsed as additional-data families.
         if strict_mode:
+            section_identifier_valid = is_valid_section_identifier_token(column)
+            if section_identifier_valid is False:
+                logger.warning(
+                    f"[PARSE_STRICT] Skipping malformed section identifier token: {column}"
+                )
+                continue
+
             known_identifier = (
                 column in KNOWN_IDENTIFIERS
                 or is_valid_eqd_identifier(column) is True

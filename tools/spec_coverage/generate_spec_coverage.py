@@ -157,6 +157,41 @@ MANDATORY_CONTEXT_MAP = {
     "sea level pressure": "SLP",
 }
 
+# Deterministic attribution for section-header identifier width rows (FLD LEN: 3).
+# Keys are (spec_part, normalized context line that follows FLD LEN: 3).
+SECTION_IDENTIFIER_CONTEXT_MAP: dict[tuple[str, str], str] = {
+    ("04", "geophysical-point-observation additional data identifier"): "ADD",
+    ("04", "liquid-precipitation occurrence identifier"): "AA1",
+    ("05", "present-weather-observation automated occurrence identifier for asos/awos data"): "AT1",
+    ("06", "subhourly observed liquid precipitation section: secondary sensor identifier"): "CB1",
+    ("07", "us-network-metadata identifier"): "CO1",
+    ("08", "crn control section identifier"): "CR1",
+    ("09", "subhourly temperature section identifier"): "CT1",
+    ("10", "hourly temperature section identifier"): "CU1",
+    ("11", "hourly temperature extreme section identifier"): "CV1",
+    ("12", "subhourly wetness section identifier"): "CW1",
+    ("13", "hourly geonor vibrating wire summary section identifier"): "CX1",
+    ("14", "runway-visual-range-observation identifier"): "ED1",
+    ("15", "sky-cover-layer identifier"): "GA1",
+    ("16", "sunshine-observation identifier"): "GJ1",
+    ("17", "solar irradiance section identifier"): "GM1",
+    ("18", "net solar radiation section identifier"): "GO1",
+    ("19", "modeled solar irradiance section identifier"): "GP1",
+    ("20", "hourly solar angle section identifier"): "GQ1",
+    ("21", "hourly extraterrestrial radiation section identifier"): "GR1",
+    # Parser uses static identifier HAIL for this section.
+    ("22", "hail identifier"): "HAIL",
+    ("23", "ground-surface-observation identifier"): "IA1",
+    ("24", "extreme-air-temperature identifier"): "KA1",
+    ("25", "sea-surface-temperature-observation identifier"): "SA1",
+    ("26", "soil-temperature identifier"): "ST1",
+    ("27", "atmospheric-pressure-observation identifier"): "MA1",
+    ("28", "present-weather-in-vicinity-observation occurrence identifier"): "MV1",
+    ("29", "supplementary-wind-observation identifier"): "OA1",
+    ("30", "wave-measurement identifier"): "UA1",
+}
+SECTION_IDENTIFIER_LOOKAHEAD_LINES = 4
+
 
 @dataclass(slots=True)
 class SpecRuleRow:
@@ -1500,6 +1535,45 @@ def infer_context_from_line(
     return current_identifiers
 
 
+def normalize_section_context_line(value: str) -> str:
+    return normalize_text_line(value).strip().lower().rstrip(".")
+
+
+def infer_identifiers_from_adjacent_structural_context(
+    spec_part: str,
+    line_idx: int,
+    raw_lines: list[str],
+    known_identifiers: set[str],
+    known_families: set[str],
+) -> list[str]:
+    """Resolve identifier context for structural width rows lacking active context."""
+    for offset in range(1, SECTION_IDENTIFIER_LOOKAHEAD_LINES + 1):
+        probe_idx = line_idx + offset
+        if probe_idx > len(raw_lines):
+            break
+
+        probe_line = normalize_text_line(raw_lines[probe_idx - 1]).strip()
+        if not probe_line:
+            continue
+        if probe_line.startswith("FLD LEN") or probe_line.startswith("POS:"):
+            break
+
+        mapped = SECTION_IDENTIFIER_CONTEXT_MAP.get((spec_part, normalize_section_context_line(probe_line)))
+        if mapped:
+            return [mapped]
+
+        context_ids = infer_context_from_line(spec_part, probe_line, [], known_identifiers, known_families)
+        if context_ids:
+            return context_ids
+
+        extracted_ids = extract_identifiers_from_line(probe_line, known_identifiers, known_families)
+        if extracted_ids:
+            explicit_ids = [value for value in extracted_ids if IDENTIFIER_WITH_DIGIT_RE.fullmatch(value)]
+            return explicit_ids if explicit_ids else extracted_ids
+
+    return []
+
+
 def add_row(
     rows: list[SpecRuleRow],
     spec_part: str,
@@ -1778,8 +1852,17 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
             fld = FLD_LEN_RE.search(line)
             if fld:
                 width = fld.group(1)
+                width_identifiers = effective_identifiers().copy()
+                if not width_identifiers and width == "3":
+                    width_identifiers = infer_identifiers_from_adjacent_structural_context(
+                        spec_part,
+                        idx,
+                        lines,
+                        known_identifiers,
+                        known_families,
+                    )
                 add_extracted_row(
-                    effective_identifiers(),
+                    width_identifiers,
                     "width",
                     f"FLD LEN {width}",
                     allowed_values_or_codes=width,
@@ -1790,8 +1873,17 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                 start_pos = int(pos.group(1))
                 end_pos = int(pos.group(2))
                 width = end_pos - start_pos + 1
+                width_identifiers = effective_identifiers().copy()
+                if not width_identifiers and spec_part == "03":
+                    width_identifiers = infer_identifiers_from_adjacent_structural_context(
+                        spec_part,
+                        idx,
+                        lines,
+                        known_identifiers,
+                        known_families,
+                    )
                 add_extracted_row(
-                    effective_identifiers(),
+                    width_identifiers,
                     "width",
                     f"POS {start_pos}-{end_pos} width {width}",
                     allowed_values_or_codes=str(width),

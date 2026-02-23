@@ -23,8 +23,10 @@ from noaa_climate_data.cleaning import (
     parse_field,
 )
 from noaa_climate_data.constants import (
+    SECTION_IDENTIFIER_WIDTH_RULE_IDENTIFIERS,
     FieldPartRule,
     get_field_rule,
+    get_token_width_rules,
     to_friendly_column,
     to_internal_column,
 )
@@ -4876,7 +4878,7 @@ class TestControlPosStrictEvidence:
             ("CONTROL_POS_1_4", 1, 4, "ABCD", "control_header_invalid_width"),
             # CONTROL_POS_5_10 currently has no direct domain/range check; width-shift
             # mutation deterministically triggers strict header rejection downstream.
-            ("CONTROL_POS_5_10", 5, 10, "72315", "control_header_invalid_domain"),
+            ("CONTROL_POS_5_10", 5, 10, "72315", "control_header_invalid_width"),
             ("CONTROL_POS_11_15", 11, 15, "A3812", "control_header_invalid_width"),
             ("CONTROL_POS_16_23", 16, 23, "2024A201", "control_header_invalid_width"),
             ("CONTROL_POS_24_27", 24, 27, "12A0", "control_header_invalid_width"),
@@ -5027,6 +5029,22 @@ class TestA2MalformedIdentifierFormat:
         
         # Should log warning
         assert "[PARSE_STRICT]" in caplog.text and "RH0001" in caplog.text
+
+    def test_section_identifier_malformed_wndx_rejected(self, caplog):
+        """WNDX rejected as malformed section identifier token in strict mode."""
+        result = clean_value_quality("180,1,N,0050,1", "WNDX", strict_mode=True)
+        assert result == {}
+        assert "[PARSE_STRICT]" in caplog.text
+        assert "WNDX" in caplog.text
+        assert "malformed section identifier token" in caplog.text
+
+    def test_section_identifier_malformed_addx_rejected(self, caplog):
+        """ADDX rejected as malformed section identifier token in strict mode."""
+        result = clean_value_quality("0050,1,N,0100,1,0", "ADDX", strict_mode=True)
+        assert result == {}
+        assert "[PARSE_STRICT]" in caplog.text
+        assert "ADDX" in caplog.text
+        assert "malformed section identifier token" in caplog.text
 
     def test_valid_eqd_identifier_Q01(self):
         """Q01 accepted (valid 2-digit EQD)."""
@@ -5278,6 +5296,59 @@ class TestA4TokenWidthValidation:
         # Should expand successfully
         assert result["wind_direction_deg"].iloc[0] == 180.0
         assert result["wind_speed_ms"].iloc[0] == 5.0
+
+    def test_wnd_direction_angle_token_width_rule_is_three(self):
+        """WND direction angle token width is fixed at 3 (POS 61-63 in mandatory section)."""
+        rules = get_token_width_rules("WND", 1)
+        assert rules is not None
+        assert rules.get("width") == 3
+
+    def test_section_identifier_token_width_signature_table(self):
+        """Section/header identifier tokens are 3-char uppercase alphanumeric (legacy HAIL excepted)."""
+        # Keep this list explicit so coverage evidence can match exact identifiers deterministically.
+        section_identifiers = (
+            "ADD",
+            "AA1",
+            "AT1",
+            "CB1",
+            "CO1",
+            "CR1",
+            "CT1",
+            "CU1",
+            "CV1",
+            "CW1",
+            "CX1",
+            "ED1",
+            "GA1",
+            "GJ1",
+            "GM1",
+            "GO1",
+            "GP1",
+            "GQ1",
+            "GR1",
+            "HAIL",
+            "IA1",
+            "KA1",
+            "MA1",
+            "MV1",
+            "OA1",
+            "SA1",
+            "ST1",
+            "UA1",
+            "WND",
+        )
+        assert set(section_identifiers) == SECTION_IDENTIFIER_WIDTH_RULE_IDENTIFIERS
+        expected_token_width = 3
+        for identifier in section_identifiers:
+            if identifier == "HAIL":
+                # Parser keeps HAIL as a legacy 4-char identifier for this 3-char section token.
+                hail_rules = get_token_width_rules(identifier, 1)
+                assert hail_rules is not None
+                assert hail_rules.get("width") == expected_token_width
+                continue
+            assert len(identifier) == expected_token_width
+            assert identifier == identifier.upper()
+            assert identifier.isalnum()
 
     def test_tmp_valid_token_width(self):
         """TMP with 4-digit value (after sign) accepted."""

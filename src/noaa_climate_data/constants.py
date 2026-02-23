@@ -4985,6 +4985,95 @@ _IDENTIFIER_ALIASES: dict[str, str] = {
     "WND2": "WND",
 }
 
+# Section/header identifiers tied to spec structural width rules (FLD LEN: 3 / POS 61-63).
+# These tokens are expected to be upper-case alphanumeric and fixed width 3,
+# except for legacy parser identifier "HAIL" which maps to a 3-char section code in docs.
+SECTION_IDENTIFIER_WIDTH_RULE_IDENTIFIERS: set[str] = {
+    "ADD",
+    "AA1",
+    "AT1",
+    "CB1",
+    "CO1",
+    "CR1",
+    "CT1",
+    "CU1",
+    "CV1",
+    "CW1",
+    "CX1",
+    "ED1",
+    "GA1",
+    "GJ1",
+    "GM1",
+    "GO1",
+    "GP1",
+    "GQ1",
+    "GR1",
+    "HAIL",
+    "IA1",
+    "KA1",
+    "MA1",
+    "MV1",
+    "OA1",
+    "SA1",
+    "ST1",
+    "UA1",
+    "WND",
+}
+_SECTION_IDENTIFIER_FAMILIES_WITH_NUMERIC_SUFFIX: set[str] = {
+    "AA",
+    "AT",
+    "CB",
+    "CO",
+    "CR",
+    "CT",
+    "CU",
+    "CV",
+    "CW",
+    "CX",
+    "ED",
+    "GA",
+    "GJ",
+    "GM",
+    "GO",
+    "GP",
+    "GQ",
+    "GR",
+    "IA",
+    "KA",
+    "MA",
+    "MV",
+    "OA",
+    "SA",
+    "ST",
+    "UA",
+}
+
+
+def is_valid_section_identifier_token(identifier: str) -> bool | None:
+    """Validate section/header identifier token format for strict parsing.
+
+    Returns:
+        True: identifier is a section token and format is valid.
+        False: identifier looks like a section token but format is invalid.
+        None: identifier is not part of section-header token checks.
+    """
+    token = _IDENTIFIER_ALIASES.get(identifier, identifier).strip().upper()
+    if not token:
+        return None
+
+    if token.startswith("HAIL"):
+        # Legacy parser token retained for compatibility with existing datasets.
+        return token == "HAIL"
+
+    if token.startswith("ADD") or token.startswith("WND"):
+        return bool(re.fullmatch(r"[A-Z0-9]{3}", token))
+
+    for family in _SECTION_IDENTIFIER_FAMILIES_WITH_NUMERIC_SUFFIX:
+        if token.startswith(family):
+            return bool(re.fullmatch(r"[A-Z0-9]{3}", token))
+
+    return None
+
 
 def is_valid_repeated_identifier(prefix: str) -> bool | None:
     """Validate repeated identifier format with exact suffix digit count.
