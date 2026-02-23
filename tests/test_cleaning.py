@@ -4722,6 +4722,63 @@ class TestA1UnknownIdentifierAllowlist:
         assert result["wind_speed_ms"].iloc[0] == 5.0
 
 
+class TestControlRecordLengthValidation:
+    """Validate POS 1-4 TOTAL-VARIABLE-CHARACTERS structural length checks."""
+
+    @staticmethod
+    def _build_raw_line(total_variable_characters: int) -> str:
+        expected_length = 105 + total_variable_characters
+        return f"{total_variable_characters:04d}" + ("X" * (expected_length - 4))
+
+    def test_valid_record_length_passes(self):
+        valid_raw = self._build_raw_line(4)
+        df = pd.DataFrame(
+            {
+                "raw_line": [valid_raw],
+                "TMP": ["+0010,1"],
+            }
+        )
+
+        result = clean_noaa_dataframe(df, strict_mode=True)
+
+        assert pd.isna(result.loc[0, "__parse_error"])
+        assert result.loc[0, "temperature_c"] == pytest.approx(1.0)
+
+    def test_short_record_rejected_before_identifier_parsing(self):
+        valid_raw = self._build_raw_line(4)
+        short_raw = valid_raw[:-1]
+        df = pd.DataFrame(
+            {
+                "raw_line": [valid_raw, short_raw],
+                "TMP": ["+0010,1", "+0010,1"],
+            }
+        )
+
+        result = clean_noaa_dataframe(df, strict_mode=True)
+
+        assert pd.isna(result.loc[0, "__parse_error"])
+        assert result.loc[0, "temperature_c"] == pytest.approx(1.0)
+        assert result.loc[1, "__parse_error"] == "record_length_mismatch"
+        assert pd.isna(result.loc[1, "temperature_c"])
+
+    def test_long_record_rejected_before_identifier_parsing(self):
+        valid_raw = self._build_raw_line(4)
+        long_raw = valid_raw + "X"
+        df = pd.DataFrame(
+            {
+                "raw_line": [valid_raw, long_raw],
+                "TMP": ["+0010,1", "+0010,1"],
+            }
+        )
+
+        result = clean_noaa_dataframe(df, strict_mode=True)
+
+        assert pd.isna(result.loc[0, "__parse_error"])
+        assert result.loc[0, "temperature_c"] == pytest.approx(1.0)
+        assert result.loc[1, "__parse_error"] == "record_length_mismatch"
+        assert pd.isna(result.loc[1, "temperature_c"])
+
+
 class TestA2MalformedIdentifierFormat:
     """A2: Enforce exact identifier token format.
     

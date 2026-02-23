@@ -753,6 +753,22 @@ def _should_parse_column(values: Iterable[str]) -> bool:
     return False
 
 
+def _record_length_mismatch(raw_line: object) -> bool:
+    """Validate Part 02 TOTAL-VARIABLE-CHARACTERS against full record length."""
+    if raw_line is None or (isinstance(raw_line, float) and pd.isna(raw_line)):
+        return False
+    text = str(raw_line).rstrip("\r\n")
+    if len(text) < 4:
+        return True
+    try:
+        total_variable_characters = int(text[0:4])
+    except ValueError:
+        return True
+    expected_length = 105 + total_variable_characters
+    actual_length = len(text)
+    return actual_length != expected_length
+
+
 def _normalize_control_fields(df: pd.DataFrame) -> pd.DataFrame:
     work = df.copy()
 
@@ -935,6 +951,18 @@ def clean_noaa_dataframe(
         DataFrame with expanded, cleaned, and QC columns
     """
     cleaned = df.copy()
+    rejected_mask = pd.Series(False, index=cleaned.index)
+    raw_line_col = "raw_line" if "raw_line" in cleaned.columns else ("RAW_LINE" if "RAW_LINE" in cleaned.columns else None)
+    if raw_line_col is not None:
+        mismatch_mask = cleaned[raw_line_col].apply(_record_length_mismatch)
+        if mismatch_mask.any():
+            rejected_mask = mismatch_mask
+            logger.warning(
+                f"[PARSE_STRICT] Rejected {int(mismatch_mask.sum())} record(s): record_length_mismatch"
+            )
+        cleaned["__parse_error"] = pd.Series(pd.NA, index=cleaned.index, dtype="object")
+        cleaned.loc[mismatch_mask, "__parse_error"] = "record_length_mismatch"
+
     if "ADD" in cleaned.columns:
         add_series = cleaned["ADD"].astype(str).str.strip().str.upper()
         add_mask = add_series.replace("", pd.NA).dropna().eq("ADD")
@@ -983,7 +1011,10 @@ def clean_noaa_dataframe(
             continue
 
         parsed_rows = []
-        for value in series.fillna("").astype(str):
+        for row_idx, value in series.fillna("").astype(str).items():
+            if rejected_mask.loc[row_idx]:
+                parsed_rows.append({})
+                continue
             if value == "":
                 parsed_rows.append({})
                 continue
