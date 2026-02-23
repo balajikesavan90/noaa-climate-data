@@ -746,6 +746,146 @@ def test_parse_tests_evidence_detects_static_short_identifiers_as_exact(tmp_path
     assert "range" not in index.wildcard_assertions
 
 
+def test_parse_tests_evidence_detects_control_pos_identifiers(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    tests_path = tests_dir / "test_control_pos_identifiers.py"
+    tests_path.write_text(
+        "\n".join(
+            [
+                "def test_control_pos_1_4_width_rejects_bad_token():",
+                "    field = 'CONTROL_POS_1_4'",
+                "    assert field == 'CONTROL_POS_1_4'",
+                "    assert True",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    known_identifiers = {"CONTROL_POS_1_4"}
+    known_families = {module.identifier_family(value) for value in known_identifiers}
+    index = module.parse_tests_evidence(tests_path, known_identifiers, known_families)
+
+    assert ("CONTROL_POS_1_4", "width") in index.exact_assertions
+
+
+def test_parse_tests_evidence_ignores_unrelated_underscore_tokens(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    tests_path = tests_dir / "test_unrelated_underscore_tokens.py"
+    tests_path.write_text(
+        "\n".join(
+            [
+                "def test_width_rejects_unrelated_underscore_token():",
+                "    field = 'FOO_BAR'",
+                "    assert field == 'FOO_BAR'",
+                "    assert True",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    known_identifiers = {"CONTROL_POS_1_4"}
+    known_families = {module.identifier_family(value) for value in known_identifiers}
+    index = module.parse_tests_evidence(tests_path, known_identifiers, known_families)
+
+    assert ("FOO_BAR", "width") not in index.exact_assertions
+    assert all(identifier != "FOO_BAR" for identifier, _rule_type in index.exact_assertions)
+    assert "width" in index.wildcard_assertions
+
+
+def test_parse_tests_evidence_width_signature_matches_control_pos_exactly(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    tests_path = tests_dir / "test_control_pos_width_signature.py"
+    tests_path.write_text(
+        "\n".join(
+            [
+                "def test_control_pos_1_4_token_width_guard():",
+                "    field = 'CONTROL_POS_1_4'",
+                "    assert True, 'CONTROL_POS_1_4 token width expected 4'",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    known_identifiers = {"CONTROL_POS_1_4", "CONTROL_POS_24_27"}
+    known_families = {module.identifier_family(value) for value in known_identifiers}
+    index = module.parse_tests_evidence(tests_path, known_identifiers, known_families)
+
+    signature_key = ("CONTROL_POS_1_4", "width", "", "", "", "4")
+    assert signature_key in index.signature_locations
+
+    # Prove the width signature path itself (not exact_assertion fallback).
+    index.exact_assertions.clear()
+
+    target_row = _fixture_row(module, "CONTROL_POS_1_4", "width")
+    target_row.allowed_values_or_codes = "4"
+    location, strength = index.find(
+        target_row.identifier,
+        target_row.identifier_family,
+        target_row.rule_type,
+        target_row.min_value,
+        target_row.max_value,
+        target_row.sentinel_values,
+        target_row.allowed_values_or_codes,
+    )
+    assert location is not None
+    assert strength == "exact_signature"
+
+
+def test_parse_tests_evidence_width_signature_does_not_cross_identifiers(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    tests_path = tests_dir / "test_control_pos_width_no_cross_match.py"
+    tests_path.write_text(
+        "\n".join(
+            [
+                "def test_control_pos_1_4_width_signature_only():",
+                "    assert True, 'CONTROL_POS_1_4 fixed-width 4 token width check'",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    known_identifiers = {"CONTROL_POS_1_4", "CONTROL_POS_24_27"}
+    known_families = {module.identifier_family(value) for value in known_identifiers}
+    index = module.parse_tests_evidence(tests_path, known_identifiers, known_families)
+
+    # Force signature-only matching and verify exact identifier scoping.
+    index.exact_assertions.clear()
+
+    other_row = _fixture_row(module, "CONTROL_POS_24_27", "width")
+    other_row.allowed_values_or_codes = "4"
+    location, strength = index.find(
+        other_row.identifier,
+        other_row.identifier_family,
+        other_row.rule_type,
+        other_row.min_value,
+        other_row.max_value,
+        other_row.sentinel_values,
+        other_row.allowed_values_or_codes,
+    )
+    assert location is None
+    assert strength == "none"
+
+
 def test_augment_known_test_identifiers_includes_spec_only_identifiers() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     module = _load_generator_module(repo_root)

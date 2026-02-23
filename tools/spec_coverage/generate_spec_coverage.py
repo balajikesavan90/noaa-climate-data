@@ -101,6 +101,8 @@ STRICT_TEST_MATCH_STRENGTHS = {"exact_signature", "exact_assertion", "family_ass
 IDENTIFIER_RE = re.compile(r"\b[A-Z][A-Z0-9]{1,5}\b")
 IDENTIFIER_WITH_DIGIT_RE = re.compile(r"\b([A-Z]{1,4})(\d{1,2})\b")
 IDENTIFIER_RANGE_RE = re.compile(r"\b([A-Z]{1,4})(\d{1,2})\s*[-–]\s*([A-Z]{1,4})(\d{1,2})\b")
+CONTROL_POS_IDENTIFIER_RE = re.compile(r"\bCONTROL_POS_\d+_\d+\b")
+WIDTH_SIGNATURE_KEYWORDS = ("width", "token_width", "token width", "fixed-width", "fixed width")
 MIN_MAX_INLINE_RE = re.compile(
     r"\bMIN\b\s*:?\s*([+\-]?\s*\d+)\b.*?\bMAX\b\s*:?\s*([+\-]?\s*\d+)\b",
     re.IGNORECASE,
@@ -1290,6 +1292,21 @@ def extract_numeric_tokens(text: str) -> set[str]:
     return tokens
 
 
+def extract_width_signature_tokens(text: str) -> set[str]:
+    lower = text.lower()
+    if not any(keyword in lower for keyword in WIDTH_SIGNATURE_KEYWORDS):
+        return set()
+
+    tokens: set[str] = set()
+    for raw in NUMERIC_TOKEN_RE.findall(text):
+        normalized = normalize_num_token(raw)
+        parsed = parse_int_token(normalized)
+        if parsed is None or parsed < 0:
+            continue
+        tokens.add(str(parsed))
+    return tokens
+
+
 EXACT_NON_DIGIT_IDENTIFIERS = {
     "DATE",
     "TIME",
@@ -1324,6 +1341,12 @@ def extract_test_identifiers(
             continue
         if token in known_families:
             families.add(token)
+
+    for token in CONTROL_POS_IDENTIFIER_RE.findall(text):
+        if token not in known_identifiers:
+            continue
+        identifiers.add(token)
+        families.add(identifier_family(token))
 
     for token in EXACT_NON_DIGIT_IDENTIFIERS:
         if token not in known_identifiers:
@@ -1361,6 +1384,7 @@ def parse_tests_evidence(
     for node, class_name in iter_test_functions(tree):
         text_parts: list[str] = [node.name, class_name]
         numeric_tokens: set[str] = set()
+        width_signature_tokens: set[str] = set()
         assert_segments: list[str] = []
         assertion_rule_types: set[str] = set()
 
@@ -1369,6 +1393,7 @@ def parse_tests_evidence(
                 if isinstance(sub.value, str):
                     text_parts.append(sub.value)
                     numeric_tokens.update(extract_numeric_tokens(sub.value))
+                    width_signature_tokens.update(extract_width_signature_tokens(sub.value))
                 elif isinstance(sub.value, (int, float)):
                     numeric_tokens.add(normalize_num_token(str(sub.value)))
             if isinstance(sub, ast.Assert):
@@ -1382,6 +1407,7 @@ def parse_tests_evidence(
                     assert_segments.append(segment)
                     text_parts.append(segment)
                     numeric_tokens.update(extract_numeric_tokens(segment))
+                    width_signature_tokens.update(extract_width_signature_tokens(segment))
                     assertion_rule_types.update(classify_assertion_rule_types(segment))
 
         joined = "\n".join(text_parts)
@@ -1410,6 +1436,9 @@ def parse_tests_evidence(
                     elif rule_type == "sentinel":
                         index.add_signature(identifier, rule_type, sentinel_values=token, location=location)
                     elif rule_type in {"allowed_quality", "domain"}:
+                        index.add_signature(identifier, rule_type, allowed_values_or_codes=token, location=location)
+                if rule_type == "width":
+                    for token in sorted(width_signature_tokens, key=natural_key):
                         index.add_signature(identifier, rule_type, allowed_values_or_codes=token, location=location)
 
             if not identifiers and families:

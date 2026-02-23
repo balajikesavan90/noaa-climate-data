@@ -4841,6 +4841,120 @@ class TestControlRecordLengthValidation:
         assert "temperature_c" not in result.columns
 
 
+class TestControlPosStrictEvidence:
+    """Part 02 strict parsing checks with explicit CONTROL_POS_* evidence strings."""
+
+    @staticmethod
+    def _build_raw_line(total_variable_characters: int = 4) -> str:
+        control_header = (
+            f"{total_variable_characters:04d}"  # TOTAL_VARIABLE_CHARACTERS
+            "723150"  # USAF
+            "03812"  # WBAN
+            "20240201"  # DATE
+            "1230"  # TIME
+            "4"  # SOURCE_FLAG
+            "+12345"  # LATITUDE
+            "+123456"  # LONGITUDE
+            "+0123"  # ELEVATION
+            "FM-15"  # REPORT_TYPE
+            "KJFK "  # CALL_SIGN
+            "V02 "  # QC_PROCESS
+        )
+        assert len(control_header) == 60
+        expected_length = 105 + total_variable_characters
+        return control_header + ("X" * (expected_length - 60))
+
+    @staticmethod
+    def _mutate_slice(raw_line: str, start_pos: int, end_pos: int, replacement: str) -> str:
+        start_idx = start_pos - 1
+        end_idx = end_pos
+        return raw_line[:start_idx] + replacement + raw_line[end_idx:]
+
+    @pytest.mark.parametrize(
+        ("control_identifier", "start_pos", "end_pos", "replacement", "expected_error"),
+        [
+            ("CONTROL_POS_1_4", 1, 4, "ABCD", "control_header_invalid_width"),
+            # CONTROL_POS_5_10 currently has no direct domain/range check; width-shift
+            # mutation deterministically triggers strict header rejection downstream.
+            ("CONTROL_POS_5_10", 5, 10, "72315", "control_header_invalid_domain"),
+            ("CONTROL_POS_11_15", 11, 15, "A3812", "control_header_invalid_width"),
+            ("CONTROL_POS_16_23", 16, 23, "2024A201", "control_header_invalid_width"),
+            ("CONTROL_POS_24_27", 24, 27, "12A0", "control_header_invalid_width"),
+            ("CONTROL_POS_28_28", 28, 28, "X", "control_header_invalid_domain"),
+            ("CONTROL_POS_29_34", 29, 34, "+12A45", "control_header_invalid_width"),
+            ("CONTROL_POS_35_41", 35, 41, "+12A456", "control_header_invalid_width"),
+            ("CONTROL_POS_42_46", 42, 46, "+01A3", "control_header_invalid_width"),
+            ("CONTROL_POS_47_51", 47, 51, "ZZZZZ", "control_header_invalid_domain"),
+            ("CONTROL_POS_52_56", 52, 56, "\u00e5JFK ", "control_header_invalid_domain"),
+            ("CONTROL_POS_57_60", 57, 60, "ABCD", "control_header_invalid_domain"),
+        ],
+    )
+    def test_control_pos_width_slice_mutation_rejected(
+        self,
+        control_identifier: str,
+        start_pos: int,
+        end_pos: int,
+        replacement: str,
+        expected_error: str,
+    ) -> None:
+        valid_raw = self._build_raw_line(4)
+        mutated_raw = self._mutate_slice(valid_raw, start_pos, end_pos, replacement)
+        df = pd.DataFrame({"raw_line": [mutated_raw], "TMP": ["+0010,1"]})
+
+        result = clean_noaa_dataframe(df, strict_mode=True)
+
+        assert result.loc[0, "__parse_error"] == expected_error, (
+            f"{control_identifier} width strict mutation should reject deterministically"
+        )
+
+    @pytest.mark.parametrize(
+        ("control_identifier", "start_pos", "end_pos", "replacement", "expected_error"),
+        [
+            ("CONTROL_POS_1_4", 1, 4, "9999", "record_length_mismatch"),
+            ("CONTROL_POS_11_15", 11, 15, "ABCDE", "control_header_invalid_width"),
+        ],
+    )
+    def test_control_pos_range_slice_mutation_rejected(
+        self,
+        control_identifier: str,
+        start_pos: int,
+        end_pos: int,
+        replacement: str,
+        expected_error: str,
+    ) -> None:
+        valid_raw = self._build_raw_line(4)
+        mutated_raw = self._mutate_slice(valid_raw, start_pos, end_pos, replacement)
+        df = pd.DataFrame({"raw_line": [mutated_raw], "TMP": ["+0010,1"]})
+
+        result = clean_noaa_dataframe(df, strict_mode=True)
+
+        assert result.loc[0, "__parse_error"] == expected_error, (
+            f"{control_identifier} range strict mutation should reject deterministically"
+        )
+
+    def test_control_pos_28_28_domain_rejected(self) -> None:
+        valid_raw = self._build_raw_line(4)
+        invalid_source_flag_raw = self._mutate_slice(valid_raw, 28, 28, "X")
+        df = pd.DataFrame({"raw_line": [invalid_source_flag_raw], "TMP": ["+0010,1"]})
+
+        result = clean_noaa_dataframe(df, strict_mode=True)
+
+        assert result.loc[0, "__parse_error"] == "control_header_invalid_domain", (
+            "CONTROL_POS_28_28 domain strict mutation should reject deterministically"
+        )
+
+    def test_control_pos_28_28_sentinel_marker_rejected_as_domain(self) -> None:
+        valid_raw = self._build_raw_line(4)
+        invalid_source_flag_raw = self._mutate_slice(valid_raw, 28, 28, "!")
+        df = pd.DataFrame({"raw_line": [invalid_source_flag_raw], "TMP": ["+0010,1"]})
+
+        result = clean_noaa_dataframe(df, strict_mode=True)
+
+        assert result.loc[0, "__parse_error"] == "control_header_invalid_domain", (
+            "CONTROL_POS_28_28 sentinel strict mutation should reject deterministically"
+        )
+
+
 class TestA2MalformedIdentifierFormat:
     """A2: Enforce exact identifier token format.
     
