@@ -540,6 +540,8 @@ def normalize_text_line(value: str) -> str:
 
 
 def identifier_family(identifier: str) -> str:
+    if identifier.startswith("CONTROL_POS_"):
+        return "CONTROL"
     match = IDENTIFIER_WITH_DIGIT_RE.match(identifier)
     if match:
         return match.group(1)
@@ -1490,27 +1492,65 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
         pending_min_token = ""
         pending_min_identifiers: list[str] = []
         pending_min_line = 0
+        part02_active_pos_identifier = ""
         part02_pending_pos_row_indices: list[int] = []
+
+        def effective_identifiers() -> list[str]:
+            if current_identifiers:
+                return current_identifiers
+            if spec_part == "02" and part02_active_pos_identifier:
+                return [part02_active_pos_identifier]
+            return current_identifiers
 
         def evidence(line_start: int, line_end: int) -> str:
             return build_spec_evidence(lines, line_start, line_end)
+
+        def add_extracted_row(
+            identifiers: list[str],
+            rule_type: str,
+            spec_rule_text: str,
+            min_value: str = "",
+            max_value: str = "",
+            sentinel_values: str = "",
+            allowed_values_or_codes: str = "",
+            line_start: int | None = None,
+            line_end: int | None = None,
+        ) -> None:
+            start_idx = len(rows)
+            row_start = idx if line_start is None else line_start
+            row_end = idx if line_end is None else line_end
+            add_row(
+                rows,
+                spec_part,
+                spec_doc,
+                spec_file,
+                row_start,
+                row_end,
+                evidence(row_start, row_end),
+                identifiers,
+                rule_type,
+                spec_rule_text,
+                min_value=min_value,
+                max_value=max_value,
+                sentinel_values=sentinel_values,
+                allowed_values_or_codes=allowed_values_or_codes,
+            )
+            if spec_part == "02" and not current_identifiers and part02_active_pos_identifier:
+                for row_idx in range(start_idx, len(rows)):
+                    if rows[row_idx].identifier == part02_active_pos_identifier:
+                        part02_pending_pos_row_indices.append(row_idx)
 
         def flush_block(force_line: int) -> None:
             nonlocal block_type, block_codes, block_identifiers, block_start_line
             if block_type and block_codes and block_identifiers:
                 line_end = max(block_start_line, force_line - 1)
-                add_row(
-                    rows,
-                    spec_part,
-                    spec_doc,
-                    spec_file,
-                    block_start_line,
-                    line_end,
-                    evidence(block_start_line, line_end),
+                add_extracted_row(
                     block_identifiers,
                     block_type,
                     f"Enumerated codes near line {block_start_line}",
                     allowed_values_or_codes=pipe_join(block_codes),
+                    line_start=block_start_line,
+                    line_end=line_end,
                 )
             block_type = None
             block_codes = set()
@@ -1542,6 +1582,11 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                 part02_pending_pos_row_indices = []
 
             if spec_part == "02":
+                pos = POS_RE.search(line)
+                if pos:
+                    start_pos = int(pos.group(1))
+                    end_pos = int(pos.group(2))
+                    part02_active_pos_identifier = f"CONTROL_POS_{start_pos}_{end_pos}"
                 for phrase, ident in CONTROL_CONTEXT_MAP.items():
                     if lower.startswith(phrase):
                         current_identifiers = [ident]
@@ -1550,7 +1595,7 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                                 if row_idx < 0 or row_idx >= len(rows):
                                     continue
                                 row = rows[row_idx]
-                                if row.identifier != "UNSPECIFIED":
+                                if not row.identifier.startswith("CONTROL_POS_"):
                                     continue
                                 row.identifier = ident
                                 row.identifier_family = identifier_family(ident)
@@ -1565,7 +1610,7 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
             if "quality code" in lower:
                 flush_block(idx)
                 block_type = "allowed_quality"
-                block_identifiers = current_identifiers.copy()
+                block_identifiers = effective_identifiers().copy()
                 block_start_line = idx
             elif (
                 " code" in lower
@@ -1575,7 +1620,7 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
             ):
                 flush_block(idx)
                 block_type = "domain"
-                block_identifiers = current_identifiers.copy()
+                block_identifiers = effective_identifiers().copy()
                 block_start_line = idx
             elif line.startswith("FLD LEN") or line.startswith("POS:"):
                 flush_block(idx)
@@ -1589,7 +1634,7 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                     block_type = "allowed_quality"
                 else:
                     block_type = "domain"
-                block_identifiers = current_identifiers.copy()
+                block_identifiers = effective_identifiers().copy()
                 block_codes.add(enum_match.group(1))
                 block_start_line = idx
 
@@ -1600,15 +1645,8 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
             if mm:
                 min_token = normalize_num_token(mm.group(1))
                 max_token = normalize_num_token(mm.group(2))
-                add_row(
-                    rows,
-                    spec_part,
-                    spec_doc,
-                    spec_file,
-                    idx,
-                    idx,
-                    evidence(idx, idx),
-                    current_identifiers,
+                add_extracted_row(
+                    effective_identifiers(),
                     "range",
                     f"MIN {min_token} MAX {max_token}",
                     min_value=min_token,
@@ -1620,15 +1658,8 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
             elif min_only and max_only:
                 min_token = normalize_num_token(min_only.group(1))
                 max_token = normalize_num_token(max_only.group(1))
-                add_row(
-                    rows,
-                    spec_part,
-                    spec_doc,
-                    spec_file,
-                    idx,
-                    idx,
-                    evidence(idx, idx),
-                    current_identifiers,
+                add_extracted_row(
+                    effective_identifiers(),
                     "range",
                     f"MIN {min_token} MAX {max_token}",
                     min_value=min_token,
@@ -1644,19 +1675,14 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
             elif max_only:
                 max_token = normalize_num_token(max_only.group(1))
                 if pending_min_token and idx - pending_min_line <= 3:
-                    add_row(
-                        rows,
-                        spec_part,
-                        spec_doc,
-                        spec_file,
-                        pending_min_line,
-                        idx,
-                        evidence(pending_min_line, idx),
-                        pending_min_identifiers or current_identifiers,
+                    add_extracted_row(
+                        pending_min_identifiers or effective_identifiers(),
                         "range",
                         f"MIN {pending_min_token} MAX {max_token}",
                         min_value=pending_min_token,
                         max_value=max_token,
+                        line_start=pending_min_line,
+                        line_end=idx,
                     )
                 pending_min_token = ""
                 pending_min_identifiers = []
@@ -1666,15 +1692,8 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
             sentinels.update(normalize_num_token(v) for v in MISSING_EQ_RE.findall(line))
             sentinels.update(normalize_num_token(v) for v in EQ_MISSING_RE.findall(line))
             if sentinels:
-                add_row(
-                    rows,
-                    spec_part,
-                    spec_doc,
-                    spec_file,
-                    idx,
-                    idx,
-                    evidence(idx, idx),
-                    current_identifiers,
+                add_extracted_row(
+                    effective_identifiers(),
                     "sentinel",
                     f"Missing sentinels {pipe_join(sentinels)}",
                     sentinel_values=pipe_join(sentinels),
@@ -1683,15 +1702,8 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
             fld = FLD_LEN_RE.search(line)
             if fld:
                 width = fld.group(1)
-                add_row(
-                    rows,
-                    spec_part,
-                    spec_doc,
-                    spec_file,
-                    idx,
-                    idx,
-                    evidence(idx, idx),
-                    current_identifiers,
+                add_extracted_row(
+                    effective_identifiers(),
                     "width",
                     f"FLD LEN {width}",
                     allowed_values_or_codes=width,
@@ -1702,24 +1714,12 @@ def parse_spec_docs(spec_dir: Path, known_identifiers: set[str], known_families:
                 start_pos = int(pos.group(1))
                 end_pos = int(pos.group(2))
                 width = end_pos - start_pos + 1
-                start_idx = len(rows)
-                add_row(
-                    rows,
-                    spec_part,
-                    spec_doc,
-                    spec_file,
-                    idx,
-                    idx,
-                    evidence(idx, idx),
-                    current_identifiers,
+                add_extracted_row(
+                    effective_identifiers(),
                     "width",
                     f"POS {start_pos}-{end_pos} width {width}",
                     allowed_values_or_codes=str(width),
                 )
-                if spec_part == "02" and not current_identifiers:
-                    for row_idx in range(start_idx, len(rows)):
-                        if rows[row_idx].identifier == "UNSPECIFIED":
-                            part02_pending_pos_row_indices.append(row_idx)
 
             if current_identifiers and "indicator" in lower and ("up to" in lower or "-" in line):
                 up_to_match = UP_TO_RE.search(line)

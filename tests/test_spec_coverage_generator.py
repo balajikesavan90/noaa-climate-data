@@ -394,7 +394,7 @@ def test_top_50_real_gaps_ranking_priority_is_stable(tmp_path: Path) -> None:
     assert "UNSPECIFIED" not in "\n".join(data_lines)
 
 
-def test_parse_spec_docs_part02_backfills_pos_identifier_and_keeps_unknowns(tmp_path: Path) -> None:
+def test_parse_spec_docs_part02_backfills_pos_identifier_and_assigns_control_pos_fallback(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     module = _load_generator_module(repo_root)
 
@@ -455,9 +455,15 @@ def test_parse_spec_docs_part02_backfills_pos_identifier_and_keeps_unknowns(tmp_
     assert all(r.identifier == "REPORT_TYPE" for r in domain_rows)
     assert all(r.identifier != "AU" for r in domain_rows), "Hyphenated enum line must not hijack context"
 
-    unknown_width_rows = [r for r in rows if r.rule_type == "width" and r.spec_line_start == 10]
-    assert unknown_width_rows, "Expected width row for POS: 1-4 block"
-    assert all(r.identifier == "UNSPECIFIED" for r in unknown_width_rows)
+    control_pos_width_rows = [r for r in rows if r.rule_type == "width" and r.spec_line_start == 10]
+    assert control_pos_width_rows, "Expected width row for POS: 1-4 block"
+    assert all(r.identifier == "CONTROL_POS_1_4" for r in control_pos_width_rows)
+    assert all(r.identifier_family == "CONTROL" for r in control_pos_width_rows)
+
+    control_pos_range_rows = [r for r in rows if r.rule_type == "range" and r.spec_line_start == 12]
+    assert control_pos_range_rows, "Expected range row for POS: 1-4 block"
+    assert all(r.identifier == "CONTROL_POS_1_4" for r in control_pos_range_rows)
+    assert all(r.identifier_family == "CONTROL" for r in control_pos_range_rows)
 
 
 def test_parse_spec_docs_part03_reanchors_context_between_mandatory_sections(tmp_path: Path) -> None:

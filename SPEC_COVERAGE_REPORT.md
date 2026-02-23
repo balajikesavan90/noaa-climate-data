@@ -10,19 +10,19 @@ python3 tools/spec_coverage/generate_spec_coverage.py
 
 ## Overall coverage
 
-- Total spec rules extracted: **3524**
+- Total spec rules extracted: **3526**
 - Synthetic rows excluded from coverage metrics: **28**
-- Metric-eligible rules (excluding `unknown`): **3524**
+- Metric-eligible rules (excluding `unknown`): **3526**
 - Unknown/noisy rows excluded from %: **0**
-- Rules implemented in code: **3488** (99.0%)
-- Progress KPI (`tested_strict`): **3488** (99.0%)
-- Weak coverage (`tested_any`, includes wildcard): **3488** (99.0%)
-- tested_any from non-wild matches only: **3488** (99.0%)
+- Rules implemented in code: **3488** (98.9%)
+- Progress KPI (`tested_strict`): **3488** (98.9%)
+- Weak coverage (`tested_any`, includes wildcard): **3488** (98.9%)
+- tested_any from non-wild matches only: **3488** (98.9%)
 - Wildcard-only tested_any (not counted toward progress): **0** (0.0%)
 - Coverage progress is measured with `tested_strict` only.
 - `test_covered` in CSV mirrors `test_covered_any` for backward compatibility.
 - Expected-gap tagged rules: **112**
-- Rows linked to unresolved `NEXT_STEPS.md` items: **3524**
+- Rows linked to unresolved `NEXT_STEPS.md` items: **3526**
 - Open checklist items in `ARCHITECTURE_NEXT_STEPS.md`: **83**
 
 ## Top 50 real gaps (strict)
@@ -32,13 +32,29 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 | rank | spec_part | identifier | rule_type | enforcement_layer | implemented | test_strict | test_any | match_strength | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| - | - | - | - | - | - | - | - | - | (none) |
+| 1 | 02 | CONTROL_POS_1_4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 2 | 02 | CONTROL_POS_1_4 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 3 | 02 | CONTROL_POS_5_10 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 4 | 02 | CONTROL_POS_11_15 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 5 | 02 | CONTROL_POS_11_15 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 6 | 02 | CONTROL_POS_28_28 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 7 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 8 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 9 | 02 | CONTROL_POS_28_28 | sentinel | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 
 ### Implementation gaps (strict): Not implemented + not tested_strict
 
 | rank | spec_part | identifier | rule_type | enforcement_layer | implemented | test_strict | test_any | match_strength | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| - | - | - | - | - | - | - | - | - | (none) |
+| 1 | 02 | CONTROL_POS_1_4 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 2 | 02 | CONTROL_POS_1_4 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 3 | 02 | CONTROL_POS_5_10 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 4 | 02 | CONTROL_POS_11_15 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 5 | 02 | CONTROL_POS_11_15 | range | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 6 | 02 | CONTROL_POS_28_28 | width | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 7 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 8 | 02 | CONTROL_POS_28_28 | domain | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
+| 9 | 02 | CONTROL_POS_28_28 | sentinel | neither | FALSE | FALSE | FALSE | none | coverage_reason_cleaning=none;coverage_reason_constants=none;test_match=none;unresolved_in_next_steps |
 
 ### Missing tests (strict): Implemented + not tested_strict
 
@@ -57,7 +73,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 - constants_only: **2597** (73.7%)
 - cleaning_only: **4** (0.1%)
 - both: **887** (25.2%)
-- neither: **36** (1.0%)
+- neither: **38** (1.1%)
 
 ## Confidence breakdown
 
@@ -70,11 +86,11 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 
 | Match strength | Count | % of metric rules |
 | --- | --- | --- |
-| exact_signature | 1292 | 36.7% |
+| exact_signature | 1292 | 36.6% |
 | exact_assertion | 2188 | 62.1% |
 | family_assertion | 8 | 0.2% |
 | wildcard_assertion | 0 | 0.0% |
-| none | 36 | 1.0% |
+| none | 38 | 1.1% |
 
 ## Precision warnings
 
@@ -107,7 +123,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | Part | Rules | Metric rules | Implemented | Tested strict | Tested any (weak) | Implemented % | Tested strict % | Tested any (weak) % |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 01 | 0 | 0 | 0 | 0 | 0 | 0.0% | 0.0% | 0.0% |
-| 02 | 29 | 29 | 22 | 22 | 22 | 75.9% | 75.9% | 75.9% |
+| 02 | 31 | 31 | 22 | 22 | 22 | 71.0% | 71.0% | 71.0% |
 | 03 | 53 | 53 | 52 | 52 | 52 | 98.1% | 98.1% | 98.1% |
 | 04 | 603 | 603 | 601 | 601 | 601 | 99.7% | 99.7% | 99.7% |
 | 05 | 450 | 450 | 449 | 449 | 449 | 99.8% | 99.8% | 99.8% |
@@ -171,6 +187,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | CIG | 12 | 12 | 12 | 12 | 12 | 100.0% | 100.0% | 100.0% |
 | CN | 113 | 113 | 113 | 113 | 113 | 100.0% | 100.0% | 100.0% |
 | CO | 73 | 73 | 73 | 73 | 73 | 100.0% | 100.0% | 100.0% |
+| CONTROL | 9 | 9 | 0 | 0 | 0 | 0.0% | 0.0% | 0.0% |
 | CR | 10 | 10 | 10 | 10 | 10 | 100.0% | 100.0% | 100.0% |
 | CT | 27 | 27 | 27 | 27 | 27 | 100.0% | 100.0% | 100.0% |
 | CU | 54 | 54 | 54 | 54 | 54 | 100.0% | 100.0% | 100.0% |
@@ -234,7 +251,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | TMP | 5 | 5 | 5 | 5 | 5 | 100.0% | 100.0% | 100.0% |
 | UA | 19 | 19 | 19 | 19 | 19 | 100.0% | 100.0% | 100.0% |
 | UG | 30 | 30 | 30 | 30 | 30 | 100.0% | 100.0% | 100.0% |
-| UNSPECIFIED | 36 | 36 | 0 | 0 | 0 | 0.0% | 0.0% | 0.0% |
+| UNSPECIFIED | 29 | 29 | 0 | 0 | 0 | 0.0% | 0.0% | 0.0% |
 | VIS | 10 | 10 | 10 | 10 | 10 | 100.0% | 100.0% | 100.0% |
 | WA | 13 | 13 | 13 | 13 | 13 | 100.0% | 100.0% | 100.0% |
 | WD | 35 | 35 | 35 | 35 | 35 | 100.0% | 100.0% | 100.0% |
@@ -249,7 +266,7 @@ Rows with `identifier=UNSPECIFIED` or `synthetic_unmapped` notes are excluded fr
 | range | 362 | 360 | 360 | 360 | 99.4% | 99.4% | 99.4% |
 | sentinel | 688 | 687 | 687 | 687 | 99.9% | 99.9% | 99.9% |
 | allowed_quality | 80 | 80 | 80 | 80 | 100.0% | 100.0% | 100.0% |
-| domain | 888 | 888 | 888 | 888 | 100.0% | 100.0% | 100.0% |
+| domain | 890 | 888 | 888 | 888 | 99.8% | 99.8% | 99.8% |
 | cardinality | 128 | 128 | 128 | 128 | 100.0% | 100.0% | 100.0% |
 | width | 1207 | 1174 | 1174 | 1174 | 97.3% | 97.3% | 97.3% |
 | arity | 171 | 171 | 171 | 171 | 100.0% | 100.0% | 100.0% |
