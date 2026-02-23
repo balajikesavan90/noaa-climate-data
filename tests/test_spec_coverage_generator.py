@@ -27,7 +27,12 @@ def _read_csv_rows(csv_path: Path) -> list[dict[str, str]]:
 
 
 def _stable_sort_key(row: dict[str, str]) -> tuple[object, ...]:
-    row_kind_rank = {"spec_rule": 0, "synthetic": 1}.get(row.get("row_kind", ""), 2)
+    row_kind_rank = {
+        "spec_rule": 0,
+        "structural_rule": 1,
+        "documentation_rule": 2,
+        "synthetic": 3,
+    }.get(row.get("row_kind", ""), 4)
     line_start = int(row["spec_line_start"]) if row.get("spec_line_start", "").isdigit() else 10**9
     line_end = int(row["spec_line_end"]) if row.get("spec_line_end", "").isdigit() else 10**9
     return (
@@ -337,6 +342,35 @@ def test_report_uses_strict_kpi_and_quarantines_wildcard_only(tmp_path: Path) ->
     assert "| width | 1 | 33.3% |" in report_text
 
 
+def test_report_metrics_include_structural_and_exclude_documentation(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    structural_row = _fixture_row(module, "CONTROL_POS_1_4", "width")
+    structural_row.row_kind = "structural_rule"
+    structural_row.code_implemented = False
+    module.apply_test_match_result(structural_row, "none", None)
+
+    documentation_row = _fixture_row(module, "UNSPECIFIED", "unknown")
+    documentation_row.row_kind = "documentation_rule"
+    documentation_row.code_implemented = False
+    module.apply_test_match_result(documentation_row, "none", None)
+
+    report_path = tmp_path / "SPEC_COVERAGE_REPORT.md"
+    module.build_report(
+        [structural_row, documentation_row],
+        report_path,
+        architecture_text="",
+        cleaning_index=module.CleaningIndex(),
+        arity_tests_detected=True,
+    )
+    report_text = report_path.read_text(encoding="utf-8")
+
+    assert "Structural rules count: **1**" in report_text
+    assert "Documentation rules count (excluded): **1**" in report_text
+    assert "Metric-eligible rules (excluding `unknown`): **1**" in report_text
+
+
 def test_top_50_real_gaps_ranking_priority_is_stable(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     module = _load_generator_module(repo_root)
@@ -540,6 +574,57 @@ def test_parse_spec_docs_part03_reanchors_context_between_mandatory_sections(tmp
     )
 
 
+def test_classify_extracted_row_kinds_marks_structural_and_documentation_rows() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    module = _load_generator_module(repo_root)
+
+    structural = module.SpecRuleRow(
+        spec_part="02",
+        spec_doc="part-02-control-data-section.md",
+        spec_file="part-02-control-data-section.md",
+        spec_line_start=7,
+        spec_line_end=7,
+        spec_evidence="POS: 1-4",
+        identifier="CONTROL_POS_1_4",
+        identifier_family="CONTROL",
+        rule_type="width",
+        spec_rule_text="POS 1-4 width 4",
+        allowed_values_or_codes="4",
+    )
+    documentation = module.SpecRuleRow(
+        spec_part="02",
+        spec_doc="part-02-control-data-section.md",
+        spec_file="part-02-control-data-section.md",
+        spec_line_start=99,
+        spec_line_end=99,
+        spec_evidence="Reference notes for section layout",
+        identifier="UNSPECIFIED",
+        identifier_family="UNSPECIFIED",
+        rule_type="unknown",
+        spec_rule_text="Layout notes for reference only",
+    )
+    normal = module.SpecRuleRow(
+        spec_part="03",
+        spec_doc="part-03-mandatory-data-section.md",
+        spec_file="part-03-mandatory-data-section.md",
+        spec_line_start=10,
+        spec_line_end=10,
+        spec_evidence="MIN: -0932 MAX: +0618",
+        identifier="TMP",
+        identifier_family="TMP",
+        rule_type="range",
+        spec_rule_text="MIN -0932 MAX +0618",
+        min_value="-0932",
+        max_value="0618",
+    )
+
+    rows = module.classify_extracted_row_kinds([structural, documentation, normal])
+    by_text = {row.spec_rule_text: row.row_kind for row in rows}
+    assert by_text["POS 1-4 width 4"] == "structural_rule"
+    assert by_text["Layout notes for reference only"] == "documentation_rule"
+    assert by_text["MIN -0932 MAX +0618"] == "spec_rule"
+
+
 def test_parse_tests_evidence_detects_control_identifiers_with_long_names(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     module = _load_generator_module(repo_root)
@@ -698,7 +783,7 @@ def test_spec_coverage_generator_smoke() -> None:
     metric_rows = [
         row
         for row in rows
-        if row.get("row_kind") == "spec_rule" and row.get("rule_type") != "unknown"
+        if row.get("row_kind") in {"spec_rule", "structural_rule"} and row.get("rule_type") != "unknown"
     ]
 
     required_columns = {
@@ -730,7 +815,7 @@ def test_spec_coverage_generator_smoke() -> None:
 
     for row in rows:
         assert row["rule_id"], "rule_id must be populated"
-        assert row["row_kind"] in {"spec_rule", "synthetic"}
+        assert row["row_kind"] in {"spec_rule", "structural_rule", "documentation_rule", "synthetic"}
         assert row["implemented_in_constants"] in {"TRUE", "FALSE"}
         assert row["implemented_in_cleaning"] in {"TRUE", "FALSE"}
         assert row["implementation_confidence"] in {"high", "medium", "low"}
@@ -754,7 +839,7 @@ def test_spec_coverage_generator_smoke() -> None:
         if row["test_match_strength"] == "none":
             assert row["test_covered_any"] == "FALSE"
             assert row["test_covered_strict"] == "FALSE"
-        if row["row_kind"] == "spec_rule":
+        if row["row_kind"] in {"spec_rule", "structural_rule", "documentation_rule"}:
             assert row["rule_id"].count("::") >= 3
             assert row["spec_file"] not in {"", "N/A"}
             assert row["spec_line_start"].isdigit()
@@ -863,14 +948,18 @@ def test_spec_coverage_generator_smoke() -> None:
     total_match = re.search(r"Total spec rules extracted: \*\*(\d+)\*\*", report_text)
     assert total_match, "Expected total extracted rule count in report"
     report_total = int(total_match.group(1))
-    expected_total = sum(1 for row in rows if row.get("row_kind") == "spec_rule")
+    expected_total = sum(
+        1 for row in rows if row.get("row_kind") in {"spec_rule", "structural_rule", "documentation_rule"}
+    )
     assert report_total == expected_total, "Synthetic rows must be excluded from total spec rule metrics"
 
     metric_match = re.search(r"Metric-eligible rules \(excluding `unknown`\): \*\*(\d+)\*\*", report_text)
     assert metric_match, "Expected metric-eligible count in report"
     report_metric_total = int(metric_match.group(1))
     expected_metric_total = sum(
-        1 for row in rows if row.get("row_kind") == "spec_rule" and row.get("rule_type") != "unknown"
+        1
+        for row in rows
+        if row.get("row_kind") in {"spec_rule", "structural_rule"} and row.get("rule_type") != "unknown"
     )
     assert report_metric_total == expected_metric_total, "Synthetic rows must be excluded from metric denominator"
 

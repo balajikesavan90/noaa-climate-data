@@ -73,6 +73,18 @@ RULE_TYPE_ORDER = [
 ]
 RULE_TYPE_SET = set(RULE_TYPE_ORDER)
 METRIC_RULE_TYPES = [rule_type for rule_type in RULE_TYPE_ORDER if rule_type != "unknown"]
+ROW_KIND_SPEC = "spec_rule"
+ROW_KIND_STRUCTURAL = "structural_rule"
+ROW_KIND_DOCUMENTATION = "documentation_rule"
+ROW_KIND_SYNTHETIC = "synthetic"
+VALID_ROW_KINDS = {
+    ROW_KIND_SPEC,
+    ROW_KIND_STRUCTURAL,
+    ROW_KIND_DOCUMENTATION,
+    ROW_KIND_SYNTHETIC,
+}
+METRIC_ROW_KINDS = {ROW_KIND_SPEC, ROW_KIND_STRUCTURAL}
+EXTRACTED_ROW_KINDS = {ROW_KIND_SPEC, ROW_KIND_STRUCTURAL, ROW_KIND_DOCUMENTATION}
 IMPLEMENTATION_CONFIDENCE_ORDER = {"high": 3, "medium": 2, "low": 1}
 IMPLEMENTATION_CONFIDENCE_VALUES = set(IMPLEMENTATION_CONFIDENCE_ORDER)
 ENFORCEMENT_LAYER_VALUES = {"constants_only", "cleaning_only", "both", "neither"}
@@ -677,10 +689,10 @@ def normalize_row(row: SpecRuleRow) -> None:
     row.allowed_values_or_codes = normalize_pipe_field(row.allowed_values_or_codes)
     row.spec_evidence = normalize_text_line(row.spec_evidence).strip()
 
-    row_kind = row.row_kind.strip().lower() if row.row_kind else "spec_rule"
-    row.row_kind = row_kind if row_kind in {"spec_rule", "synthetic"} else "spec_rule"
+    row_kind = row.row_kind.strip().lower() if row.row_kind else ROW_KIND_SPEC
+    row.row_kind = row_kind if row_kind in VALID_ROW_KINDS else ROW_KIND_SPEC
 
-    if row.row_kind == "synthetic":
+    if row.row_kind == ROW_KIND_SYNTHETIC:
         row.spec_file = "N/A"
         row.spec_line_start = None
         row.spec_line_end = None
@@ -698,7 +710,7 @@ def normalize_row(row: SpecRuleRow) -> None:
 
 
 def assign_rule_id(row: SpecRuleRow) -> None:
-    if row.row_kind == "synthetic":
+    if row.row_kind == ROW_KIND_SYNTHETIC:
         payload = build_row_payload(row)
         payload_obj = {
             "identifier": row.identifier,
@@ -735,11 +747,43 @@ def normalize_and_assign_rule_ids(rows: list[SpecRuleRow]) -> list[SpecRuleRow]:
 
 
 def row_kind_rank(value: str) -> int:
-    if value == "spec_rule":
+    if value == ROW_KIND_SPEC:
         return 0
-    if value == "synthetic":
+    if value == ROW_KIND_STRUCTURAL:
         return 1
-    return 2
+    if value == ROW_KIND_DOCUMENTATION:
+        return 2
+    if value == ROW_KIND_SYNTHETIC:
+        return 3
+    return 4
+
+
+def classify_extracted_row_kinds(rows: list[SpecRuleRow]) -> list[SpecRuleRow]:
+    structural_types = {"width", "range", "sentinel"}
+    for row in rows:
+        if row.row_kind == ROW_KIND_SYNTHETIC:
+            continue
+
+        has_pos = bool(parse_pos_range(row.spec_rule_text) or POS_RE.search(row.spec_evidence))
+        has_numeric_bounds = bool(row.min_value or row.max_value)
+        has_sentinel = bool(row.sentinel_values)
+        is_mapped_identifier = bool(
+            row.identifier
+            and row.identifier != "UNSPECIFIED"
+            and not row.identifier.startswith("CONTROL_POS_")
+        )
+
+        if has_pos and row.rule_type in structural_types and not is_mapped_identifier:
+            row.row_kind = ROW_KIND_STRUCTURAL
+            continue
+
+        if row.rule_type == "unknown" and not has_pos and not has_numeric_bounds and not has_sentinel:
+            row.row_kind = ROW_KIND_DOCUMENTATION
+            continue
+
+        row.row_kind = ROW_KIND_SPEC
+
+    return rows
 
 
 def line_sort_value(value: int | None) -> int:
@@ -2452,7 +2496,7 @@ def augment_known_test_identifiers(
     families = set(known_families)
 
     for row in rows:
-        if row.row_kind != "spec_rule":
+        if row.row_kind not in METRIC_ROW_KINDS:
             continue
         identifier = (row.identifier or "").strip()
         if not identifier or identifier == "UNSPECIFIED":
@@ -2669,12 +2713,15 @@ def build_report(
     cleaning_index: CleaningIndex,
     arity_tests_detected: bool,
 ) -> None:
-    spec_rows = [row for row in rows if row.row_kind == "spec_rule"]
-    synthetic_rows_list = [row for row in rows if row.row_kind == "synthetic"]
-    total = len(spec_rows)
-    metric_rows = [row for row in spec_rows if row.rule_type in METRIC_RULE_TYPES]
+    extracted_rows = [row for row in rows if row.row_kind in EXTRACTED_ROW_KINDS]
+    coverage_rows = [row for row in rows if row.row_kind in METRIC_ROW_KINDS]
+    structural_rows_list = [row for row in rows if row.row_kind == ROW_KIND_STRUCTURAL]
+    documentation_rows_list = [row for row in rows if row.row_kind == ROW_KIND_DOCUMENTATION]
+    synthetic_rows_list = [row for row in rows if row.row_kind == ROW_KIND_SYNTHETIC]
+    total = len(extracted_rows)
+    metric_rows = [row for row in coverage_rows if row.rule_type in METRIC_RULE_TYPES]
     total_metric = len(metric_rows)
-    unknown_excluded = len(spec_rows) - total_metric
+    unknown_excluded = len(coverage_rows) - total_metric
     implemented = sum(1 for r in metric_rows if r.code_implemented)
     tested_any = sum(1 for r in metric_rows if r.test_covered_any)
     tested_strict = sum(1 for r in metric_rows if r.test_covered_strict)
@@ -2704,7 +2751,7 @@ def build_report(
     by_family: dict[str, list[SpecRuleRow]] = defaultdict(list)
     by_type: dict[str, list[SpecRuleRow]] = defaultdict(list)
 
-    for row in spec_rows:
+    for row in coverage_rows:
         by_part[row.spec_part].append(row)
         by_family[row.identifier_family].append(row)
         by_type[row.rule_type].append(row)
@@ -2874,7 +2921,7 @@ def build_report(
             rows_out.append(["(none)", "-", "-", "-"])
         return rows_out
 
-    unresolved_count = sum(1 for r in spec_rows if "unresolved_in_next_steps" in r.notes)
+    unresolved_count = sum(1 for r in coverage_rows if "unresolved_in_next_steps" in r.notes)
     arch_unchecked = sum(1 for line in architecture_text.splitlines() if line.strip().startswith("- [ ]"))
     exact_signature_count = tested_match_counter.get("exact_signature", 0)
     exact_assertion_count = tested_match_counter.get("exact_assertion", 0)
@@ -2900,6 +2947,8 @@ def build_report(
     lines.append("## Overall coverage")
     lines.append("")
     lines.append(f"- Total spec rules extracted: **{total}**")
+    lines.append(f"- Structural rules count: **{len(structural_rows_list)}**")
+    lines.append(f"- Documentation rules count (excluded): **{len(documentation_rows_list)}**")
     lines.append(f"- Synthetic rows excluded from coverage metrics: **{synthetic_rows}**")
     lines.append(f"- Metric-eligible rules (excluding `unknown`): **{total_metric}**")
     lines.append(f"- Unknown/noisy rows excluded from %: **{unknown_excluded}**")
@@ -3198,6 +3247,7 @@ def main() -> None:
 
     unresolved_items = parse_unresolved_next_steps(next_steps)
     rows = annotate_unresolved_next_steps(rows, unresolved_items, known_identifiers, known_families)
+    rows = classify_extracted_row_kinds(rows)
 
     rows = normalize_and_assign_rule_ids(rows)
     rows = merge_duplicate_rows(rows)
@@ -3217,8 +3267,8 @@ def main() -> None:
     architecture_text = architecture_next_steps.read_text(encoding="utf-8", errors="ignore")
     build_report(rows, report_output, architecture_text, cleaning_index, test_index.arity_tests_detected)
 
-    total = sum(1 for r in rows if r.row_kind == "spec_rule")
-    metric_rows = [r for r in rows if r.row_kind == "spec_rule" and r.rule_type in METRIC_RULE_TYPES]
+    total = sum(1 for r in rows if r.row_kind in EXTRACTED_ROW_KINDS)
+    metric_rows = [r for r in rows if r.row_kind in METRIC_ROW_KINDS and r.rule_type in METRIC_RULE_TYPES]
     metric_total = len(metric_rows)
     impl = sum(1 for r in metric_rows if r.code_implemented)
     tested_strict = sum(1 for r in metric_rows if r.test_covered_strict)
