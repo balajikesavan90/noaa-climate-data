@@ -28,19 +28,21 @@ REPRODUCIBILITY_BOUNDARY_NOTE = (
     "This artifact provides operational smoke validation for a stratified "
     "100-station sample. It does not claim exhaustive validation of the full "
     "NOAA corpus. Semantic correctness is verified by tracked upstream-traceable "
-    "fixtures and tests. The selected raw inputs are archived with checksums so "
-    "reviewers can inspect or rerun the workflow without depending on live NOAA "
-    "availability."
+    "fixtures, tests, and source-document-linked rule families. The selected raw "
+    "inputs are archived with checksums so reviewers can inspect or rerun the "
+    "workflow without depending on live NOAA availability once a DOI-backed "
+    "archive exists."
 )
 SUMMARY_OPERATIONAL_LANGUAGE = (
     "Small upstream-traceable fixtures verify semantic correctness. The "
-    "100-station validation artifact demonstrates that the same "
-    "repository-controlled workflow runs successfully across a broader "
-    "stratified operational sample."
+    "100-station validation artifact is supplementary operational evidence that "
+    "the same repository-controlled workflow runs successfully across a broader "
+    "stratified sample."
 )
 SUMMARY_ARCHIVAL_LANGUAGE = (
-    "The archived raw inputs are included to make the validation evidence "
-    "inspectable and rerunnable without relying on live NOAA availability."
+    "The raw inputs are intended for DOI-backed archival before submission so "
+    "the validation evidence can be inspected and rerun without relying on live "
+    "NOAA availability."
 )
 SUMMARY_NON_EXHAUSTIVE_LANGUAGE = (
     "This artifact does not prove correctness over the full NOAA corpus."
@@ -50,7 +52,7 @@ SUMMARY_SELECTION_LANGUAGE = (
     "favorable outcomes."
 )
 STRICT_TOKEN_DIAGNOSTIC_LANGUAGE = (
-    "Strict token-level validation rejections are diagnostic. They identify "
+    "Strict token-level validation rejections are observability signals. They identify "
     "optional-section payloads that did not match declared token-width expectations. "
     "They did not cause station-level failure or row loss in this validation run."
 )
@@ -80,7 +82,7 @@ def run_validation_workflow(
     continue_on_error: bool = False,
     build_id: str | None = None,
     command: str | None = None,
-    selected_by: str = "noaa-spec build-validation-bundle",
+    selected_by: str = "noaa-spec dev build-validation-bundle",
 ) -> dict[str, Any]:
     if count <= 0:
         raise ValueError("count must be greater than zero")
@@ -107,7 +109,11 @@ def run_validation_workflow(
         seed=seed,
         continue_on_error=continue_on_error,
         build_id=resolved_build_id,
-        command_name=selected_by.split()[1] if " " in selected_by else selected_by,
+        command_name=(
+            selected_by.removeprefix("noaa-spec ").strip()
+            if selected_by.startswith("noaa-spec ")
+            else selected_by
+        ),
     )
 
     scan_records = _scan_station_candidates(source_root=source_root, seed=seed)
@@ -285,8 +291,8 @@ def _default_command(
 ) -> str:
     parts = [
         "noaa-spec",
-        command_name,
-        "--source-root",
+        *command_name.split(),
+        "--input-root" if "validate-100-stations" in command_name else "--source-root",
         str(source_root),
         "--output-root",
         str(output_root),
@@ -958,7 +964,7 @@ def _write_summary(
         "",
         "## Provenance and raw inputs",
         "- Selected raw station files are copied into `raw_inputs/` and checksum-recorded before cleaning.",
-        "- Reviewers can inspect the archived bundle without needing the original local station corpus or live NOAA access.",
+        "- Once DOI-backed archival is complete, reviewers can inspect the archived bundle without needing the original local station corpus or live NOAA access.",
         "- Local rerun requires either the archived raw input bundle or a local NOAA station corpus.",
         "",
         "## Run environment",
@@ -1014,7 +1020,7 @@ def _write_summary(
             "",
             "## DOI archival status",
             f"- DOI: {DOI_PLACEHOLDER}",
-            "- This bundle is intended for external archival so reviewers can inspect it without rerunning the workflow.",
+            "- This bundle is intended for external archival before submission; until a DOI is inserted, the archive should be treated as planned.",
             "",
         ]
     )
@@ -1044,7 +1050,7 @@ def _build_archive_manifest_payload(
         "build_id": str(run_manifest["build_id"]),
         "repo_commit_sha": run_manifest["repo_commit_sha"],
         "created_utc": _now_utc_isoformat(),
-        "intended_archive": "external DOI archive",
+        "intended_archive": "external DOI archive before submission",
         "total_files": len(files),
         "total_bytes": sum(path.stat().st_size for path in files),
         "checksum_algorithm": "SHA256",

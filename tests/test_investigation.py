@@ -189,6 +189,7 @@ def test_cli_inspect_identifier_writes_reports(
         "argv",
         [
             "prog",
+            "dev",
             "inspect-identifier",
             "--bundle-root",
             str(bundle_root),

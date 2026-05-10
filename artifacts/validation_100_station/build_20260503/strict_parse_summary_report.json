@@ -5,7 +5,7 @@
   "schema_version": "1.0.0",
   "token_validation_rejections": {
     "affected_station_count": 70,
-    "diagnostic_note": "Strict token-level validation rejections are diagnostic. They identify optional-section payloads that did not match declared token-width expectations. They did not cause station-level failure or row loss in this validation run.",
+    "diagnostic_note": "Strict token-level validation rejections are observability signals. They identify optional-section payloads that did not match declared token-width expectations. They did not cause station-level failure or row loss in this validation run.",
     "token_rejection_examples": [
       {
         "actual_width": 3,

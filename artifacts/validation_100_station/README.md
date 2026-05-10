@@ -1,8 +1,13 @@
 # 100-Station Validation Artifact
 
-This directory contains a deterministic operational validation artifact generated from a stratified 100-station sample of NOAA station files.
+This directory contains metadata for a deterministic operational validation
+artifact generated from a stratified 100-station sample of NOAA station files.
 
-The purpose of this artifact is to demonstrate that the repository-controlled cleaning workflow executes successfully across a broader operational sample beyond the small upstream-traceable semantic fixtures used in the test suite.
+The purpose of this artifact is to demonstrate that the repository-controlled
+cleaning workflow executes successfully across a broader operational sample
+beyond the small upstream-traceable semantic fixtures used in the test suite.
+It is supplementary smoke-validation evidence, not required for the basic
+`noaa-spec clean INPUT.csv OUTPUT.csv` workflow.
 
 ---
 
@@ -23,7 +28,7 @@ Semantic correctness is established separately through:
 
 * upstream-traceable fixtures
 * repository-controlled tests
-* specification-linked validation logic
+* source-document-linked rule families
 * deterministic transformation rules
 
 ---
@@ -62,7 +67,10 @@ Large generated payloads are intentionally excluded from the Git repository:
 * `canonical_cleaned/`
 * `checksums.txt`
 
-These large artifacts are intended for external archival (e.g. DOI-backed archive storage).
+These large artifacts are intended for external archival, for example
+DOI-backed archive storage before JOSS submission. Until an actual DOI is
+inserted, the archive should be treated as planned rather than already
+available.
 
 ---
 
@@ -99,7 +107,9 @@ These reports are intended for auditability and reviewer inspection.
 
 # Strict Token Diagnostics
 
-Strict token validation diagnostics identify optional-section payloads that do not match declared token-width expectations.
+Strict token validation diagnostics identify optional-section payloads that do
+not match declared token-width expectations. They are observability signals, not
+parse failures.
 
 These diagnostics are intentionally non-fatal because:
 
@@ -143,7 +153,7 @@ Primary semantic validation lives in:
 
 * upstream-traceable fixtures
 * repository-controlled tests
-* specification-derived parsing rules
+* source-document-linked rule families
 * validation logic linked to NOAA documentation
 
 This validation artifact complements — but does not replace — those correctness mechanisms.
@@ -152,7 +162,7 @@ This validation artifact complements — but does not replace — those correctn
 
 # DOI / External Archive
 
-Large validation payloads are intended for external archival.
+Large validation payloads are intended for external archival before submission.
 
 DOI status:
 

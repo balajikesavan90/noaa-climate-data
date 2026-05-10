@@ -1,6 +1,6 @@
 {
   "build_id": "20260502",
-  "command": "/home/balaji-kesavan/.cache/pypoetry/virtualenvs/noaa-spec-gzQ-YukN-py3.12/bin/noaa-spec build-validation-bundle --source-root /media/balaji-kesavan/LaCie/NOAA_Data --output-root artifacts/validation_100_station/build_20260503 --build-id 20260502 --count 100 --strategy size-stratified --seed 20260503",
+  "command": "/home/balaji-kesavan/.cache/pypoetry/virtualenvs/noaa-spec-gzQ-YukN-py3.12/bin/noaa-spec dev build-validation-bundle --source-root /media/balaji-kesavan/LaCie/NOAA_Data --output-root artifacts/validation_100_station/build_20260503 --build-id 20260502 --count 100 --strategy size-stratified --seed 20260503",
   "dependency_lock_hash": "3cd1b6148f01d530a4342aea25203bb56a3fb36a5e596bc9bf694cf5451f8758",
   "git_dirty_status": "clean",
   "output_root": "/home/balaji-kesavan/Documents/AI_Projects/noaa-spec/artifacts/validation_100_station/build_20260503",
@@ -8,7 +8,7 @@
   "platform": "Linux-6.17.0-19-generic-x86_64-with-glibc2.39",
   "python_version": "3.12.3",
   "repo_commit_sha": "fb56c08d8bc5fc33a7b4c2e14059d0bd1a8f6ace",
-  "reproducibility_boundary_note": "This artifact provides operational smoke validation for a stratified 100-station sample. It does not claim exhaustive validation of the full NOAA corpus. Semantic correctness is verified by tracked upstream-traceable fixtures and tests. The selected raw inputs are archived with checksums so reviewers can inspect or rerun the workflow without depending on live NOAA availability.",
+  "reproducibility_boundary_note": "This artifact provides operational smoke validation for a stratified 100-station sample. It does not claim exhaustive validation of the full NOAA corpus. Semantic correctness is verified by tracked upstream-traceable fixtures, tests, and source-document-linked rule families. The selected raw inputs are archived with checksums so reviewers can inspect or rerun the workflow without depending on live NOAA availability once a DOI-backed archive exists.",
   "sampling_strategy": "size-stratified",
   "seed": 20260503,
   "source_root": "/media/balaji-kesavan/LaCie/NOAA_Data",

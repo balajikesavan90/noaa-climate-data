@@ -21,12 +21,25 @@ start from the same documented interpretation rather than divergent local
 scripts. NOAA-Spec does not download NOAA data, orchestrate station batches,
 split datasets into analysis domains, produce releases, or run analyses.
 
-The 100-station validation bundle is intended for external DOI archival. The
-repository contains the workflow and small tracked fixtures; the generated
-100-station raw inputs and outputs are not committed to the source repository.
-See [docs/validation_100_station.md](docs/validation_100_station.md). This
-workflow complements the small tracked fixtures, is not the main quickstart
-path, and does not expand the repository's core claim boundary.
+Scope is deliberately layered:
+
+- JOSS core: deterministic CSV cleaning via `noaa-spec clean`; documented
+  NOAA ISD / Global Hourly field families exercised by committed fixtures;
+  sentinel normalization; QC-code preservation; stable decoded column names;
+  and checksum-stable output.
+- Maintainer evidence layer: the 100-station validation bundle, quality
+  reports, strict token diagnostics, validation bundle builder, and identifier
+  inspection tools. These are operational diagnostics for transparency and
+  auditability, not prerequisites for normal use and not acceptance-critical
+  correctness evidence.
+
+The 100-station validation bundle is supplementary operational smoke-validation
+evidence intended for DOI-backed archival before submission. It demonstrates
+that the repository-controlled workflow executes across a deterministic
+stratified sample; it does not prove universal correctness across the NOAA
+corpus. Semantic correctness is established by upstream-traceable fixtures,
+regression tests, and source-document-linked rule families. See
+[docs/validation_100_station.md](docs/validation_100_station.md).
 
 ## Reproducibility Verification
 
@@ -171,8 +184,9 @@ columns plus `WND`, `CIG`, `VIS`, `TMP`, `DEW`, and `SLP`.
 
 Additional NOAA families remain implemented, but they are not part of the
 primary JOSS-reviewed claim. Treat them as secondary implementation inventory:
-documented and tested, but not all backed by equal upstream-traceable real-data
-fixtures. Use [docs/evidence_matrix.md](docs/evidence_matrix.md) and
+included for transparency, covered by regression tests and operational
+diagnostics, but not all backed by upstream-replay fixtures. Use
+[docs/evidence_matrix.md](docs/evidence_matrix.md) and
 [docs/supported_fields.md](docs/supported_fields.md) for the evidence boundary.
 
 ## Why A Shared Cleaning Tool?
@@ -180,9 +194,9 @@ fixtures. Use [docs/evidence_matrix.md](docs/evidence_matrix.md) and
 A careful project-local script can reproduce the core cleaning mechanics for
 one study. NOAA-Spec is useful when that interpretation needs to be shared: it
 publishes stable decoded column names, explicit QC preservation,
-checksum-backed regression behavior, and deterministic CSV serialization as a
-versioned contract across users and studies instead of leaving each study to
-carry a private preprocessing policy.
+checksum-backed regression behavior, field-family/spec-section provenance, and
+deterministic CSV serialization as a versioned contract across users and
+studies instead of leaving each study to carry a private preprocessing policy.
 
 As a concrete illustration, a raw visibility token such as:
 
@@ -199,6 +213,9 @@ python3 examples/pandas_vs_noaa_spec.py
 ```
 
 For a compact edge-case table of selected real rows, see [docs/reviewer_cleaning_examples.md](docs/reviewer_cleaning_examples.md). For claim-to-evidence mapping, see [docs/evidence_matrix.md](docs/evidence_matrix.md).
+
+For a concise explanation of why the implementation is larger than a minimal
+study-local script, see [docs/design_rationale.md](docs/design_rationale.md).
 
 ## Relationship to Existing NOAA Tools
 

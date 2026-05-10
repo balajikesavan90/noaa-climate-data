@@ -1,8 +1,8 @@
 # 100-Station Validation Summary
 
 ## Purpose
-Small upstream-traceable fixtures verify semantic correctness. The 100-station validation artifact demonstrates that the same repository-controlled workflow runs successfully across a broader stratified operational sample.
-The archived raw inputs are included to make the validation evidence inspectable and rerunnable without relying on live NOAA availability.
+Small upstream-traceable fixtures verify semantic correctness. The 100-station validation artifact is supplementary operational evidence that the same repository-controlled workflow runs successfully across a broader stratified sample.
+The raw inputs are intended for DOI-backed archival before submission so the validation evidence can be inspected and rerun without relying on live NOAA availability.
 
 ## What this artifact demonstrates
 - The repository-controlled cleaning workflow completed across a deterministic stratified station sample.
@@ -25,7 +25,7 @@ The archived raw inputs are included to make the validation evidence inspectable
 
 ## Provenance and raw inputs
 - Selected raw station files are copied into `raw_inputs/` and checksum-recorded before cleaning.
-- Reviewers can inspect the archived bundle without needing the original local station corpus or live NOAA access.
+- Once DOI-backed archival is complete, reviewers can inspect the archived bundle without needing the original local station corpus or live NOAA access.
 - Local rerun requires either the archived raw input bundle or a local NOAA station corpus.
 
 ## Run environment
@@ -49,7 +49,7 @@ The archived raw inputs are included to make the validation evidence inspectable
 ## Strict token diagnostics
 - Strict token rejection count: 2352988
 - Affected station count: 70
-- Strict token-level validation rejections are diagnostic. They identify optional-section payloads that did not match declared token-width expectations. They did not cause station-level failure or row loss in this validation run.
+- Strict token-level validation rejections are observability signals. They identify optional-section payloads that did not match declared token-width expectations. They did not cause station-level failure or row loss in this validation run.
 
 ## Failure summary
 - No station failures were recorded.
@@ -68,8 +68,8 @@ The archived raw inputs are included to make the validation evidence inspectable
 - `archive_manifest.json`
 
 ## Reproducibility boundary
-This artifact provides operational smoke validation for a stratified 100-station sample. It does not claim exhaustive validation of the full NOAA corpus. Semantic correctness is verified by tracked upstream-traceable fixtures and tests. The selected raw inputs are archived with checksums so reviewers can inspect or rerun the workflow without depending on live NOAA availability.
+This artifact provides operational smoke validation for a stratified 100-station sample. It does not claim exhaustive validation of the full NOAA corpus. Semantic correctness is verified by tracked upstream-traceable fixtures, tests, and source-document-linked rule families. The selected raw inputs are archived with checksums so reviewers can inspect or rerun the workflow without depending on live NOAA availability once a DOI-backed archive exists.
 
 ## DOI archival status
 - DOI: TO_BE_ADDED_BEFORE_JOSS_SUBMISSION
-- This bundle is intended for external archival so reviewers can inspect it without rerunning the workflow.
+- This bundle is intended for external archival before submission; until a DOI is inserted, the archive should be treated as planned.

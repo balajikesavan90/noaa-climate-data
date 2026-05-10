@@ -68,7 +68,7 @@ def test_station_selection_is_deterministic(tmp_path: Path) -> None:
         count=8,
         strategy="size-stratified",
         seed=20260430,
-        selected_by="noaa-spec build-validation-bundle",
+        selected_by="noaa-spec dev build-validation-bundle",
     )
     second_selection, _ = _select_candidates(
         scan_records=scan_records,
@@ -76,7 +76,7 @@ def test_station_selection_is_deterministic(tmp_path: Path) -> None:
         count=8,
         strategy="size-stratified",
         seed=20260430,
-        selected_by="noaa-spec build-validation-bundle",
+        selected_by="noaa-spec dev build-validation-bundle",
     )
 
     assert [candidate.station_id for candidate in first_selection] == [
@@ -98,6 +98,7 @@ def test_validate_command_writes_expected_artifacts(
         "argv",
         [
             "prog",
+            "dev",
             "build-validation-bundle",
             "--source-root",
             str(input_root),
@@ -179,7 +180,7 @@ def test_validate_command_writes_expected_artifacts(
 
     summary_text = (output_root / "summary.md").read_text(encoding="utf-8")
     assert "does not prove correctness over the full NOAA corpus" in summary_text
-    assert "inspectable and rerunnable without relying on live NOAA availability" in summary_text
+    assert "intended for DOI-backed archival before submission" in summary_text
     assert "not manually selected for favorable outcomes" in summary_text
 
 
@@ -197,6 +198,7 @@ def test_validation_bundle_reports_strict_token_diagnostics(tmp_path: Path, monk
         "argv",
         [
             "prog",
+            "dev",
             "build-validation-bundle",
             "--source-root",
             str(input_root),
@@ -240,6 +242,6 @@ def test_validation_bundle_reports_strict_token_diagnostics(tmp_path: Path, monk
     assert "## Token validation rejections" in strict_report_md
     assert strict_report_json["token_validation_rejections"]["total_token_rejection_count"] == 1
     assert strict_report_json["token_validation_rejections"]["affected_station_count"] == 1
-    assert "Strict token-level validation rejections are diagnostic." in summary_text
+    assert "Strict token-level validation rejections are observability signals." in summary_text
     assert "They did not cause station-level failure or row loss in this validation run." in summary_text
     assert int(station_payload["input_rows"]) == int(station_payload["output_rows"]) == len(canonical_frame)

@@ -22,7 +22,7 @@
       "total_bytes": 399509646
     }
   ],
-  "intended_archive": "external DOI archive",
+  "intended_archive": "external DOI archive before submission",
   "repo_commit_sha": "fb56c08d8bc5fc33a7b4c2e14059d0bd1a8f6ace",
   "top_level_files": [
     "archive_manifest.json",

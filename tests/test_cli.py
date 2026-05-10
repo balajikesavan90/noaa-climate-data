@@ -12,6 +12,44 @@ import pytest
 import noaa_spec.cli as cli
 
 
+def test_top_level_help_centers_public_clean_command(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["prog", "--help"])
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main()
+
+    assert excinfo.value.code == 0
+    captured = capsys.readouterr()
+    assert "clean" in captured.out
+    assert "dev" in captured.out
+    assert "validate-100-stations" not in captured.out
+    assert "build-validation-bundle" not in captured.out
+    assert "inspect-identifier" not in captured.out
+    assert "noaa-spec clean INPUT.csv OUTPUT.csv" in captured.out
+
+
+def test_dev_help_labels_maintainer_diagnostics(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["prog", "dev", "--help"])
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main()
+
+    assert excinfo.value.code == 0
+    captured = capsys.readouterr()
+    assert "Maintainer and operational diagnostics" in captured.out
+    normalized_help = " ".join(captured.out.split())
+    assert "not part of the core JOSS claim" in normalized_help
+    assert "validate-100-stations" in captured.out
+    assert "build-validation-bundle" in captured.out
+    assert "inspect-identifier" in captured.out
+
+
 def test_cli_clean_writes_canonical_csv(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -121,13 +121,33 @@ def _parse_args() -> argparse.Namespace:
         help="Show detailed [PARSE_STRICT] validation warnings during cleaning.",
     )
 
+    dev_parser = subparsers.add_parser(
+        "dev",
+        help="Maintainer operational diagnostics; not part of the JOSS core workflow.",
+        description=(
+            "Maintainer and operational diagnostics for validation bundles. "
+            "These commands are not required for normal package use and are not "
+            "part of the core JOSS claim, which is `noaa-spec clean INPUT.csv OUTPUT.csv`."
+        ),
+    )
+    dev_subparsers = dev_parser.add_subparsers(dest="dev_command", required=True)
+    _add_dev_commands(dev_subparsers)
+
+    return parser.parse_args()
+
+
+def _add_dev_commands(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    """Register maintainer commands in the dev namespace."""
     validate_parser = subparsers.add_parser(
         "validate-100-stations",
-        help="Run deterministic operational validation over a stratified station sample.",
+        help="Maintainer diagnostic: run operational validation over a station sample.",
         description=(
+            "Maintainer / operational diagnostics; not part of the JOSS core claim. "
             "Select a deterministic file-size-stratified station sample, run the "
-            "existing NOAA-Spec cleaning workflow against each selected station, "
-            "and write reviewer-facing manifests, checksums, and summary artifacts."
+            "NOAA-Spec cleaning workflow against each selected station, and write "
+            "manifests, checksums, and summary artifacts."
         ),
     )
     validate_parser.add_argument(
@@ -177,12 +197,13 @@ def _parse_args() -> argparse.Namespace:
 
     bundle_parser = subparsers.add_parser(
         "build-validation-bundle",
-        help="Build a reviewer-facing 100-station validation bundle with archived raw inputs.",
+        help="Maintainer diagnostic: build an operational validation bundle.",
         description=(
+            "Maintainer / operational diagnostics; not part of the JOSS core claim. "
             "Select a deterministic file-size-stratified station sample from a local "
-            "station corpus, copy the selected raw inputs into the output bundle, run "
-            "the existing NOAA-Spec cleaning workflow against those frozen inputs, and "
-            "write reviewer-facing manifests, checksums, and summary artifacts."
+            "station corpus, copy selected raw inputs into the output bundle, run "
+            "the NOAA-Spec cleaning workflow against those frozen inputs, and write "
+            "manifests, checksums, and summary artifacts."
         ),
     )
     bundle_parser.add_argument(
@@ -232,8 +253,9 @@ def _parse_args() -> argparse.Namespace:
 
     inspect_parser = subparsers.add_parser(
         "inspect-identifier",
-        help="Inspect a reviewer-facing validation bundle for an identifier without changing cleaning behavior.",
+        help="Maintainer diagnostic: inspect a validation bundle for one identifier.",
         description=(
+            "Maintainer / operational diagnostics; not part of the JOSS core claim. "
             "Scan validation-bundle raw inputs for a specific identifier, preserve a "
             "small set of provenance-rich examples, compare the observation against "
             "current parser/spec metadata, and write diagnostic Markdown + JSON reports."
@@ -269,8 +291,6 @@ def _parse_args() -> argparse.Namespace:
         help="Markdown output path. A JSON sibling with the same stem is also written.",
     )
 
-    return parser.parse_args()
-
 
 def main() -> None:
     args = _parse_args()
@@ -283,7 +303,9 @@ def main() -> None:
         print(f"Wrote cleaned CSV to {written_path.resolve()}")
         return
 
-    if args.command == "validate-100-stations":
+    command = args.dev_command if args.command == "dev" else args.command
+
+    if command == "validate-100-stations":
         output_root = args.output_root
         build_id = args.build_id or default_build_id()
         if output_root is None:
@@ -297,14 +319,14 @@ def main() -> None:
             continue_on_error=args.continue_on_error,
             build_id=build_id,
             command=" ".join(sys.argv),
-            selected_by="noaa-spec validate-100-stations",
+            selected_by="noaa-spec dev validate-100-stations",
         )
         print(f"Wrote validation artifacts to {result['output_root']}")
         if result["failed"]:
             raise SystemExit(1)
         return
 
-    if args.command == "build-validation-bundle":
+    if command == "build-validation-bundle":
         output_root = args.output_root
         build_id = args.build_id or default_build_id()
         if output_root is None:
@@ -318,14 +340,14 @@ def main() -> None:
             continue_on_error=args.continue_on_error,
             build_id=build_id,
             command=" ".join(sys.argv),
-            selected_by="noaa-spec build-validation-bundle",
+            selected_by="noaa-spec dev build-validation-bundle",
         )
         print(f"Wrote validation artifacts to {result['output_root']}")
         if result["failed"]:
             raise SystemExit(1)
         return
 
-    if args.command == "inspect-identifier":
+    if command == "inspect-identifier":
         result = inspect_identifier_bundle(
             bundle_root=args.bundle_root,
             identifier=args.identifier,
