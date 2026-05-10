@@ -20,6 +20,7 @@ import pandas as pd
 from . import __version__
 from .cleaning import clean_noaa_dataframe
 from .deterministic_io import write_deterministic_csv
+from .projections import project_domains
 
 DEFAULT_VALIDATION_COUNT = 100
 DEFAULT_VALIDATION_SEED = 20260430
@@ -83,6 +84,7 @@ def run_validation_workflow(
     build_id: str | None = None,
     command: str | None = None,
     selected_by: str = "noaa-spec dev build-validation-bundle",
+    emit_domains: bool = False,
 ) -> dict[str, Any]:
     if count <= 0:
         raise ValueError("count must be greater than zero")
@@ -98,8 +100,11 @@ def run_validation_workflow(
     raw_inputs_dir = output_root / "raw_inputs"
     canonical_dir = output_root / "canonical_cleaned"
     quality_dir = output_root / "quality_reports"
+    domains_dir = output_root / "domains"
     for path in (output_root, raw_inputs_dir, canonical_dir, quality_dir):
         path.mkdir(parents=True, exist_ok=True)
+    if emit_domains:
+        domains_dir.mkdir(parents=True, exist_ok=True)
 
     command_text = command or _default_command(
         source_root=source_root,
@@ -109,6 +114,7 @@ def run_validation_workflow(
         seed=seed,
         continue_on_error=continue_on_error,
         build_id=resolved_build_id,
+        emit_domains=emit_domains,
         command_name=(
             selected_by.removeprefix("noaa-spec ").strip()
             if selected_by.startswith("noaa-spec ")
@@ -152,6 +158,7 @@ def run_validation_workflow(
         "station_count_selected": len(selected_candidates),
         "sampling_strategy": strategy,
         "seed": seed,
+        "domain_outputs_requested": emit_domains,
         "reproducibility_boundary_note": REPRODUCIBILITY_BOUNDARY_NOTE,
     }
 
@@ -170,6 +177,7 @@ def run_validation_workflow(
             copied_entry=copied_entry,
             canonical_dir=canonical_dir,
             quality_dir=quality_dir,
+            domains_dir=domains_dir if emit_domains else None,
             output_root=output_root,
         )
         results_rows.append(result)
@@ -192,6 +200,7 @@ def run_validation_workflow(
                 copied_entry=copied_entry,
                 canonical_dir=canonical_dir,
                 quality_dir=quality_dir,
+                domains_dir=domains_dir if emit_domains else None,
                 output_root=output_root,
             )
             results_rows.append(result)
@@ -287,6 +296,7 @@ def _default_command(
     seed: int,
     continue_on_error: bool,
     build_id: str,
+    emit_domains: bool,
     command_name: str,
 ) -> str:
     parts = [
@@ -307,6 +317,8 @@ def _default_command(
     ]
     if continue_on_error:
         parts.append("--continue-on-error")
+    if emit_domains:
+        parts.append("--emit-domains")
     return shlex.join(parts)
 
 
@@ -773,6 +785,7 @@ def _process_station_candidate(
     copied_entry: dict[str, Any],
     canonical_dir: Path,
     quality_dir: Path,
+    domains_dir: Path | None,
     output_root: Path,
 ) -> dict[str, Any]:
     start = time.perf_counter()
@@ -790,6 +803,15 @@ def _process_station_candidate(
             canonical_path,
             sort_by=("STATION", "DATE"),
             float_format="%.1f",
+        )
+        domain_output_paths = (
+            _write_domain_outputs(
+                cleaned=cleaned,
+                station_id=candidate.station_id,
+                domains_dir=domains_dir,
+            )
+            if domains_dir is not None
+            else {}
         )
         strict_summary = cleaned.attrs.get("strict_parse_summary", {})
         parse_error_rows = (
@@ -818,6 +840,10 @@ def _process_station_candidate(
                     if "row_has_any_usable_metric" in cleaned.columns
                     else None
                 ),
+                "domain_output_paths": {
+                    domain: _relative_to_root(path, output_root)
+                    for domain, path in domain_output_paths.items()
+                },
                 "warnings_count": warnings_count,
             },
         )
@@ -832,7 +858,7 @@ def _process_station_candidate(
             "canonical_output_path": _relative_to_root(canonical_path, output_root),
             "canonical_output_sha256": _sha256_file(canonical_path),
             "quality_report_path": _relative_to_root(quality_report_path, output_root),
-            "domain_outputs_generated": False,
+            "domain_outputs_generated": bool(domain_output_paths),
             "warnings_count": warnings_count,
             "strict_parse_summary": strict_summary,
             "error_type": "",
@@ -856,6 +882,29 @@ def _process_station_candidate(
             "error_type": exc.__class__.__name__,
             "error_message": str(exc),
         }
+
+
+def _write_domain_outputs(
+    *,
+    cleaned: pd.DataFrame,
+    station_id: str,
+    domains_dir: Path | None,
+) -> dict[str, Path]:
+    if domains_dir is None:
+        return {}
+
+    written: dict[str, Path] = {}
+    for domain, frame in project_domains(cleaned).items():
+        domain_dir = domains_dir / domain
+        output_path = domain_dir / f"{station_id}_{domain}.csv"
+        write_deterministic_csv(
+            frame,
+            output_path,
+            sort_by=("STATION", "DATE"),
+            float_format="%.1f",
+        )
+        written[domain] = output_path
+    return written
 
 
 def _not_run_result(
@@ -983,6 +1032,7 @@ def _write_summary(
         f"- Total input rows: {total_input_rows}",
         f"- Total output rows: {total_output_rows}",
         f"- Total runtime (seconds): {total_runtime:.6f}",
+        f"- Domain outputs generated: {bool(run_manifest.get('domain_outputs_requested'))}",
         f"- Checksum file: {summary_path.parent / 'checksums.txt'}",
         "",
         "## Strict token diagnostics",
@@ -1005,6 +1055,11 @@ def _write_summary(
             "## Output artifact inventory",
             "- `raw_inputs/`",
             "- `canonical_cleaned/`",
+            *(
+                ["- `domains/`"]
+                if bool(run_manifest.get("domain_outputs_requested"))
+                else []
+            ),
             "- `quality_reports/`",
             "- `station_selection_manifest.csv`",
             "- `run_manifest.json`",

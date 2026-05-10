@@ -13,6 +13,7 @@ from . import __version__
 from .cleaning import clean_noaa_dataframe
 from .deterministic_io import write_deterministic_csv
 from .investigation import inspect_identifier_bundle
+from .projections import project_domains
 from .validation import (
     DEFAULT_VALIDATION_COUNT,
     DEFAULT_VALIDATION_SEED,
@@ -21,7 +22,12 @@ from .validation import (
 )
 
 
-def _clean_csv_to_csv(input_csv: Path, output_csv: Path) -> Path:
+def _clean_csv_to_csv(
+    input_csv: Path,
+    output_csv: Path,
+    *,
+    emit_domains: bool = False,
+) -> Path:
     raw = pd.read_csv(input_csv, dtype=str)
     cleaned = clean_noaa_dataframe(raw, keep_raw=False, strict_mode=True)
     _print_strict_parse_summary(cleaned)
@@ -31,7 +37,24 @@ def _clean_csv_to_csv(input_csv: Path, output_csv: Path) -> Path:
         sort_by=("STATION", "DATE"),
         float_format="%.1f",
     )
+    if emit_domains:
+        _write_domain_projections(cleaned, output_csv)
     return output_csv
+
+
+def _write_domain_projections(cleaned: pd.DataFrame, output_csv: Path) -> None:
+    for domain, projection in project_domains(cleaned).items():
+        write_deterministic_csv(
+            projection,
+            _domain_output_path(output_csv, domain),
+            sort_by=("STATION", "DATE"),
+            float_format="%.1f",
+        )
+
+
+def _domain_output_path(output_csv: Path, domain: str) -> Path:
+    suffix = output_csv.suffix or ".csv"
+    return output_csv.with_name(f"{output_csv.stem}_{domain}{suffix}")
 
 
 def _print_strict_parse_summary(cleaned: pd.DataFrame) -> None:
@@ -120,6 +143,15 @@ def _parse_args() -> argparse.Namespace:
         default=False,
         help="Show detailed [PARSE_STRICT] validation warnings during cleaning.",
     )
+    clean_parser.add_argument(
+        "--emit-domains",
+        action="store_true",
+        default=False,
+        help=(
+            "Also write optional domain projection CSVs beside the canonical "
+            "cleaned output. The canonical output remains unchanged."
+        ),
+    )
 
     dev_parser = subparsers.add_parser(
         "dev",
@@ -190,6 +222,15 @@ def _add_dev_commands(
         help="Continue after station-level failures and preserve partial results.",
     )
     validate_parser.add_argument(
+        "--emit-domains",
+        action="store_true",
+        default=False,
+        help=(
+            "Also emit optional per-station domain projection CSVs under "
+            "domains/. Default: off."
+        ),
+    )
+    validate_parser.add_argument(
         "--build-id",
         default=None,
         help="Optional build identifier recorded in manifests.",
@@ -246,6 +287,15 @@ def _add_dev_commands(
         help="Continue after station-level failures and preserve partial results.",
     )
     bundle_parser.add_argument(
+        "--emit-domains",
+        action="store_true",
+        default=False,
+        help=(
+            "Also emit optional per-station domain projection CSVs under "
+            "domains/. Default: off."
+        ),
+    )
+    bundle_parser.add_argument(
         "--build-id",
         default=None,
         help="Optional build identifier recorded in manifests.",
@@ -299,7 +349,11 @@ def main() -> None:
         if not args.verbose:
             cleaning_logger.setLevel(logging.ERROR)
 
-        written_path = _clean_csv_to_csv(args.input_csv, args.output_csv)
+        written_path = _clean_csv_to_csv(
+            args.input_csv,
+            args.output_csv,
+            emit_domains=args.emit_domains,
+        )
         print(f"Wrote cleaned CSV to {written_path.resolve()}")
         return
 
@@ -320,6 +374,7 @@ def main() -> None:
             build_id=build_id,
             command=" ".join(sys.argv),
             selected_by="noaa-spec dev validate-100-stations",
+            emit_domains=args.emit_domains,
         )
         print(f"Wrote validation artifacts to {result['output_root']}")
         if result["failed"]:
@@ -341,6 +396,7 @@ def main() -> None:
             build_id=build_id,
             command=" ".join(sys.argv),
             selected_by="noaa-spec dev build-validation-bundle",
+            emit_domains=args.emit_domains,
         )
         print(f"Wrote validation artifacts to {result['output_root']}")
         if result["failed"]:

@@ -1,5 +1,9 @@
 # 100-Station Validation Artifact
 
+> ⚠️ This validation bundle is NOT fully reproducible from this repository alone.
+> Raw inputs and canonical outputs are excluded and will be published via DOI
+> prior to final JOSS submission.
+
 This directory contains metadata for a deterministic operational validation
 artifact generated from a stratified 100-station sample of NOAA station files.
 
@@ -7,7 +11,8 @@ The purpose of this artifact is to demonstrate that the repository-controlled
 cleaning workflow executes successfully across a broader operational sample
 beyond the small upstream-traceable semantic fixtures used in the test suite.
 It is supplementary smoke-validation evidence, not required for the basic
-`noaa-spec clean INPUT.csv OUTPUT.csv` workflow.
+`noaa-spec clean INPUT.csv OUTPUT.csv` workflow, and it is not part of the
+repo-native reproducibility claim.
 
 ---
 
@@ -16,11 +21,12 @@ It is supplementary smoke-validation evidence, not required for the basic
 This artifact is intended to provide:
 
 * Operational smoke-validation evidence
-* Reproducible workflow provenance
+* Workflow provenance for future DOI-backed reruns
 * Archived validation metadata
 * Per-station audit summaries
 * Deterministic sampling evidence
-* Rerunnable validation manifests
+* Validation manifests that become rerunnable only with the external archived
+  raw inputs
 
 This artifact is **not** intended to prove universal correctness across the entire NOAA corpus.
 
@@ -33,14 +39,14 @@ Semantic correctness is established separately through:
 
 ---
 
-# What This Artifact Demonstrates
+# What This Metadata Records
 
-The validation workflow successfully:
+The tracked metadata records that a local validation workflow:
 
 * selected a deterministic stratified station sample
-* archived raw input provenance
+* recorded raw input provenance for future DOI-backed archival
 * executed the repository-controlled cleaning pipeline
-* generated canonical cleaned outputs
+* generated canonical cleaned outputs outside git
 * generated per-station quality reports
 * preserved row-level parity
 * produced deterministic manifests and diagnostics
@@ -55,9 +61,9 @@ build_<timestamp>/
 ├── run_manifest.json
 ├── station_results.csv
 ├── station_selection_manifest.csv
-├── strict_parse_summary_report.json
 ├── strict_parse_summary_report.md
 ├── summary.md
+├── domains/                 # optional, only when --emit-domains is used
 └── quality_reports/
 ```
 
@@ -66,6 +72,7 @@ Large generated payloads are intentionally excluded from the Git repository:
 * `raw_inputs/`
 * `canonical_cleaned/`
 * `checksums.txt`
+* `domains/` when optional domain projections are emitted
 
 These large artifacts are intended for external archival, for example
 DOI-backed archive storage before JOSS submission. Until an actual DOI is
@@ -126,24 +133,40 @@ Strict token diagnostics:
 See:
 
 * `strict_parse_summary_report.md`
-* `strict_parse_summary_report.json`
+
+---
+
+# Optional Domain Projections
+
+The validation workflow can optionally emit domain projection CSVs with:
+
+```bash
+noaa-spec dev build-validation-bundle ... --emit-domains
+```
+
+When enabled, the bundle includes `domains/<domain>/<station>_<domain>.csv`
+files for the projection domains exposed by `noaa-spec clean --emit-domains`.
+The default validation behavior does not emit these files, and the canonical
+cleaned CSV remains the required output.
 
 ---
 
 # Reproducibility Boundary
 
-This artifact provides operational reproducibility evidence for a deterministic stratified sample.
+This artifact is Tier 2 optional / future evidence. It is not fully
+reproducible from the git repository alone.
 
 It does not claim exhaustive reproducibility validation for the full NOAA corpus.
 
-The archived validation metadata allows reviewers to:
+After DOI-backed archival exists, the validation metadata should allow reviewers to:
 
 * inspect the selected station sample
 * inspect deterministic provenance
 * inspect diagnostic outputs
 * rerun the workflow against archived raw inputs
 
-without depending on live NOAA availability.
+without depending on live NOAA availability. Until then, treat this directory as
+metadata only.
 
 ---
 
@@ -166,6 +189,6 @@ Large validation payloads are intended for external archival before submission.
 
 DOI status:
 
-* `TO_BE_ADDED_BEFORE_JOSS_SUBMISSION`
+* `TO_BE_ASSIGNED`
 
 ---

@@ -18,30 +18,41 @@ record/header structural validation on that column. The value is not parsing
 alone; it is making a bounded set of NOAA cleaning decisions explicit,
 testable, provenance-aware, and checksum-stable so downstream researchers can
 start from the same documented interpretation rather than divergent local
-scripts. NOAA-Spec does not download NOAA data, orchestrate station batches,
-split datasets into analysis domains, produce releases, or run analyses.
+scripts.
+
+This project implements deterministic cleaning for a defined subset of NOAA ISD
+/ Global Hourly fields. It does not attempt to cover the entire NOAA
+specification. The JOSS-facing field families are `WND`, `CIG`, `VIS`, `TMP`,
+`DEW`, and `SLP`, with source/control columns retained.
+
+NOAA-Spec does not download NOAA data, orchestrate station batches, produce
+releases, or run analyses. Optional domain projections can be emitted with
+`--emit-domains`, but the canonical output remains the required public
+artifact.
 
 Scope is deliberately layered:
 
-- JOSS core: deterministic CSV cleaning via `noaa-spec clean`; documented
-  NOAA ISD / Global Hourly field families exercised by committed fixtures;
-  sentinel normalization; QC-code preservation; stable decoded column names;
-  and checksum-stable output.
-- Maintainer evidence layer: the 100-station validation bundle, quality
-  reports, strict token diagnostics, validation bundle builder, and identifier
-  inspection tools. These are operational diagnostics for transparency and
-  auditability, not prerequisites for normal use and not acceptance-critical
-  correctness evidence.
+- JOSS core: deterministic CSV cleaning via `noaa-spec clean`; field families
+  `WND`, `CIG`, `VIS`, `TMP`, `DEW`, and `SLP`; sentinel normalization;
+  QC-code preservation; stable decoded column names; and checksum-stable
+  output.
+- Optional / future DOI-backed evidence: the 100-station validation bundle,
+  quality reports, strict token diagnostics, validation bundle builder, and
+  identifier inspection tools. These are operational diagnostics for
+  transparency and auditability, not prerequisites for normal use and not
+  acceptance-critical correctness evidence.
 
-The 100-station validation bundle is supplementary operational smoke-validation
-evidence intended for DOI-backed archival before submission. It demonstrates
-that the repository-controlled workflow executes across a deterministic
-stratified sample; it does not prove universal correctness across the NOAA
-corpus. Semantic correctness is established by upstream-traceable fixtures,
-regression tests, and source-document-linked rule families. See
-[docs/validation_100_station.md](docs/validation_100_station.md).
+## Reproducibility Tiers
 
-## Reproducibility Verification
+### Tier 1: Repo-native, required
+
+Tier 1 is the required reproducibility boundary for the JOSS-facing claim. It
+uses only tracked repository files.
+
+- Workflow: `noaa-spec clean INPUT.csv OUTPUT.csv`
+- Inputs: tracked raw fixture CSVs under `reproducibility/`
+- Expected outputs: committed `station_cleaned_expected.csv` files
+- Verification: checksum equality with `reproducibility/checksums.sha256`
 
 Use the repository-defined Docker workflow. This is the primary tested
 execution path for reviewers; local installation below is a convenience path
@@ -71,6 +82,16 @@ checksums should remain stable. Long-term archival builds should use the tagged
 release plus archived artifacts or DOIs. `requirements-review.txt` pins the
 Docker verification Python dependency path only; it is not required for
 standard local installation.
+
+### Tier 2: DOI-backed, optional / future
+
+Tier 2 is the 100-station operational validation run. It is not reproducible
+from this repository alone because the raw inputs and canonical outputs are not
+tracked in git. It requires an external archived dataset with a DOI before it
+can be reviewed as rerunnable evidence. Tier 2 is optional and is not required
+for the core `noaa-spec clean` reproducibility claim. See
+[artifacts/validation_100_station/README.md](artifacts/validation_100_station/README.md)
+and [docs/validation_100_station.md](docs/validation_100_station.md).
 
 ## Traceable Fixtures
 
@@ -112,7 +133,7 @@ Core-field snapshot from the tracked expected output:
 | 78724099999 | 2001-01-01T15:00:00 | 29.3 | 1 | 28000.0 | 1.0 | 8.2 | N | 1013.8 |
 | 78724099999 | 2001-01-01T18:00:00 | 32.7 | 1 | 28000.0 | 1.0 | 10.8 | N | 1011.9 |
 
-### Raw Row Walkthrough
+## Minimal Output View
 
 From the tracked primary fixture, this raw row snippet:
 
@@ -125,25 +146,17 @@ WND=999,9,9,9999,9
 SLP=99999,9
 ```
 
-becomes the following compact cleaned view. This is not the full schema; it is
-a useful first-pass interpretation.
+becomes this compact core-column view:
 
-| Output column | Meaning | Result |
-| --- | --- | --- |
-| `STATION` | Source station | `40435099999` |
-| `DATE` | Observation timestamp | `2000-03-17T09:00:00` |
-| `temperature_c` | Decoded air temperature | empty null |
-| `temperature_quality_code` | NOAA QC flag from `TMP` | `9` |
-| `TMP__qc_reason` | Why temperature is null | `SENTINEL_MISSING` |
-| `visibility_m` | Decoded visibility distance | empty null |
-| `visibility_quality_code` | NOAA QC flag from `VIS` | `9.0` |
-| `VIS__part1__qc_reason` | Why visibility is null | `SENTINEL_MISSING` |
-| `wind_speed_ms` | Decoded wind speed | empty null |
-| `wind_speed_quality_code` | NOAA QC flag from `WND` | `9.0` |
-| `sea_level_pressure_hpa` | Decoded sea-level pressure | empty null |
+| STATION | DATE | temperature_c | temperature_quality_code | visibility_m | visibility_quality_code | wind_speed_ms | wind_speed_quality_code | sea_level_pressure_hpa |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 40435099999 | 2000-03-17T09:00:00 |  | 9 |  | 9.0 |  | 9.0 |  |
 
 The useful behavior is explicit: sentinel-coded measurements become null while
 the NOAA quality-code context remains visible.
+
+Full output schema includes additional sidecar columns and quality fields. See
+[docs/schema.md](docs/schema.md) for full details.
 
 ## First Output: Suggested First Inspection
 
@@ -165,12 +178,12 @@ surprising.
 | `wind_speed_quality_code` | NOAA QC code preserved for wind speed. |
 | `sea_level_pressure_hpa` | Decoded sea-level pressure; `99999` becomes null. |
 
-Compact excerpt from the tracked primary fixture:
+Compact core-column excerpt from the tracked primary fixture:
 
-| STATION | DATE | temperature_c | temperature_quality_code | visibility_m | visibility_quality_code | wind_speed_ms | wind_type_code | TMP__qc_reason | VIS__part1__qc_reason |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 40435099999 | 2000-01-10T06:00:00 | 18.0 | 1 | 10000.0 | 1.0 | 0.0 | C |  |  |
-| 40435099999 | 2000-03-17T09:00:00 |  | 9 |  | 9.0 |  |  | SENTINEL_MISSING | SENTINEL_MISSING |
+| STATION | DATE | temperature_c | temperature_quality_code | visibility_m | visibility_quality_code | wind_speed_ms | wind_type_code |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 40435099999 | 2000-01-10T06:00:00 | 18.0 | 1 | 10000.0 | 1.0 | 0.0 | C |
+| 40435099999 | 2000-03-17T09:00:00 |  | 9 |  | 9.0 |  |  |
 
 For a slightly longer guide, see [docs/first_output_guide.md](docs/first_output_guide.md). For the supported field registry, see [docs/supported_fields.md](docs/supported_fields.md).
 
@@ -188,6 +201,23 @@ included for transparency, covered by regression tests and operational
 diagnostics, but not all backed by upstream-replay fixtures. Use
 [docs/evidence_matrix.md](docs/evidence_matrix.md) and
 [docs/supported_fields.md](docs/supported_fields.md) for the evidence boundary.
+
+## Why not a simple script?
+
+A 500-1000 line script can parse NOAA fields for one project. That is not the
+claim NOAA-Spec makes.
+
+NOAA-Spec provides:
+
+- deterministic outputs that are checksum stable;
+- explicit sentinel-to-null handling tied to NOAA documentation;
+- preservation of NOAA quality codes;
+- traceability to source documentation and rule families;
+- reproducibility guarantees across supported environments for the tracked
+  fixture workflow.
+
+This project is not about parsing NOAA data - it is about standardizing its
+interpretation.
 
 ## Why A Shared Cleaning Tool?
 

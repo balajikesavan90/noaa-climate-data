@@ -4,11 +4,37 @@ This document describes the tracked reproducibility checks for the JOSS-facing
 NOAA-Spec claim: deterministic cleaned CSV output from the public
 `noaa-spec clean` CLI.
 
-The boundary is deliberately precise:
+The boundary has two tiers.
 
-- Reproducible from the repository alone: `clean(committed_input) = committed_output` for tracked raw fixtures, verified against `reproducibility/checksums.sha256`.
-- Additionally traceable to upstream NOAA retrieval: `reproducibility/real_provenance_example/`, `reproducibility/traceable_peru_il_2014_aa1_qc/`, and `reproducibility/traceable_albion_ne_2014_calm_aa1/` record NOAA/NCEI source URLs, retrieval dates, and observed upstream checksums.
-- Not claimed: full upstream NOAA retrieval reproducibility for every curated fixture, NOAA downloading, multi-station orchestration, or exhaustive NOAA coverage.
+## Tier 1: Repo-native, required
+
+Tier 1 is the required JOSS-facing reproducibility claim:
+
+- Deterministic cleaning of tracked fixtures.
+- Command: `noaa-spec clean INPUT OUTPUT`.
+- Verification: checksum equality with committed expected outputs in
+  `reproducibility/checksums.sha256`.
+
+Tier 1 is reproducible from this repository alone:
+`clean(committed_input) = committed_output` for tracked raw fixtures.
+
+The three traceable fixture directories also record NOAA/NCEI source URLs,
+retrieval dates, and observed upstream checksums:
+`reproducibility/real_provenance_example/`,
+`reproducibility/traceable_peru_il_2014_aa1_qc/`, and
+`reproducibility/traceable_albion_ne_2014_calm_aa1/`.
+
+## Tier 2: DOI-backed, optional / future
+
+Tier 2 is the 100-station operational validation run. It requires an external
+archived dataset with a DOI because the raw station inputs and canonical
+outputs are not tracked in this repository. Tier 2 is optional, future
+DOI-backed validation evidence; it is not required for the core reproducibility
+claim.
+
+Not claimed: full upstream NOAA retrieval reproducibility for every curated
+fixture, NOAA downloading, multi-station orchestration, exhaustive NOAA
+coverage, or repo-native reproduction of the 100-station validation bundle.
 
 ## Docker Verification
 

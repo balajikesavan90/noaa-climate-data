@@ -6,6 +6,10 @@ semantic verification, while the larger 100-station validation bundle is
 supplementary operational evidence intended for external DOI-backed archival
 before submission.
 
+This is Tier 2 optional / future evidence. It is not fully reproducible from
+the repository alone because raw inputs and canonical cleaned outputs are
+excluded from git.
+
 Small upstream-traceable fixtures, regression tests, and source-document-linked
 rule families verify the semantic core. The 100-station validation artifact
 demonstrates that the same repository-controlled workflow runs successfully
@@ -40,7 +44,7 @@ reviewer dependency.
 
 Status: pending DOI before submission.
 
-DOI: TO_BE_ADDED_BEFORE_JOSS_SUBMISSION
+DOI: TO_BE_ASSIGNED
 
 Planned contents:
 

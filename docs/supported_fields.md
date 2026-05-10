@@ -59,7 +59,7 @@ for the family is exercised by the fixtures.
 | `DEW` dew point temperature | `dew_point_c` | `dew_point_quality_code`, `DEW__qc_*` | `+9999` / `9999` become null; valid values are scaled from tenths of degrees C | Not repeated | `part-03-mandatory-data-section.md`; `FIELD_RULES["DEW"]` | upstream-traceable fixture-backed; unit-tested |
 | `SLP` sea-level pressure | `sea_level_pressure_hpa` | `sea_level_pressure_quality_code`, `SLP__qc_*` | `99999` becomes null; valid values are scaled from tenths of hPa | Not repeated | `part-03-mandatory-data-section.md`; `FIELD_RULES["SLP"]` | upstream-traceable fixture-backed; unit-tested |
 
-## Additional Implemented Families (Secondary to JOSS)
+## Experimental / Partial Support (Not part of JOSS claim)
 
 This section is **not** the primary submission surface. These families remain
 implemented and documented so users can see what the parser recognizes, while

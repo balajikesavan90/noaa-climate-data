@@ -56,7 +56,12 @@ def test_cli_clean_writes_canonical_csv(
 ) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     input_csv = repo_root / "reproducibility" / "minimal" / "station_raw.csv"
-    expected_csv = repo_root / "reproducibility" / "minimal" / "station_cleaned_expected.csv"
+    expected_csv = (
+        repo_root
+        / "reproducibility"
+        / "minimal"
+        / "station_cleaned_expected.csv"
+    )
     output_csv = tmp_path / "station_cleaned.csv"
 
     monkeypatch.setattr(
@@ -66,7 +71,9 @@ def test_cli_clean_writes_canonical_csv(
     )
     cli.main()
 
-    assert output_csv.read_text(encoding="utf-8") == expected_csv.read_text(encoding="utf-8")
+    assert output_csv.read_text(encoding="utf-8") == expected_csv.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_cli_clean_preserves_quality_code_when_sentinel_is_null(
@@ -89,6 +96,46 @@ def test_cli_clean_preserves_quality_code_when_sentinel_is_null(
     assert pd.isna(sentinel_row["temperature_c"])
     assert str(sentinel_row["temperature_quality_code"]) == "9"
     assert sentinel_row["TMP__qc_reason"] == "SENTINEL_MISSING"
+
+
+def test_cli_clean_emit_domains_writes_optional_projection_csvs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    input_csv = repo_root / "reproducibility" / "minimal" / "station_raw.csv"
+    expected_csv = repo_root / "reproducibility" / "minimal" / "station_cleaned_expected.csv"
+    output_csv = tmp_path / "station_cleaned.csv"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["prog", "clean", "--emit-domains", str(input_csv), str(output_csv)],
+    )
+    cli.main()
+
+    assert output_csv.read_text(encoding="utf-8") == expected_csv.read_text(encoding="utf-8")
+    wind_csv = tmp_path / "station_cleaned_wind.csv"
+    quality_csv = tmp_path / "station_cleaned_quality_codes.csv"
+    assert wind_csv.exists()
+    assert quality_csv.exists()
+
+    wind = pd.read_csv(wind_csv, low_memory=False)
+    assert list(wind.columns) == [
+        "STATION",
+        "DATE",
+        "SOURCE",
+        "REPORT_TYPE",
+        "CALL_SIGN",
+        "QUALITY_CONTROL",
+        "wind_direction_deg",
+        "wind_direction_quality_code",
+        "wind_type_code",
+        "wind_speed_ms",
+        "wind_speed_quality_code",
+        "wind_direction_variable",
+        "qc_calm_wind_detected",
+    ]
 
 
 def test_cli_clean_requires_output_path(

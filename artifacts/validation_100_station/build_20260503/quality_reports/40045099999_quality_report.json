@@ -1,7 +1,8 @@
 {
+  "_comment": "# Local path removed for portability",
   "archived_raw_input_path": "raw_inputs/40045099999.parquet",
   "input_rows": 98420,
-  "original_source_path": "/media/balaji-kesavan/LaCie/NOAA_Data/40045099999/LocationData_Raw.parquet",
+  "original_source_path": "LOCAL_PATH_PLACEHOLDER",
   "output_rows": 98420,
   "parse_error_rows": 0,
   "raw_sha256": "55a86fc90c717261f916cfa872f2bcb41535043119f73a608e46aa3556469592",

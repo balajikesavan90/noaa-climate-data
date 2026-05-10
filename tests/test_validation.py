@@ -245,3 +245,61 @@ def test_validation_bundle_reports_strict_token_diagnostics(tmp_path: Path, monk
     assert "Strict token-level validation rejections are observability signals." in summary_text
     assert "They did not cause station-level failure or row loss in this validation run." in summary_text
     assert int(station_payload["input_rows"]) == int(station_payload["output_rows"]) == len(canonical_frame)
+
+
+def test_validation_bundle_can_emit_optional_domain_outputs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    input_root = tmp_path / "input"
+    output_root = tmp_path / "output"
+    input_root.mkdir()
+    _make_station_pool(input_root, station_count=8)
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "prog",
+            "dev",
+            "build-validation-bundle",
+            "--source-root",
+            str(input_root),
+            "--output-root",
+            str(output_root),
+            "--count",
+            "4",
+            "--seed",
+            "20260430",
+            "--build-id",
+            "domain-build",
+            "--emit-domains",
+        ],
+    )
+    cli.main()
+
+    station_results = pd.read_csv(output_root / "station_results.csv")
+    assert set(station_results["domain_outputs_generated"]) == {True}
+
+    run_manifest = pd.read_json(output_root / "run_manifest.json", typ="series")
+    assert bool(run_manifest["domain_outputs_requested"]) is True
+
+    first_station = str(station_results.iloc[0]["station_id"])
+    wind_path = output_root / "domains" / "wind" / f"{first_station}_wind.csv"
+    quality_path = (
+        output_root
+        / "domains"
+        / "quality_codes"
+        / f"{first_station}_quality_codes.csv"
+    )
+    assert wind_path.exists()
+    assert quality_path.exists()
+
+    wind = pd.read_csv(wind_path, low_memory=False)
+    assert {"STATION", "DATE", "wind_speed_ms", "wind_speed_quality_code"}.issubset(
+        wind.columns
+    )
+
+    summary_text = (output_root / "summary.md").read_text(encoding="utf-8")
+    assert "- Domain outputs generated: True" in summary_text
+    assert "- `domains/`" in summary_text
