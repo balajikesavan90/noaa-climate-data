@@ -245,3 +245,18 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Ignore heavy generated artifact payloads
+artifacts/validation_100_station/build_*/canonical_cleaned/
+artifacts/validation_100_station/build_*/raw_inputs/
+artifacts/validation_100_station/build_*/checksums.txt
+
+# Keep lightweight provenance + reviewer metadata
+!artifacts/validation_100_station/build_*/summary.md
+!artifacts/validation_100_station/build_*/README.md
+!artifacts/validation_100_station/build_*/run_manifest.json
+!artifacts/validation_100_station/build_*/archive_manifest.json
+!artifacts/validation_100_station/build_*/station_selection_manifest.csv
+!artifacts/validation_100_station/build_*/station_results.csv
+!artifacts/validation_100_station/build_*/strict_parse_summary_report.md
+!artifacts/validation_100_station/build_*/strict_parse_summary_report.json

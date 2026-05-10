@@ -1,0 +1,90 @@
+{
+  "archived_raw_input_path": "raw_inputs/16480099999.parquet",
+  "input_rows": 439247,
+  "original_source_path": "/media/balaji-kesavan/LaCie/NOAA_Data/16480099999/LocationData_Raw.parquet",
+  "output_rows": 439247,
+  "parse_error_rows": 0,
+  "raw_sha256": "31ef18b21240e6990ce3daa0a080b86095edc7f9b2341b1ed05872419707807e",
+  "rows_with_any_usable_metric": 437783,
+  "station_id": "16480099999",
+  "strict_parse_summary": {
+    "malformed_identifier_columns": [],
+    "malformed_section_identifier_columns": [],
+    "skipped_encoded_column_count": 1,
+    "skipped_encoded_columns": [
+      "HL1"
+    ],
+    "supported_prefix_family_identifiers": [
+      "AJ1",
+      "AG1",
+      "GJ1"
+    ],
+    "token_rejection_count": 7600,
+    "token_rejection_examples": [
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "9,9,999,9,+010,1",
+        "reason": "token_width_mismatch",
+        "row_index": 8194,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "16480099999",
+        "token_sample": "+010"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "9,9,999,9,+000,1",
+        "reason": "token_width_mismatch",
+        "row_index": 8265,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "16480099999",
+        "token_sample": "+000"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "9,9,999,9,+007,1",
+        "reason": "token_width_mismatch",
+        "row_index": 8464,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "16480099999",
+        "token_sample": "+007"
+      }
+    ],
+    "token_rejection_suppressed_log_count": 7590,
+    "token_rejections_by_identifier": {
+      "MD1": 1692,
+      "OD1": 5794,
+      "OD2": 88,
+      "SA1": 26
+    },
+    "token_rejections_by_identifier_part": {
+      "MD1.part_5": 1692,
+      "OD1.part_3": 2901,
+      "OD1.part_5": 2893,
+      "OD2.part_3": 44,
+      "OD2.part_5": 44,
+      "SA1.part_1": 26
+    },
+    "token_rejections_by_reason": {
+      "token_width_mismatch": 7600
+    },
+    "unknown_identifier_columns": [
+      "HL1"
+    ],
+    "unsupported_identifier_columns": [
+      "HL1"
+    ]
+  },
+  "warnings_count": 7601
+}

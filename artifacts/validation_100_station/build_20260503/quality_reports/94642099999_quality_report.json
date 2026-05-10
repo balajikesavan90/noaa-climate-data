@@ -1,0 +1,28 @@
+{
+  "archived_raw_input_path": "raw_inputs/94642099999.parquet",
+  "input_rows": 31701,
+  "original_source_path": "/media/balaji-kesavan/LaCie/NOAA_Data/94642099999/LocationData_Raw.parquet",
+  "output_rows": 31701,
+  "parse_error_rows": 0,
+  "raw_sha256": "d345b2a068e80b19ea92a6dbaf525cea8c71f8f6313b0b57b0e7c81d5332129d",
+  "rows_with_any_usable_metric": 31700,
+  "station_id": "94642099999",
+  "strict_parse_summary": {
+    "malformed_identifier_columns": [],
+    "malformed_section_identifier_columns": [],
+    "skipped_encoded_column_count": 0,
+    "skipped_encoded_columns": [],
+    "supported_prefix_family_identifiers": [
+      "AG1"
+    ],
+    "token_rejection_count": 0,
+    "token_rejection_examples": [],
+    "token_rejection_suppressed_log_count": 0,
+    "token_rejections_by_identifier": {},
+    "token_rejections_by_identifier_part": {},
+    "token_rejections_by_reason": {},
+    "unknown_identifier_columns": [],
+    "unsupported_identifier_columns": []
+  },
+  "warnings_count": 0
+}

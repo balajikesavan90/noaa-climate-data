@@ -1,0 +1,78 @@
+{
+  "archived_raw_input_path": "raw_inputs/11747099999.parquet",
+  "input_rows": 195796,
+  "original_source_path": "/media/balaji-kesavan/LaCie/NOAA_Data/11747099999/LocationData_Raw.parquet",
+  "output_rows": 195796,
+  "parse_error_rows": 0,
+  "raw_sha256": "b9b1ed9d4872b857eaa67a52e338a74d8a9e47b6dcea960f2053487993d4f9f7",
+  "rows_with_any_usable_metric": 195778,
+  "station_id": "11747099999",
+  "strict_parse_summary": {
+    "malformed_identifier_columns": [],
+    "malformed_section_identifier_columns": [],
+    "skipped_encoded_column_count": 0,
+    "skipped_encoded_columns": [],
+    "supported_prefix_family_identifiers": [
+      "AJ1"
+    ],
+    "token_rejection_count": 19336,
+    "token_rejection_examples": [
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "3,99,0110,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 139,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "11747099999",
+        "token_sample": "0110"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 1,
+        "identifier": "OD1",
+        "part_index": 5,
+        "raw_section_sample": "3,99,0110,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 139,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "11747099999",
+        "token_sample": "999"
+      },
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "3,99,0120,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 140,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "11747099999",
+        "token_sample": "0120"
+      }
+    ],
+    "token_rejection_suppressed_log_count": 19326,
+    "token_rejections_by_identifier": {
+      "OD1": 18280,
+      "OD2": 1056
+    },
+    "token_rejections_by_identifier_part": {
+      "OD1.part_3": 9140,
+      "OD1.part_5": 9140,
+      "OD2.part_3": 528,
+      "OD2.part_5": 528
+    },
+    "token_rejections_by_reason": {
+      "token_width_mismatch": 19336
+    },
+    "unknown_identifier_columns": [],
+    "unsupported_identifier_columns": []
+  },
+  "warnings_count": 19336
+}
