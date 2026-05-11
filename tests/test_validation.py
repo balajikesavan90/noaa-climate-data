@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 import noaa_spec.cli as cli
+import noaa_spec.validation as validation
 from noaa_spec.validation import _scan_station_candidates, _select_candidates, _station_id_from_path
 
 
@@ -303,3 +304,36 @@ def test_validation_bundle_can_emit_optional_domain_outputs(
     summary_text = (output_root / "summary.md").read_text(encoding="utf-8")
     assert "- Domain outputs generated: True" in summary_text
     assert "- `domains/`" in summary_text
+
+
+def test_validation_worker_crash_is_recorded_without_losing_manifests(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    input_root = tmp_path / "input"
+    output_root = tmp_path / "output"
+    input_root.mkdir()
+    _make_station_pool(input_root, station_count=4)
+
+    monkeypatch.setattr(
+        validation,
+        "_station_worker_command",
+        lambda **_: [sys.executable, "-c", "import sys; sys.exit(137)"],
+    )
+
+    result = validation.run_validation_workflow(
+        source_root=input_root,
+        output_root=output_root,
+        count=4,
+        seed=20260430,
+        build_id="crash-build",
+    )
+
+    assert result["failed"] is True
+    station_results = pd.read_csv(output_root / "station_results.csv")
+    assert "failed" in set(station_results["status"])
+    failed = station_results[station_results["status"] == "failed"].iloc[0]
+    assert failed["error_type"] == "child_process_crash"
+    assert "station worker exited without error output" in failed["error_message"]
+    assert (output_root / "station_selection_manifest.csv").exists()
+    assert (output_root / "summary.md").exists()

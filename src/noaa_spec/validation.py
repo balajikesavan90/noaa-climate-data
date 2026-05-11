@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import argparse
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import platform
 import shlex
 import shutil
 import subprocess
+import sys
+import tempfile
 import time
 from typing import Any
 
@@ -57,6 +61,7 @@ STRICT_TOKEN_DIAGNOSTIC_LANGUAGE = (
     "optional-section payloads that did not match declared token-width expectations. "
     "They did not cause station-level failure or row loss in this validation run."
 )
+WORKER_RESULT_SCHEMA_VERSION = "validation-station-result-v1"
 
 
 @dataclass(frozen=True)
@@ -788,6 +793,69 @@ def _process_station_candidate(
     domains_dir: Path | None,
     output_root: Path,
 ) -> dict[str, Any]:
+    with tempfile.TemporaryDirectory(prefix="noaa-spec-validation-worker-") as tmpdir:
+        result_path = Path(tmpdir) / f"{candidate.station_id}_result.json"
+        command = _station_worker_command(
+            candidate=candidate,
+            copied_entry=copied_entry,
+            canonical_dir=canonical_dir,
+            quality_dir=quality_dir,
+            domains_dir=domains_dir,
+            output_root=output_root,
+            result_path=result_path,
+        )
+        timed_out = False
+        exit_code: int | None = None
+        stdout = ""
+        stderr = ""
+        try:
+            proc = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                env=_station_worker_env(),
+                timeout=_station_worker_timeout_seconds(),
+            )
+            exit_code = int(proc.returncode)
+            stdout = proc.stdout
+            stderr = proc.stderr
+        except subprocess.TimeoutExpired as exc:
+            timed_out = True
+            stdout = exc.stdout or ""
+            stderr = exc.stderr or ""
+
+        worker_result = _load_station_worker_result(result_path)
+        if (
+            not timed_out
+            and exit_code == 0
+            and worker_result is not None
+            and _station_result_outputs_are_valid(worker_result, output_root=output_root)
+        ):
+            return worker_result
+
+        if worker_result is not None and worker_result.get("status") != "success":
+            return worker_result
+
+        return _failed_subprocess_result(
+            candidate=candidate,
+            copied_entry=copied_entry,
+            timed_out=timed_out,
+            exit_code=exit_code,
+            stderr=stderr,
+            stdout=stdout,
+            worker_result=worker_result,
+        )
+
+
+def _process_station_candidate_in_worker(
+    *,
+    candidate: StationCandidate,
+    copied_entry: dict[str, Any],
+    canonical_dir: Path,
+    quality_dir: Path,
+    domains_dir: Path | None,
+    output_root: Path,
+) -> dict[str, Any]:
     start = time.perf_counter()
     archived_raw_path = Path(copied_entry["archived_raw_path_abs"])
     canonical_path = canonical_dir / f"{candidate.station_id}_cleaned.csv"
@@ -864,7 +932,7 @@ def _process_station_candidate(
             "error_type": "",
             "error_message": "",
         }
-    except Exception as exc:
+    except BaseException as exc:
         return {
             "station_id": candidate.station_id,
             "status": "failed",
@@ -882,6 +950,176 @@ def _process_station_candidate(
             "error_type": exc.__class__.__name__,
             "error_message": str(exc),
         }
+
+
+def _station_worker_command(
+    *,
+    candidate: StationCandidate,
+    copied_entry: dict[str, Any],
+    canonical_dir: Path,
+    quality_dir: Path,
+    domains_dir: Path | None,
+    output_root: Path,
+    result_path: Path,
+) -> list[str]:
+    return [
+        sys.executable,
+        "-m",
+        "noaa_spec.validation",
+        "_station-worker",
+        "--station-id",
+        candidate.station_id,
+        "--source-path",
+        str(candidate.source_path),
+        "--source-format",
+        candidate.source_format,
+        "--file-size-bytes",
+        str(candidate.file_size_bytes),
+        "--size-stratum",
+        candidate.size_stratum or "",
+        "--selection-score",
+        str(candidate.selection_score),
+        "--archived-raw-path",
+        str(copied_entry["archived_raw_path_abs"]),
+        "--archived-raw-input-path",
+        str(copied_entry["archived_raw_input_path"]),
+        "--raw-sha256",
+        str(copied_entry["raw_sha256"]),
+        "--original-source-path",
+        str(copied_entry["source_path"]),
+        "--canonical-dir",
+        str(canonical_dir),
+        "--quality-dir",
+        str(quality_dir),
+        "--output-root",
+        str(output_root),
+        "--result-path",
+        str(result_path),
+        *([] if domains_dir is None else ["--domains-dir", str(domains_dir)]),
+    ]
+
+
+def _station_worker_env() -> dict[str, str]:
+    env = os.environ.copy()
+    src_root = Path(__file__).resolve().parents[1]
+    existing = env.get("PYTHONPATH", "")
+    pythonpath_parts = [str(src_root)]
+    if existing:
+        pythonpath_parts.append(existing)
+    env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
+    return env
+
+
+def _station_worker_timeout_seconds() -> int | None:
+    value = os.environ.get("NOAA_SPEC_VALIDATION_STATION_TIMEOUT_SECONDS", "").strip()
+    if not value:
+        return None
+    try:
+        timeout = int(value)
+    except ValueError:
+        return None
+    return timeout if timeout > 0 else None
+
+
+def _load_station_worker_result(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if payload.get("schema_version") != WORKER_RESULT_SCHEMA_VERSION:
+        return None
+    result = payload.get("result")
+    return result if isinstance(result, dict) else None
+
+
+def _station_result_outputs_are_valid(result: dict[str, Any], *, output_root: Path) -> bool:
+    if result.get("status") != "success":
+        return True
+    required = [
+        result.get("canonical_output_path"),
+        result.get("quality_report_path"),
+    ]
+    if result.get("canonical_output_sha256"):
+        canonical_path = output_root / str(result.get("canonical_output_path"))
+        if not canonical_path.exists():
+            return False
+        if _sha256_file(canonical_path) != str(result["canonical_output_sha256"]):
+            return False
+    return all(bool(path) and (output_root / str(path)).exists() for path in required)
+
+
+def _failed_subprocess_result(
+    *,
+    candidate: StationCandidate,
+    copied_entry: dict[str, Any],
+    timed_out: bool,
+    exit_code: int | None,
+    stderr: str,
+    stdout: str,
+    worker_result: dict[str, Any] | None,
+) -> dict[str, Any]:
+    error_type = _subprocess_failure_type(exit_code=exit_code, timed_out=timed_out)
+    if worker_result is not None and worker_result.get("status") == "success":
+        error_type = "output_validation"
+        error_message = (
+            "station worker exited successfully but required outputs or checksums "
+            "could not be validated"
+        )
+    else:
+        error_message = _summarize_subprocess_error(
+            stderr=stderr,
+            stdout=stdout,
+            timed_out=timed_out,
+        )
+    return {
+        "station_id": candidate.station_id,
+        "status": "failed",
+        "input_rows": 0,
+        "output_rows": 0,
+        "runtime_seconds": 0.0,
+        "archived_raw_input_path": copied_entry["archived_raw_input_path"],
+        "raw_sha256": copied_entry["raw_sha256"],
+        "canonical_output_path": "",
+        "canonical_output_sha256": "",
+        "quality_report_path": "",
+        "domain_outputs_generated": False,
+        "warnings_count": 0,
+        "strict_parse_summary": {},
+        "error_type": error_type,
+        "error_message": error_message,
+    }
+
+
+def _subprocess_failure_type(*, exit_code: int | None, timed_out: bool) -> str:
+    if timed_out:
+        return "subprocess_timeout"
+    if exit_code is None:
+        return "subprocess_unknown"
+    if exit_code < 0 or exit_code in {134, 136, 137, 139}:
+        return "child_process_crash"
+    if exit_code == 0:
+        return "worker_result_missing"
+    return "child_process_nonzero_exit"
+
+
+def _summarize_subprocess_error(
+    *,
+    stderr: str,
+    stdout: str,
+    timed_out: bool,
+) -> str:
+    if timed_out:
+        return "station worker timed out"
+    text = stderr.strip() or stdout.strip()
+    if not text:
+        return "station worker exited without error output"
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    summary = lines[-1] if lines else text
+    if len(summary) > 500:
+        summary = summary[:497] + "..."
+    return summary
 
 
 def _write_domain_outputs(
@@ -1272,3 +1510,61 @@ def _dependency_lock_hash() -> str | None:
     if not poetry_lock.exists():
         return None
     return _sha256_file(poetry_lock)
+
+
+def _run_station_worker_cli(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="python -m noaa_spec.validation _station-worker")
+    parser.add_argument("command", choices=("_station-worker",))
+    parser.add_argument("--station-id", required=True)
+    parser.add_argument("--source-path", required=True, type=Path)
+    parser.add_argument("--source-format", required=True)
+    parser.add_argument("--file-size-bytes", required=True, type=int)
+    parser.add_argument("--size-stratum", default="")
+    parser.add_argument("--selection-score", required=True, type=int)
+    parser.add_argument("--archived-raw-path", required=True, type=Path)
+    parser.add_argument("--archived-raw-input-path", required=True)
+    parser.add_argument("--raw-sha256", required=True)
+    parser.add_argument("--original-source-path", required=True)
+    parser.add_argument("--canonical-dir", required=True, type=Path)
+    parser.add_argument("--quality-dir", required=True, type=Path)
+    parser.add_argument("--domains-dir", type=Path, default=None)
+    parser.add_argument("--output-root", required=True, type=Path)
+    parser.add_argument("--result-path", required=True, type=Path)
+    args = parser.parse_args(argv)
+
+    candidate = StationCandidate(
+        station_id=args.station_id,
+        source_path=args.source_path,
+        source_format=args.source_format,
+        file_size_bytes=args.file_size_bytes,
+        size_stratum=args.size_stratum or None,
+        selection_score=args.selection_score,
+    )
+    copied_entry = {
+        "station_id": args.station_id,
+        "source_path": args.original_source_path,
+        "source_format": args.source_format,
+        "archived_raw_input_path": args.archived_raw_input_path,
+        "archived_raw_path_abs": args.archived_raw_path,
+        "raw_sha256": args.raw_sha256,
+    }
+    result = _process_station_candidate_in_worker(
+        candidate=candidate,
+        copied_entry=copied_entry,
+        canonical_dir=args.canonical_dir,
+        quality_dir=args.quality_dir,
+        domains_dir=args.domains_dir,
+        output_root=args.output_root,
+    )
+    _write_json(
+        args.result_path,
+        {
+            "schema_version": WORKER_RESULT_SCHEMA_VERSION,
+            "result": result,
+        },
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_run_station_worker_cli(sys.argv[1:]))
