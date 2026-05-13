@@ -28,6 +28,10 @@ from .projections import project_domains
 
 DEFAULT_VALIDATION_COUNT = 100
 DEFAULT_VALIDATION_SEED = 20260430
+STATION_CHUNKING_ROW_COUNT_THRESHOLD = 250_000
+STATION_CHUNK_ROW_COUNT = 250_000
+STATION_CHUNKING_THRESHOLD_ENV = "NOAA_STATION_CHUNKING_ROW_COUNT_THRESHOLD"
+STATION_CHUNK_ROW_COUNT_ENV = "NOAA_STATION_CHUNK_ROW_COUNT"
 DOI_PLACEHOLDER = "TO_BE_ADDED_BEFORE_JOSS_SUBMISSION"
 REPRODUCIBILITY_BOUNDARY_NOTE = (
     "This artifact provides operational smoke validation for a stratified "
@@ -72,6 +76,13 @@ class StationCandidate:
     file_size_bytes: int
     size_stratum: str | None
     selection_score: int
+
+
+@dataclass(frozen=True)
+class StationChunkPlan:
+    chunk_index: int
+    start_row: int
+    end_row: int
 
 
 def default_build_id() -> str:
@@ -856,6 +867,37 @@ def _process_station_candidate_in_worker(
     domains_dir: Path | None,
     output_root: Path,
 ) -> dict[str, Any]:
+    archived_raw_path = Path(copied_entry["archived_raw_path_abs"])
+    row_count = _station_row_count(archived_raw_path, candidate.source_format)
+    if row_count > _station_chunking_row_count_threshold():
+        return _process_station_candidate_chunked(
+            candidate=candidate,
+            copied_entry=copied_entry,
+            canonical_dir=canonical_dir,
+            quality_dir=quality_dir,
+            domains_dir=domains_dir,
+            output_root=output_root,
+            row_count=row_count,
+        )
+    return _process_station_candidate_whole_file(
+        candidate=candidate,
+        copied_entry=copied_entry,
+        canonical_dir=canonical_dir,
+        quality_dir=quality_dir,
+        domains_dir=domains_dir,
+        output_root=output_root,
+    )
+
+
+def _process_station_candidate_whole_file(
+    *,
+    candidate: StationCandidate,
+    copied_entry: dict[str, Any],
+    canonical_dir: Path,
+    quality_dir: Path,
+    domains_dir: Path | None,
+    output_root: Path,
+) -> dict[str, Any]:
     start = time.perf_counter()
     archived_raw_path = Path(copied_entry["archived_raw_path_abs"])
     canonical_path = canonical_dir / f"{candidate.station_id}_cleaned.csv"
@@ -1122,6 +1164,152 @@ def _summarize_subprocess_error(
     return summary
 
 
+def _process_station_candidate_chunked(
+    *,
+    candidate: StationCandidate,
+    copied_entry: dict[str, Any],
+    canonical_dir: Path,
+    quality_dir: Path,
+    domains_dir: Path | None,
+    output_root: Path,
+    row_count: int,
+) -> dict[str, Any]:
+    start = time.perf_counter()
+    archived_raw_path = Path(copied_entry["archived_raw_path_abs"])
+    canonical_path = canonical_dir / f"{candidate.station_id}_cleaned.csv"
+    quality_report_path = quality_dir / f"{candidate.station_id}_quality_report.json"
+    runtime_root = output_root / ".runtime" / "station_chunks" / candidate.station_id
+    if runtime_root.exists():
+        shutil.rmtree(runtime_root)
+    cleaned_chunks_dir = runtime_root / "cleaned"
+    domain_chunks_dir = runtime_root / "domains"
+    cleaned_chunks_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        chunk_paths: list[Path] = []
+        chunk_schemas: list[tuple[str, ...]] = []
+        strict_summaries: list[dict[str, Any]] = []
+        parse_error_rows = 0
+        rows_with_any_usable_metric = 0
+        output_rows = 0
+        plans = _plan_station_chunks(row_count)
+
+        for plan, raw_chunk in zip(
+            plans,
+            _iter_station_data_chunks(archived_raw_path, candidate.source_format),
+            strict=True,
+        ):
+            cleaned_chunk = clean_noaa_dataframe(raw_chunk, keep_raw=False, strict_mode=True)
+            output_rows += int(len(cleaned_chunk))
+            if "__parse_error" in cleaned_chunk.columns:
+                parse_error_rows += int(cleaned_chunk["__parse_error"].notna().sum())
+            if "row_has_any_usable_metric" in cleaned_chunk.columns:
+                rows_with_any_usable_metric += int(cleaned_chunk["row_has_any_usable_metric"].sum())
+            strict_summaries.append(cleaned_chunk.attrs.get("strict_parse_summary", {}))
+            chunk_schemas.append(tuple(cleaned_chunk.columns))
+            chunk_path = cleaned_chunks_dir / f"chunk_{plan.chunk_index:05d}.csv"
+            write_deterministic_csv(
+                cleaned_chunk,
+                chunk_path,
+                sort_by=("STATION", "DATE"),
+                float_format="%.1f",
+            )
+            chunk_paths.append(chunk_path)
+
+        if len(chunk_paths) != len(plans):
+            raise RuntimeError(
+                f"Chunk execution mismatch for station {candidate.station_id}: "
+                f"planned={len(plans)} cleaned={len(chunk_paths)}"
+            )
+
+        canonical_schema = _union_chunk_columns(chunk_schemas)
+        _stream_collate_csv_chunks(
+            chunk_paths=chunk_paths,
+            output_path=canonical_path,
+            aligned_columns=canonical_schema,
+            float_format="%.1f",
+        )
+        domain_output_paths = (
+            _write_chunked_domain_outputs(
+                chunk_paths=chunk_paths,
+                aligned_columns=canonical_schema,
+                station_id=candidate.station_id,
+                domains_dir=domains_dir,
+                runtime_dir=domain_chunks_dir,
+            )
+            if domains_dir is not None
+            else {}
+        )
+        strict_summary = _merge_strict_parse_summaries(strict_summaries)
+        warnings_count = (
+            parse_error_rows
+            + int(strict_summary.get("skipped_encoded_column_count", 0))
+            + int(strict_summary.get("token_rejection_count", 0))
+        )
+        _write_json(
+            quality_report_path,
+            {
+                "station_id": candidate.station_id,
+                "original_source_path": copied_entry["source_path"],
+                "archived_raw_input_path": copied_entry["archived_raw_input_path"],
+                "raw_sha256": copied_entry["raw_sha256"],
+                "input_rows": row_count,
+                "output_rows": output_rows,
+                "parse_error_rows": parse_error_rows,
+                "strict_parse_summary": strict_summary,
+                "rows_with_any_usable_metric": rows_with_any_usable_metric,
+                "domain_output_paths": {
+                    domain: _relative_to_root(path, output_root)
+                    for domain, path in domain_output_paths.items()
+                },
+                "warnings_count": warnings_count,
+                "chunked_processing": {
+                    "chunk_count": len(chunk_paths),
+                    "chunk_row_count": _station_chunk_row_count(),
+                    "chunking_threshold": _station_chunking_row_count_threshold(),
+                },
+            },
+        )
+        return {
+            "station_id": candidate.station_id,
+            "status": "success",
+            "input_rows": row_count,
+            "output_rows": output_rows,
+            "runtime_seconds": time.perf_counter() - start,
+            "archived_raw_input_path": copied_entry["archived_raw_input_path"],
+            "raw_sha256": copied_entry["raw_sha256"],
+            "canonical_output_path": _relative_to_root(canonical_path, output_root),
+            "canonical_output_sha256": _sha256_file(canonical_path),
+            "quality_report_path": _relative_to_root(quality_report_path, output_root),
+            "domain_outputs_generated": bool(domain_output_paths),
+            "warnings_count": warnings_count,
+            "strict_parse_summary": strict_summary,
+            "error_type": "",
+            "error_message": "",
+        }
+    except BaseException as exc:
+        return {
+            "station_id": candidate.station_id,
+            "status": "failed",
+            "input_rows": 0,
+            "output_rows": 0,
+            "runtime_seconds": time.perf_counter() - start,
+            "archived_raw_input_path": copied_entry["archived_raw_input_path"],
+            "raw_sha256": copied_entry["raw_sha256"],
+            "canonical_output_path": "",
+            "canonical_output_sha256": "",
+            "quality_report_path": "",
+            "domain_outputs_generated": False,
+            "warnings_count": 0,
+            "strict_parse_summary": {},
+            "error_type": exc.__class__.__name__,
+            "error_message": str(exc),
+        }
+    finally:
+        if runtime_root.exists():
+            shutil.rmtree(runtime_root)
+
+
 def _write_domain_outputs(
     *,
     cleaned: pd.DataFrame,
@@ -1143,6 +1331,292 @@ def _write_domain_outputs(
         )
         written[domain] = output_path
     return written
+
+
+def _write_chunked_domain_outputs(
+    *,
+    chunk_paths: list[Path],
+    aligned_columns: tuple[str, ...],
+    station_id: str,
+    domains_dir: Path | None,
+    runtime_dir: Path,
+) -> dict[str, Path]:
+    if domains_dir is None:
+        return {}
+
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    domain_chunk_paths: dict[str, list[Path]] = {}
+    domain_schemas: dict[str, list[tuple[str, ...]]] = {}
+    for chunk_index, cleaned_chunk in enumerate(
+        _iter_aligned_cleaned_chunks(chunk_paths, aligned_columns=aligned_columns)
+    ):
+        for domain, frame in project_domains(cleaned_chunk).items():
+            domain_dir = runtime_dir / domain
+            domain_dir.mkdir(parents=True, exist_ok=True)
+            chunk_path = domain_dir / f"chunk_{chunk_index:05d}.csv"
+            write_deterministic_csv(
+                frame,
+                chunk_path,
+                sort_by=("STATION", "DATE"),
+                float_format="%.1f",
+            )
+            domain_chunk_paths.setdefault(domain, []).append(chunk_path)
+            domain_schemas.setdefault(domain, []).append(tuple(frame.columns))
+
+    written: dict[str, Path] = {}
+    for domain, paths in sorted(domain_chunk_paths.items()):
+        domain_dir = domains_dir / domain
+        output_path = domain_dir / f"{station_id}_{domain}.csv"
+        _stream_collate_csv_chunks(
+            chunk_paths=paths,
+            output_path=output_path,
+            aligned_columns=_union_chunk_columns(domain_schemas[domain]),
+            float_format="%.1f",
+        )
+        written[domain] = output_path
+    return written
+
+
+def _station_row_count(source_path: Path, source_format: str) -> int:
+    if source_format in {"csv", "csv.gz"}:
+        opener: Any
+        if source_format == "csv.gz":
+            import gzip
+
+            opener = gzip.open
+        else:
+            opener = open
+        with opener(source_path, "rt", encoding="utf-8", newline="") as handle:
+            return max(sum(1 for _ in handle) - 1, 0)
+    if source_format == "parquet":
+        import pyarrow.parquet as pq
+
+        return int(pq.ParquetFile(source_path).metadata.num_rows)
+    raise ValueError(f"Unsupported source format: {source_format}")
+
+
+def _iter_station_data_chunks(source_path: Path, source_format: str) -> Any:
+    chunk_size = _station_chunk_row_count()
+    if source_format == "csv":
+        return pd.read_csv(source_path, dtype=str, chunksize=chunk_size)
+    if source_format == "csv.gz":
+        return pd.read_csv(
+            source_path,
+            dtype=str,
+            compression="infer",
+            chunksize=chunk_size,
+        )
+    if source_format == "parquet":
+        import pyarrow.parquet as pq
+
+        parquet_file = pq.ParquetFile(source_path)
+        return (
+            batch.to_pandas(split_blocks=True, self_destruct=True).astype("string")
+            for batch in parquet_file.iter_batches(batch_size=chunk_size)
+        )
+    raise ValueError(f"Unsupported source format: {source_format}")
+
+
+def _station_chunking_row_count_threshold() -> int:
+    return _runtime_positive_int(
+        env_name=STATION_CHUNKING_THRESHOLD_ENV,
+        default=STATION_CHUNKING_ROW_COUNT_THRESHOLD,
+    )
+
+
+def _station_chunk_row_count() -> int:
+    return _runtime_positive_int(
+        env_name=STATION_CHUNK_ROW_COUNT_ENV,
+        default=STATION_CHUNK_ROW_COUNT,
+    )
+
+
+def _runtime_positive_int(*, env_name: str, default: int) -> int:
+    raw_value = os.environ.get(env_name, "").strip()
+    if raw_value == "":
+        return default
+    value = int(raw_value)
+    if value <= 0:
+        raise ValueError(f"{env_name} must be a positive integer when set")
+    return value
+
+
+def _plan_station_chunks(row_count: int) -> tuple[StationChunkPlan, ...]:
+    if row_count < 0:
+        raise ValueError("row_count must be zero or greater")
+    chunk_size = _station_chunk_row_count()
+    plans: list[StationChunkPlan] = []
+    start_row = 0
+    chunk_index = 0
+    while start_row < row_count:
+        end_row = min(start_row + chunk_size, row_count)
+        plans.append(
+            StationChunkPlan(
+                chunk_index=chunk_index,
+                start_row=start_row,
+                end_row=end_row,
+            )
+        )
+        start_row = end_row
+        chunk_index += 1
+    return tuple(plans)
+
+
+def _union_chunk_columns(chunk_schemas: list[tuple[str, ...]]) -> tuple[str, ...]:
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for schema in chunk_schemas:
+        for column in schema:
+            if column in seen:
+                continue
+            seen.add(column)
+            ordered.append(column)
+    return tuple(ordered)
+
+
+def _align_chunk_columns(frame: pd.DataFrame, aligned_columns: tuple[str, ...]) -> pd.DataFrame:
+    aligned = frame.copy()
+    schema_changed = tuple(aligned.columns) != aligned_columns
+    for column in aligned_columns:
+        if column not in aligned.columns:
+            aligned[column] = pd.NA
+    aligned = aligned.loc[:, list(aligned_columns)]
+    if schema_changed:
+        aligned = _recompute_row_usability_summary(aligned)
+    return aligned
+
+
+def _recompute_row_usability_summary(frame: pd.DataFrame) -> pd.DataFrame:
+    qc_pass_columns = [column for column in frame.columns if column.endswith("__qc_pass")]
+    if not qc_pass_columns:
+        return frame
+    recomputed = frame.copy()
+    qc_pass_frame = recomputed[qc_pass_columns].fillna(False).astype(bool)
+    usable_metric_count = qc_pass_frame.sum(axis=1)
+    recomputed["row_has_any_usable_metric"] = qc_pass_frame.any(axis=1)
+    recomputed["usable_metric_count"] = usable_metric_count
+    recomputed["usable_metric_fraction"] = (
+        usable_metric_count / len(qc_pass_columns) if qc_pass_columns else 0.0
+    )
+    return recomputed
+
+
+def _iter_aligned_cleaned_chunks(
+    chunk_paths: list[Path],
+    *,
+    aligned_columns: tuple[str, ...],
+) -> Any:
+    for chunk_path in chunk_paths:
+        yield _align_chunk_columns(
+            pd.read_csv(chunk_path, dtype=str, low_memory=False),
+            aligned_columns,
+        )
+
+
+def _stream_collate_csv_chunks(
+    *,
+    chunk_paths: list[Path],
+    output_path: Path,
+    aligned_columns: tuple[str, ...],
+    float_format: str | None,
+) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = output_path.parent / f".{output_path.name}.tmp-{os.getpid()}"
+    try:
+        wrote_header = False
+        with tmp_path.open("w", encoding="utf-8", newline="") as handle:
+            for chunk in _iter_aligned_cleaned_chunks(
+                chunk_paths,
+                aligned_columns=aligned_columns,
+            ):
+                if "usable_metric_fraction" in chunk.columns:
+                    chunk["usable_metric_fraction"] = chunk["usable_metric_fraction"].map(
+                        _format_usable_metric_fraction
+                    )
+                chunk.to_csv(
+                    handle,
+                    index=False,
+                    header=not wrote_header,
+                    lineterminator="\n",
+                    na_rep="",
+                    encoding="utf-8",
+                    float_format=float_format,
+                )
+                wrote_header = True
+        os.replace(tmp_path, output_path)
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+def _format_usable_metric_fraction(value: object) -> object:
+    if pd.isna(value) or value == "":
+        return value
+    formatted = f"{float(value):.6f}".rstrip("0").rstrip(".")
+    if "." not in formatted:
+        return f"{formatted}.0"
+    return formatted
+
+
+def _merge_strict_parse_summaries(summaries: list[dict[str, Any]]) -> dict[str, Any]:
+    malformed_section_identifier_columns: set[str] = set()
+    malformed_identifier_columns: set[str] = set()
+    unsupported_identifier_columns: set[str] = set()
+    supported_prefix_family_identifiers: set[str] = set()
+    skipped_encoded_columns: set[str] = set()
+    token_rejections_by_identifier: Counter[str] = Counter()
+    token_rejections_by_reason: Counter[str] = Counter()
+    token_rejections_by_identifier_part: Counter[str] = Counter()
+    token_rejection_examples: list[dict[str, Any]] = []
+    token_rejection_count = 0
+    token_rejection_suppressed_log_count = 0
+
+    for summary in summaries:
+        malformed_section_identifier_columns.update(
+            str(value) for value in summary.get("malformed_section_identifier_columns", ())
+        )
+        malformed_identifier_columns.update(
+            str(value) for value in summary.get("malformed_identifier_columns", ())
+        )
+        unsupported_identifier_columns.update(
+            str(value) for value in summary.get("unsupported_identifier_columns", ())
+        )
+        supported_prefix_family_identifiers.update(
+            str(value) for value in summary.get("supported_prefix_family_identifiers", ())
+        )
+        skipped_encoded_columns.update(
+            str(value) for value in summary.get("skipped_encoded_columns", ())
+        )
+        token_rejections_by_identifier.update(summary.get("token_rejections_by_identifier", {}))
+        token_rejections_by_reason.update(summary.get("token_rejections_by_reason", {}))
+        token_rejections_by_identifier_part.update(
+            summary.get("token_rejections_by_identifier_part", {})
+        )
+        token_rejection_count += int(summary.get("token_rejection_count", 0) or 0)
+        token_rejection_suppressed_log_count += int(
+            summary.get("token_rejection_suppressed_log_count", 0) or 0
+        )
+        token_rejection_examples.extend(
+            dict(example) for example in summary.get("token_rejection_examples", ())
+        )
+
+    return {
+        "malformed_section_identifier_columns": tuple(sorted(malformed_section_identifier_columns)),
+        "malformed_identifier_columns": tuple(sorted(malformed_identifier_columns)),
+        "unsupported_identifier_columns": tuple(sorted(unsupported_identifier_columns)),
+        "unknown_identifier_columns": tuple(sorted(unsupported_identifier_columns)),
+        "supported_prefix_family_identifiers": tuple(sorted(supported_prefix_family_identifiers)),
+        "skipped_encoded_columns": tuple(sorted(skipped_encoded_columns)),
+        "skipped_encoded_column_count": len(skipped_encoded_columns),
+        "token_rejection_count": token_rejection_count,
+        "token_rejections_by_identifier": dict(sorted(token_rejections_by_identifier.items())),
+        "token_rejections_by_reason": dict(sorted(token_rejections_by_reason.items())),
+        "token_rejections_by_identifier_part": dict(
+            sorted(token_rejections_by_identifier_part.items())
+        ),
+        "token_rejection_examples": token_rejection_examples[:10],
+        "token_rejection_suppressed_log_count": token_rejection_suppressed_log_count,
+    }
 
 
 def _not_run_result(

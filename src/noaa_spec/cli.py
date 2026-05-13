@@ -218,8 +218,14 @@ def _add_dev_commands(
     validate_parser.add_argument(
         "--continue-on-error",
         action="store_true",
-        default=False,
+        default=True,
         help="Continue after station-level failures and preserve partial results.",
+    )
+    validate_parser.add_argument(
+        "--stop-on-error",
+        dest="continue_on_error",
+        action="store_false",
+        help="Stop after the first station-level failure.",
     )
     validate_parser.add_argument(
         "--emit-domains",
@@ -283,8 +289,14 @@ def _add_dev_commands(
     bundle_parser.add_argument(
         "--continue-on-error",
         action="store_true",
-        default=False,
+        default=True,
         help="Continue after station-level failures and preserve partial results.",
+    )
+    bundle_parser.add_argument(
+        "--stop-on-error",
+        dest="continue_on_error",
+        action="store_false",
+        help="Stop after the first station-level failure.",
     )
     bundle_parser.add_argument(
         "--emit-domains",

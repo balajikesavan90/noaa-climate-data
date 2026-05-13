@@ -337,3 +337,84 @@ def test_validation_worker_crash_is_recorded_without_losing_manifests(
     assert "station worker exited without error output" in failed["error_message"]
     assert (output_root / "station_selection_manifest.csv").exists()
     assert (output_root / "summary.md").exists()
+
+
+def test_validation_cli_attempts_all_selected_stations_by_default(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    input_root = tmp_path / "input"
+    output_root = tmp_path / "output"
+    input_root.mkdir()
+    _make_station_pool(input_root, station_count=4)
+
+    monkeypatch.setattr(
+        validation,
+        "_station_worker_command",
+        lambda **_: [sys.executable, "-c", "import sys; sys.exit(137)"],
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "prog",
+            "dev",
+            "build-validation-bundle",
+            "--source-root",
+            str(input_root),
+            "--output-root",
+            str(output_root),
+            "--count",
+            "4",
+            "--seed",
+            "20260430",
+            "--build-id",
+            "cli-continue-build",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main()
+
+    assert excinfo.value.code == 1
+    station_results = pd.read_csv(output_root / "station_results.csv")
+    assert len(station_results) == 4
+    assert set(station_results["status"]) == {"failed"}
+    assert "not_run" not in set(station_results["status"])
+
+
+def test_validation_chunked_station_processing_writes_outputs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    input_root = tmp_path / "input"
+    output_root = tmp_path / "output"
+    input_root.mkdir()
+    _make_station_pool(input_root, station_count=4)
+    monkeypatch.setenv("NOAA_STATION_CHUNKING_ROW_COUNT_THRESHOLD", "1")
+    monkeypatch.setenv("NOAA_STATION_CHUNK_ROW_COUNT", "1")
+
+    result = validation.run_validation_workflow(
+        source_root=input_root,
+        output_root=output_root,
+        count=4,
+        seed=20260430,
+        build_id="chunked-build",
+        emit_domains=True,
+    )
+
+    assert result["failed"] is False
+    station_results = pd.read_csv(output_root / "station_results.csv")
+    assert set(station_results["status"]) == {"success"}
+    chunked_report_count = 0
+    for _, row in station_results.iterrows():
+        canonical_path = output_root / str(row["canonical_output_path"])
+        quality_path = output_root / str(row["quality_report_path"])
+        assert canonical_path.exists()
+        assert quality_path.exists()
+        payload = json.loads(quality_path.read_text(encoding="utf-8"))
+        if "chunked_processing" in payload:
+            chunked_report_count += 1
+            assert payload["chunked_processing"]["chunk_row_count"] == 1
+    assert chunked_report_count > 0
+    assert any((output_root / "domains" / "wind").glob("*_wind.csv"))
