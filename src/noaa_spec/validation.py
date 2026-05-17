@@ -2040,7 +2040,7 @@ def _dependency_lock_hash() -> str | None:
 
 
 def _run_station_worker_cli(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="python -m noaa_spec.validation _station-worker")
+    parser = argparse.ArgumentParser(prog="python3 -m noaa_spec.validation _station-worker")
     parser.add_argument("command", choices=("_station-worker",))
     parser.add_argument("--station-id", required=True)
     parser.add_argument("--source-path", required=True, type=Path)

@@ -73,14 +73,14 @@ URLs and upstream checksums are present in the artifact metadata.
 Verify the extracted DOI artifact from the repository root:
 
 ```bash
-python scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260510
+python3 scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260510
 ```
 
 Inspect the manifests:
 
 ```bash
-python -m json.tool artifacts/validation_100_station/build_20260510/run_manifest.json
-python -m json.tool artifacts/validation_100_station/build_20260510/archive_manifest.json
+python3 -m json.tool artifacts/validation_100_station/build_20260510/run_manifest.json
+python3 -m json.tool artifacts/validation_100_station/build_20260510/archive_manifest.json
 sed -n '1,40p' artifacts/validation_100_station/build_20260510/station_results.csv
 ```
 

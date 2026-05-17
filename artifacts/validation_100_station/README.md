@@ -106,7 +106,7 @@ Frozen Docker metadata:
 From the repository root, verify the extracted DOI artifact:
 
 ```bash
-python scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260510
+python3 scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260510
 ```
 
 This verifies `checksums.txt`, required files, the expected 100 raw inputs, 100
@@ -116,8 +116,8 @@ row-count parity, and `selected_station_metadata.csv`.
 Inspect the main manifests:
 
 ```bash
-python -m json.tool artifacts/validation_100_station/build_20260510/run_manifest.json
-python -m json.tool artifacts/validation_100_station/build_20260510/archive_manifest.json
+python3 -m json.tool artifacts/validation_100_station/build_20260510/run_manifest.json
+python3 -m json.tool artifacts/validation_100_station/build_20260510/archive_manifest.json
 sed -n '1,40p' artifacts/validation_100_station/build_20260510/station_results.csv
 ```
 

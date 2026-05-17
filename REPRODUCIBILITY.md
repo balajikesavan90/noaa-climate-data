@@ -106,7 +106,7 @@ Local verification:
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e .
+python3 -m pip install -e .
 noaa-spec clean reproducibility/minimal/station_raw.csv /tmp/noaa-spec-sample.csv
 sha256sum /tmp/noaa-spec-sample.csv
 ```

@@ -270,8 +270,8 @@ macOS or Linux:
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -e .
+python3 -m pip install --upgrade pip setuptools wheel
+python3 -m pip install -e .
 ```
 
 Use `python3.11` instead of `python3.12` if that is your supported local
@@ -293,7 +293,7 @@ interpreter.
 If the console script is not on `PATH`, use:
 
 ```bash
-python -m noaa_spec.cli clean INPUT.csv OUTPUT.csv
+python3 -m noaa_spec.cli clean INPUT.csv OUTPUT.csv
 ```
 
 ## Reproducibility Fixtures
@@ -340,7 +340,7 @@ command should produce no output. The checksum should match the corresponding
 
 ```bash
 source .venv/bin/activate
-python -m pip install -e .
-python -m pip install pytest
-python -m pytest tests -v
+python3 -m pip install -e .
+python3 -m pip install pytest
+python3 -m pytest tests -v
 ```
