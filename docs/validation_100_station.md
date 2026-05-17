@@ -42,6 +42,10 @@ Canonical build: `build_20260510`
 
 DOI: `TODO_BEFORE_DOI`
 
+Docker image: `noaa-spec-review:latest`
+
+Docker image digest: `sha256:dbbaa759a8ccc1ae7f86ccbc1189771643fa56d0fa798e29552c415c04dd030e`
+
 Required contents:
 
 - selected 100 station raw parquet input files

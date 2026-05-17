@@ -93,6 +93,12 @@ included in the external DOI artifact:
 The current DOI placeholder is `TODO_BEFORE_DOI` and must be replaced before
 the final frozen archive is cited.
 
+Frozen Docker metadata:
+
+* repository: `noaa-spec-review`
+* tag: `latest`
+* digest: `sha256:dbbaa759a8ccc1ae7f86ccbc1189771643fa56d0fa798e29552c415c04dd030e`
+
 ---
 
 # Reviewer Quickstart

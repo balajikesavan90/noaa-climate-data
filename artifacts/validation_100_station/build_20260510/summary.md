@@ -37,6 +37,8 @@ The frozen validation inputs are archived raw parquet files. The artifact suppor
 - Package version: 1.0.0
 - Repo commit SHA: 03d378f10b8f6da683051bac712d03e75669ff94
 - Git dirty status: clean
+- Docker image: noaa-spec-review:latest
+- Docker image digest: sha256:dbbaa759a8ccc1ae7f86ccbc1189771643fa56d0fa798e29552c415c04dd030e
 
 ## Results summary
 - Stations succeeded: 100

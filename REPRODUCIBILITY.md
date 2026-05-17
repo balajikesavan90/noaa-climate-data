@@ -46,6 +46,10 @@ docker build -f Dockerfile -t noaa-spec-review .
 docker run --rm noaa-spec-review bash scripts/verify_reproducibility.sh
 ```
 
+The 100-station validation artifact records the inspected local review image as
+`noaa-spec-review:latest` with digest
+`sha256:dbbaa759a8ccc1ae7f86ccbc1189771643fa56d0fa798e29552c415c04dd030e`.
+
 Expected result: one `PASS` line for each tracked `station_cleaned_expected.csv`
 entry in `reproducibility/checksums.sha256`, followed by:
 

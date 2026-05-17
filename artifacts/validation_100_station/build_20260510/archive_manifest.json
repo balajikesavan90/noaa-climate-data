@@ -31,6 +31,9 @@
       "total_bytes": 588176337
     }
   ],
+  "docker_image_digest": "sha256:dbbaa759a8ccc1ae7f86ccbc1189771643fa56d0fa798e29552c415c04dd030e",
+  "docker_image_repository": "noaa-spec-review",
+  "docker_image_tag": "latest",
   "doi": "TODO_BEFORE_DOI",
   "excluded_prior_builds": [
     "build_20260503"
@@ -51,6 +54,6 @@
     "strict_token_rejection_explanation.md",
     "summary.md"
   ],
-  "total_bytes": 47452670694,
+  "total_bytes": 47452671067,
   "total_files": 1112
 }
