@@ -1,9 +1,13 @@
 {
-  "DOI": "TO_BE_ADDED_BEFORE_JOSS_SUBMISSION",
   "artifact_name": "validation_100_station_bundle",
+  "artifact_root": "artifacts/validation_100_station/build_20260510",
   "artifact_version": "20260510",
   "build_id": "20260510",
+  "canonical": true,
   "checksum_algorithm": "SHA256",
+  "checksum_file": "checksums.txt",
+  "checksum_file_excluded_from_checksums": true,
+  "claim_scope": "Operational reproducibility from archived validation inputs, not full upstream NOAA reconstruction",
   "created_utc": "2026-05-13T23:58:41Z",
   "directory_inventory": [
     {
@@ -27,18 +31,26 @@
       "total_bytes": 588176337
     }
   ],
-  "intended_archive": "external DOI archive before submission",
+  "doi": "TODO_BEFORE_DOI",
+  "excluded_prior_builds": [
+    "build_20260503"
+  ],
+  "intended_archive": "external DOI archive",
   "repo_commit_sha": "03d378f10b8f6da683051bac712d03e75669ff94",
   "top_level_files": [
+    "aggregate_quality_summary.json",
+    "aggregate_quality_summary.md",
     "archive_manifest.json",
     "checksums.txt",
     "run_manifest.json",
+    "selected_station_metadata.csv",
     "station_results.csv",
     "station_selection_manifest.csv",
     "strict_parse_summary_report.json",
     "strict_parse_summary_report.md",
+    "strict_token_rejection_explanation.md",
     "summary.md"
   ],
-  "total_bytes": 47452639412,
-  "total_files": 1108
+  "total_bytes": 47452670694,
+  "total_files": 1112
 }

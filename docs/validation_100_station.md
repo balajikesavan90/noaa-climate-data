@@ -1,14 +1,12 @@
 # 100-Station Operational Validation
 
 The repository contains maintainer tooling to produce a 100-station operational
-validation artifact. The repository keeps small upstream-traceable fixtures for
-semantic verification, while the larger 100-station validation bundle is
-supplementary operational evidence intended for external DOI-backed archival
-before submission.
+validation artifact. The canonical DOI candidate is
+`artifacts/validation_100_station/build_20260510`.
 
-This is Tier 2 optional / future evidence. It is not fully reproducible from
-the repository alone because raw inputs and canonical cleaned outputs are
-excluded from git.
+This is Tier 2 optional evidence. It is not fully reproducible from the
+repository alone because large archived raw inputs and canonical cleaned outputs
+are not part of the normal source checkout.
 
 Small upstream-traceable fixtures, regression tests, and source-document-linked
 rule families verify the semantic core. The 100-station validation artifact
@@ -27,61 +25,99 @@ This is the normal reviewer quick path.
 
 See `REPRODUCIBILITY.md`, `reproducibility/checksums.sha256`, and the tracked fixture directories for the in-repo verification path.
 
-## B. Planned DOI-backed 100-station validation bundle
+## B. DOI-backed 100-station validation bundle
 
-This section documents an artifact intended for DOI-backed archival before
-submission. Until an actual DOI is inserted, this artifact should be treated as
-planned supplementary operational evidence rather than an already retrievable
-reviewer dependency.
+This section documents the canonical 100-station artifact intended for DOI
+archival.
 
-- Intended to use an externally archived validation artifact rather than live
-  NOAA downloads.
-- Intended to allow inspection of selected station inputs or archived source
-  snapshots, canonical cleaned outputs, manifests, checksums, and `summary.md`.
+- Uses externally archived validation parquet inputs rather than live NOAA
+  downloads.
+- Allows inspection of selected station inputs, canonical cleaned outputs,
+  manifests, checksums, quality summaries, and `summary.md`.
 - Not required for the public `noaa-spec clean INPUT.csv OUTPUT.csv` workflow.
 
 ## Archived validation bundle
 
-Status: pending DOI before submission.
+Canonical build: `build_20260510`
 
-DOI: TO_BE_ASSIGNED
+DOI: `TODO_BEFORE_DOI`
 
-Planned contents:
+Required contents:
 
-- selected 100 station input files or archived source snapshots
+- selected 100 station raw parquet input files
 - `station_selection_manifest.csv`
+- `selected_station_metadata.csv`
 - `run_manifest.json`
 - `station_results.csv`
 - `canonical_cleaned/`
 - `quality_reports/`
+- `strict_parse_summary_report.json`
+- `strict_parse_summary_report.md`
+- `strict_token_rejection_explanation.md`
+- `aggregate_quality_summary.json`
+- `aggregate_quality_summary.md`
 - `summary.md`
 - `checksums.txt`
 
-The generated validation artifact can include 100 cleaned station outputs,
-per-station quality JSON files, manifests, and checksums. That is useful
-operational smoke-validation evidence, but it is not appropriate to commit into
-the source repository because it would materially increase repository size. The
-repository therefore keeps the maintainer workflow and small semantic fixtures,
-while the larger validation bundle is meant to be archived externally with a DOI
-before submission.
+The bounded claim is: given the archived validation inputs, NOAA-Spec
+deterministically reproduces the archived cleaned outputs and quality evidence.
+Exact upstream NOAA-source reconstruction is not claimed unless upstream source
+URLs and upstream checksums are present in the artifact metadata.
+
+## Reviewer quickstart
+
+Verify the extracted DOI artifact from the repository root:
+
+```bash
+python scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260510
+```
+
+Inspect the manifests:
+
+```bash
+python -m json.tool artifacts/validation_100_station/build_20260510/run_manifest.json
+python -m json.tool artifacts/validation_100_station/build_20260510/archive_manifest.json
+sed -n '1,40p' artifacts/validation_100_station/build_20260510/station_results.csv
+```
+
+Optional single-station rerun:
+
+```bash
+mkdir -p /tmp/noaa-spec-validation-check
+mkdir -p /tmp/noaa-spec-validation-check/source
+cp artifacts/validation_100_station/build_20260510/raw_inputs/01121099999.parquet \
+  /tmp/noaa-spec-validation-check/source/
+noaa-spec dev build-validation-bundle \
+  --source-root /tmp/noaa-spec-validation-check/source \
+  --output-root /tmp/noaa-spec-validation-check/out \
+  --count 1 \
+  --seed 20260510 \
+  --build-id reviewer-single-station
+sha256sum /tmp/noaa-spec-validation-check/out/canonical_cleaned/01121099999_cleaned.csv
+grep 'canonical_cleaned/01121099999_cleaned.csv' \
+  artifacts/validation_100_station/build_20260510/checksums.txt
+```
 
 ## C. Reproduce the 100-station validation locally
 
 This path is optional.
 
-- It is for maintainers or reviewers who want to reproduce the archived validation artifact.
-- It requires either downloaded station files or the archived input bundle.
+- It is for maintainers or reviewers who want to regenerate the archived validation artifact.
+- It requires the archived input bundle for the DOI reproducibility boundary.
 - It uses `noaa-spec dev build-validation-bundle`.
 
-Provide a directory of station files that this repository can read as `.csv`, `.csv.gz`, or `.parquet` inputs, or point the workflow at an unpacked archived input bundle. Then run:
+Provide a directory of station files that this repository can read as `.csv`,
+`.csv.gz`, or `.parquet` inputs, or point the workflow at an unpacked archived
+input bundle. Then run:
 
 ```bash
 noaa-spec dev build-validation-bundle \
   --source-root /path/to/downloaded/stations \
-  --output-root artifacts/validation_100_station/build_20260430 \
+  --output-root artifacts/validation_100_station/build_20260510_rerun \
   --count 100 \
   --strategy size-stratified \
-  --seed 20260430
+  --seed 20260510 \
+  --emit-domains
 ```
 
 The workflow fails if fewer than the requested number of viable station files are available. By default it also fails if any selected station run fails. Use `--continue-on-error` only when diagnostic partial output is more important than strict pass/fail behavior.
@@ -92,10 +128,16 @@ The output directory contains:
 
 - `raw_inputs/`
 - `station_selection_manifest.csv`
+- `selected_station_metadata.csv`
 - `run_manifest.json`
 - `station_results.csv`
 - `canonical_cleaned/`
 - `quality_reports/`
+- `strict_parse_summary_report.json`
+- `strict_parse_summary_report.md`
+- `strict_token_rejection_explanation.md`
+- `aggregate_quality_summary.json`
+- `aggregate_quality_summary.md`
 - `summary.md`
 - `checksums.txt`
 - `archive_manifest.json`
@@ -119,11 +161,8 @@ or claiming NOAA-wide exhaustiveness.
 
 ## External archival
 
-For JOSS or later archival packaging, generate the output locally, review
-`summary.md` and `checksums.txt`, and archive the resulting artifact bundle in
-an external repository or data archive that can mint a DOI. Once a DOI exists,
-reviewers can inspect that archived bundle without rerunning the workflow.
-Until then, the DOI-backed artifact should not be described as available. Local
-rerun is optional and requires either the archived input bundle or local station
-downloads. The source repository remains small and focused while the larger
-validation bundle can be cited separately.
+For JOSS or later archival packaging, review `summary.md`, `checksums.txt`, and
+`archive_manifest.json`, then archive the resulting `build_20260510` bundle in
+an external repository or data archive that can mint a DOI. Replace
+`TODO_BEFORE_DOI` before final citation. Local rerun is optional and requires
+the archived input bundle for this DOI boundary.

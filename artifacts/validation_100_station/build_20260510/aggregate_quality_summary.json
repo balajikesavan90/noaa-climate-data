@@ -1,0 +1,134 @@
+{
+  "artifact_id": "aggregate_quality_summary",
+  "build_id": "20260510",
+  "parse_error_rows": 0,
+  "row_parity": true,
+  "schema_version": "1.0.0",
+  "skipped_identifiers": {
+    "AW5": 5,
+    "AW6": 1,
+    "EQD": 1,
+    "HL1": 22
+  },
+  "stations_with_warnings": 71,
+  "strict_token_affected_station_count": 70,
+  "strict_token_rejection_total": 7347677,
+  "strict_token_rejections_by_identifier": {
+    "CH1": 4871002,
+    "CI1": 402647,
+    "MD1": 156447,
+    "MK1": 46,
+    "OD1": 1704737,
+    "OD2": 129958,
+    "SA1": 82840
+  },
+  "strict_token_rejections_by_identifier_part": {
+    "CH1.part_2": 4871002,
+    "CI1.part_1": 402647,
+    "MD1.part_5": 156447,
+    "MK1.part_2": 19,
+    "MK1.part_5": 27,
+    "OD1.part_3": 852369,
+    "OD1.part_5": 852368,
+    "OD2.part_3": 64979,
+    "OD2.part_5": 64979,
+    "SA1.part_1": 82840
+  },
+  "strict_token_rejections_by_reason": {
+    "token_pattern_mismatch": 46,
+    "token_width_mismatch": 7347631
+  },
+  "successful_stations": 100,
+  "top_affected_stations_by_strict_rejection_count": [
+    {
+      "station_id": "99999903048",
+      "token_rejection_count": 1768193
+    },
+    {
+      "station_id": "99999923907",
+      "token_rejection_count": 1763346
+    },
+    {
+      "station_id": "99999903733",
+      "token_rejection_count": 1635339
+    },
+    {
+      "station_id": "07481099999",
+      "token_rejection_count": 332561
+    },
+    {
+      "station_id": "02836099999",
+      "token_rejection_count": 162889
+    },
+    {
+      "station_id": "15460099999",
+      "token_rejection_count": 150844
+    },
+    {
+      "station_id": "86891099999",
+      "token_rejection_count": 146044
+    },
+    {
+      "station_id": "02992099999",
+      "token_rejection_count": 141480
+    },
+    {
+      "station_id": "86796099999",
+      "token_rejection_count": 134532
+    },
+    {
+      "station_id": "86798099999",
+      "token_rejection_count": 122016
+    }
+  ],
+  "top_affected_stations_by_warning_count": [
+    {
+      "station_id": "99999903048",
+      "warnings_count": 1768193
+    },
+    {
+      "station_id": "99999923907",
+      "warnings_count": 1763346
+    },
+    {
+      "station_id": "99999903733",
+      "warnings_count": 1635339
+    },
+    {
+      "station_id": "07481099999",
+      "warnings_count": 332562
+    },
+    {
+      "station_id": "02836099999",
+      "warnings_count": 162890
+    },
+    {
+      "station_id": "15460099999",
+      "warnings_count": 150845
+    },
+    {
+      "station_id": "86891099999",
+      "warnings_count": 146044
+    },
+    {
+      "station_id": "02992099999",
+      "warnings_count": 141480
+    },
+    {
+      "station_id": "86796099999",
+      "warnings_count": 134532
+    },
+    {
+      "station_id": "86798099999",
+      "warnings_count": 122016
+    }
+  ],
+  "total_input_rows": 17884625,
+  "total_output_rows": 17884625,
+  "total_stations": 100,
+  "total_warnings": 7347706,
+  "unsupported_identifiers": {
+    "EQD": 1,
+    "HL1": 22
+  }
+}

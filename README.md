@@ -36,7 +36,7 @@ Scope is deliberately layered:
   `WND`, `CIG`, `VIS`, `TMP`, `DEW`, and `SLP`; sentinel normalization;
   QC-code preservation; stable decoded column names; and checksum-stable
   output.
-- Optional / future DOI-backed evidence: the 100-station validation bundle,
+- Optional DOI-backed evidence: the 100-station validation bundle,
   quality reports, strict token diagnostics, validation bundle builder, and
   identifier inspection tools. These are operational diagnostics for
   transparency and auditability, not prerequisites for normal use and not
@@ -83,13 +83,16 @@ release plus archived artifacts or DOIs. `requirements-review.txt` pins the
 Docker verification Python dependency path only; it is not required for
 standard local installation.
 
-### Tier 2: DOI-backed, optional / future
+### Tier 2: DOI-backed, optional
 
-Tier 2 is the 100-station operational validation run. It is not reproducible
-from this repository alone because the raw inputs and canonical outputs are not
-tracked in git. It requires an external archived dataset with a DOI before it
-can be reviewed as rerunnable evidence. Tier 2 is optional and is not required
-for the core `noaa-spec clean` reproducibility claim. See
+Tier 2 is the `build_20260510` 100-station operational validation run. It is
+not reproducible from this repository alone because the large raw inputs and
+canonical outputs are archived outside the normal source checkout. Its bounded
+claim is: given the archived validation inputs, NOAA-Spec deterministically
+reproduces the archived cleaned outputs and quality evidence. It does not claim
+exact upstream NOAA-source reconstruction unless the artifact metadata includes
+source URLs and upstream checksums. Tier 2 is optional and is not required for
+the core `noaa-spec clean` reproducibility claim. See
 [artifacts/validation_100_station/README.md](artifacts/validation_100_station/README.md)
 and [docs/validation_100_station.md](docs/validation_100_station.md).
 

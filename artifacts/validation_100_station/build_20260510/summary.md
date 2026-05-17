@@ -2,7 +2,7 @@
 
 ## Purpose
 Small upstream-traceable fixtures verify semantic correctness. The 100-station validation artifact is supplementary operational evidence that the same repository-controlled workflow runs successfully across a broader stratified sample.
-The raw inputs are intended for DOI-backed archival before submission so the validation evidence can be inspected and rerun without relying on live NOAA availability.
+The frozen validation inputs are archived raw parquet files. The artifact supports reproduction from those archived inputs to the archived cleaned outputs and quality evidence.
 
 ## What this artifact demonstrates
 - The repository-controlled cleaning workflow completed across a deterministic stratified station sample.
@@ -25,8 +25,9 @@ The raw inputs are intended for DOI-backed archival before submission so the val
 
 ## Provenance and raw inputs
 - Selected raw station files are copied into `raw_inputs/` and checksum-recorded before cleaning.
-- Once DOI-backed archival is complete, reviewers can inspect the archived bundle without needing the original local station corpus or live NOAA access.
-- Local rerun requires either the archived raw input bundle or a local NOAA station corpus.
+- Reviewers can inspect the archived bundle without needing the original local station corpus or live NOAA access.
+- Local rerun of this validation boundary requires the archived raw parquet input bundle.
+- Exact upstream NOAA-source reconstruction is not claimed because selected source URLs and upstream file checksums are not present in this artifact.
 
 ## Run environment
 - Build ID: 20260510
@@ -67,11 +68,15 @@ The raw inputs are intended for DOI-backed archival before submission so the val
 - `strict_parse_summary_report.md`
 - `checksums.txt`
 - `summary.md`
+- `aggregate_quality_summary.json`
+- `aggregate_quality_summary.md`
+- `selected_station_metadata.csv`
+- `strict_token_rejection_explanation.md`
 - `archive_manifest.json`
 
 ## Reproducibility boundary
-This artifact provides operational smoke validation for a stratified 100-station sample. It does not claim exhaustive validation of the full NOAA corpus. Semantic correctness is verified by tracked upstream-traceable fixtures, tests, and source-document-linked rule families. The selected raw inputs are archived with checksums so reviewers can inspect or rerun the workflow without depending on live NOAA availability once a DOI-backed archive exists.
+This artifact provides operational reproducibility evidence for a stratified 100-station sample. The bounded claim is: given the archived validation inputs, NOAA-Spec deterministically reproduces the archived cleaned outputs and quality evidence. It does not claim exhaustive validation of the full NOAA corpus or exact reconstruction of these validation inputs from upstream NOAA services.
 
 ## DOI archival status
-- DOI: TO_BE_ADDED_BEFORE_JOSS_SUBMISSION
-- This bundle is intended for external archival before submission; until a DOI is inserted, the archive should be treated as planned.
+- DOI: TODO_BEFORE_DOI
+- The DOI placeholder must be replaced before final DOI freeze or JOSS submission.
