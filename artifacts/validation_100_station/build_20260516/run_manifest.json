@@ -1,0 +1,19 @@
+{
+  "build_id": "20260516",
+  "command": "/home/balaji-kesavan/.cache/pypoetry/virtualenvs/noaa-spec-gzQ-YukN-py3.12/bin/noaa-spec dev build-validation-bundle --emit-domains --source-root /media/balaji-kesavan/LaCie/NOAA_Data --output-root artifacts/validation_100_station/build_20260516 --build-id 20260516 --count 100 --strategy size-stratified --seed 20260516",
+  "dependency_lock_hash": "3cd1b6148f01d530a4342aea25203bb56a3fb36a5e596bc9bf694cf5451f8758",
+  "domain_outputs_requested": true,
+  "git_dirty_status": "clean",
+  "output_root": "/home/balaji-kesavan/Documents/AI_Projects/noaa-spec/artifacts/validation_100_station/build_20260516",
+  "package_version": "1.0.0",
+  "platform": "Linux-6.17.0-19-generic-x86_64-with-glibc2.39",
+  "python_version": "3.12.3",
+  "repo_commit_sha": "10cd901fb9fc9ddddbe659022022e598812195b6",
+  "reproducibility_boundary_note": "This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.\n\nThe primary DOI archive contains the canonical reproducibility boundary:\n\narchived inputs \u2192 deterministic NOAA-Spec processing \u2192 canonical cleaned outputs\n\nDomain outputs are convenience projections intended to improve interpretability for downstream workflows. They are derived from canonical cleaned outputs and are not required to reproduce NOAA-Spec's core deterministic cleaning behavior.\n\nDomain outputs are archived separately as supplementary artifacts and are outside the primary reproducibility claim.",
+  "sampling_strategy": "size-stratified",
+  "seed": 20260516,
+  "source_root": "/media/balaji-kesavan/LaCie/NOAA_Data",
+  "station_count_requested": 100,
+  "station_count_selected": 100,
+  "timestamp_utc": "2026-05-17T03:55:56Z"
+}

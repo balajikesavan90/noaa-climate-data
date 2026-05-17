@@ -1,0 +1,127 @@
+{
+  "archived_raw_input_path": "raw_inputs/72389693144.parquet",
+  "chunked_processing": {
+    "chunk_count": 2,
+    "chunk_row_count": 250000,
+    "chunking_threshold": 250000
+  },
+  "domain_output_paths": {
+    "clouds": "domains/clouds/72389693144_clouds.csv",
+    "core_meteorology": "domains/core_meteorology/72389693144_core_meteorology.csv",
+    "precipitation": "domains/precipitation/72389693144_precipitation.csv",
+    "pressure_temperature": "domains/pressure_temperature/72389693144_pressure_temperature.csv",
+    "quality_codes": "domains/quality_codes/72389693144_quality_codes.csv",
+    "remarks": "domains/remarks/72389693144_remarks.csv",
+    "visibility": "domains/visibility/72389693144_visibility.csv",
+    "wind": "domains/wind/72389693144_wind.csv"
+  },
+  "input_rows": 348943,
+  "original_source_path": "/media/balaji-kesavan/LaCie/NOAA_Data/72389693144/LocationData_Raw.parquet",
+  "output_rows": 348943,
+  "parse_error_rows": 0,
+  "raw_sha256": "4c239c195bb81de54704469b228430cb4babb0d7165722d79a4c012d26d4e3b9",
+  "rows_with_any_usable_metric": 346913,
+  "station_id": "72389693144",
+  "strict_parse_summary": {
+    "malformed_identifier_columns": [],
+    "malformed_section_identifier_columns": [],
+    "skipped_encoded_column_count": 0,
+    "skipped_encoded_columns": [],
+    "supported_prefix_family_identifiers": [],
+    "token_rejection_count": 414,
+    "token_rejection_examples": [
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "4,99,0144,1,350",
+        "reason": "token_width_mismatch",
+        "row_index": 246260,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "72389693144",
+        "token_sample": "0144"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 1,
+        "identifier": "OD1",
+        "part_index": 5,
+        "raw_section_sample": "4,99,0144,1,350",
+        "reason": "token_width_mismatch",
+        "row_index": 246260,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "72389693144",
+        "token_sample": "350"
+      },
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "4,99,0139,1,200",
+        "reason": "token_width_mismatch",
+        "row_index": 246363,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "72389693144",
+        "token_sample": "0139"
+      },
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "4,99,0139,1,080",
+        "reason": "token_width_mismatch",
+        "row_index": 840,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "72389693144",
+        "token_sample": "0139"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 1,
+        "identifier": "OD1",
+        "part_index": 5,
+        "raw_section_sample": "4,99,0139,1,080",
+        "reason": "token_width_mismatch",
+        "row_index": 840,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "72389693144",
+        "token_sample": "080"
+      },
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "4,99,0133,1,300",
+        "reason": "token_width_mismatch",
+        "row_index": 1887,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "72389693144",
+        "token_sample": "0133"
+      }
+    ],
+    "token_rejection_suppressed_log_count": 394,
+    "token_rejections_by_identifier": {
+      "OD1": 414
+    },
+    "token_rejections_by_identifier_part": {
+      "OD1.part_3": 207,
+      "OD1.part_5": 207
+    },
+    "token_rejections_by_reason": {
+      "token_width_mismatch": 414
+    },
+    "unknown_identifier_columns": [],
+    "unsupported_identifier_columns": []
+  },
+  "warnings_count": 414
+}
