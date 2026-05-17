@@ -32,6 +32,8 @@ outputs are not tracked in this repository. Tier 2 is optional, future
 DOI-backed validation evidence; it is not required for the core reproducibility
 claim.
 
+This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
+
 Not claimed: full upstream NOAA retrieval reproducibility for every curated
 fixture, NOAA downloading, multi-station orchestration, exhaustive NOAA
 coverage, or repo-native reproduction of the 100-station validation bundle.

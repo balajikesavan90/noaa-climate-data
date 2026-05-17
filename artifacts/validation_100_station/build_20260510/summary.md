@@ -2,7 +2,7 @@
 
 ## Purpose
 Small upstream-traceable fixtures verify semantic correctness. The 100-station validation artifact is supplementary operational evidence that the same repository-controlled workflow runs successfully across a broader stratified sample.
-The frozen validation inputs are archived raw parquet files. The artifact supports reproduction from those archived inputs to the archived cleaned outputs and quality evidence.
+This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
 
 ## What this artifact demonstrates
 - The repository-controlled cleaning workflow completed across a deterministic stratified station sample.
@@ -27,7 +27,7 @@ The frozen validation inputs are archived raw parquet files. The artifact suppor
 - Selected raw station files are copied into `raw_inputs/` and checksum-recorded before cleaning.
 - Reviewers can inspect the archived bundle without needing the original local station corpus or live NOAA access.
 - Local rerun of this validation boundary requires the archived raw parquet input bundle.
-- Exact upstream NOAA-source reconstruction is not claimed because selected source URLs and upstream file checksums are not present in this artifact.
+- This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
 
 ## Run environment
 - Build ID: 20260510
@@ -77,7 +77,7 @@ The frozen validation inputs are archived raw parquet files. The artifact suppor
 - `archive_manifest.json`
 
 ## Reproducibility boundary
-This artifact provides operational reproducibility evidence for a stratified 100-station sample. The bounded claim is: given the archived validation inputs, NOAA-Spec deterministically reproduces the archived cleaned outputs and quality evidence. It does not claim exhaustive validation of the full NOAA corpus or exact reconstruction of these validation inputs from upstream NOAA services.
+This artifact provides operational reproducibility evidence for a stratified 100-station sample. This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
 
 ## DOI archival status
 - DOI: TODO_BEFORE_DOI

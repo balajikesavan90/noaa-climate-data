@@ -91,12 +91,9 @@ standard local installation.
 
 Tier 2 is the `build_20260510` 100-station operational validation run. It is
 not reproducible from this repository alone because the large raw inputs and
-canonical outputs are archived outside the normal source checkout. Its bounded
-claim is: given the archived validation inputs, NOAA-Spec deterministically
-reproduces the archived cleaned outputs and quality evidence. It does not claim
-exact upstream NOAA-source reconstruction unless the artifact metadata includes
-source URLs and upstream checksums. Tier 2 is optional and is not required for
-the core `noaa-spec clean` reproducibility claim. See
+canonical outputs are archived outside the normal source checkout. This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
+Tier 2 is optional and is not required for the core `noaa-spec clean`
+reproducibility claim. See
 [artifacts/validation_100_station/README.md](artifacts/validation_100_station/README.md)
 and [docs/validation_100_station.md](docs/validation_100_station.md).
 

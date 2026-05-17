@@ -7,7 +7,7 @@
   "checksum_algorithm": "SHA256",
   "checksum_file": "checksums.txt",
   "checksum_file_excluded_from_checksums": true,
-  "claim_scope": "Operational reproducibility from archived validation inputs, not full upstream NOAA reconstruction",
+  "claim_scope": "This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.",
   "created_utc": "2026-05-13T23:58:41Z",
   "directory_inventory": [
     {
@@ -54,6 +54,6 @@
     "strict_token_rejection_explanation.md",
     "summary.md"
   ],
-  "total_bytes": 47452671067,
+  "total_bytes": 47452671410,
   "total_files": 1112
 }

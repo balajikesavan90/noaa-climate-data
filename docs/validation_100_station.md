@@ -46,6 +46,8 @@ Docker image: `noaa-spec-review:latest`
 
 Docker image digest: `sha256:dbbaa759a8ccc1ae7f86ccbc1189771643fa56d0fa798e29552c415c04dd030e`
 
+This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
+
 Required contents:
 
 - selected 100 station raw parquet input files
@@ -62,11 +64,6 @@ Required contents:
 - `aggregate_quality_summary.md`
 - `summary.md`
 - `checksums.txt`
-
-The bounded claim is: given the archived validation inputs, NOAA-Spec
-deterministically reproduces the archived cleaned outputs and quality evidence.
-Exact upstream NOAA-source reconstruction is not claimed unless upstream source
-URLs and upstream checksums are present in the artifact metadata.
 
 ## Reviewer quickstart
 

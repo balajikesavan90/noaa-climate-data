@@ -11,6 +11,14 @@ import sys
 from typing import Any
 
 
+VALIDATION_BOUNDARY_STATEMENT = (
+    "This validation artifact supports deterministic reproducibility from "
+    "archived validation inputs to archived outputs. Reconstruction from "
+    "upstream NOAA archives is not claimed because upstream NOAA source URLs "
+    "and checksums are not preserved within this artifact."
+)
+
+
 REQUIRED_TOP_LEVEL_FILES = {
     "archive_manifest.json",
     "checksums.txt",
@@ -334,12 +342,7 @@ def update_run_manifest(artifact_root: Path) -> Path:
     payload["docker_image_tag"] = payload.get("docker_image_tag", "noaa-spec-review:1.0.0")
     payload["docker_image_digest"] = payload.get("docker_image_digest", "TODO_BEFORE_DOI")
     payload["reproducibility_boundary"] = "archived-inputs-to-archived-outputs"
-    payload["reproducibility_boundary_note"] = (
-        "Given the archived validation inputs, NOAA-Spec deterministically "
-        "reproduces the archived cleaned outputs and quality evidence. This "
-        "artifact does not claim exact upstream NOAA-source reconstruction "
-        "unless source URLs and upstream checksums are present."
-    )
+    payload["reproducibility_boundary_note"] = VALIDATION_BOUNDARY_STATEMENT
     payload["upstream_noaa_reconstruction_claimed"] = False
     payload["archived_input_format"] = "parquet"
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -351,15 +354,15 @@ def update_summary_markdown(artifact_root: Path) -> Path:
     text = path.read_text(encoding="utf-8")
     text = text.replace(
         "The raw inputs are intended for DOI-backed archival before submission so the validation evidence can be inspected and rerun without relying on live NOAA availability.",
-        "The frozen validation inputs are archived raw parquet files. The artifact supports reproduction from those archived inputs to the archived cleaned outputs and quality evidence.",
+        VALIDATION_BOUNDARY_STATEMENT,
     )
     text = text.replace(
         "- Once DOI-backed archival is complete, reviewers can inspect the archived bundle without needing the original local station corpus or live NOAA access.\n- Local rerun requires either the archived raw input bundle or a local NOAA station corpus.",
-        "- Reviewers can inspect the archived bundle without needing the original local station corpus or live NOAA access.\n- Local rerun of this validation boundary requires the archived raw parquet input bundle.\n- Exact upstream NOAA-source reconstruction is not claimed because selected source URLs and upstream file checksums are not present in this artifact.",
+        "- Reviewers can inspect the archived bundle without needing the original local station corpus or live NOAA access.\n- Local rerun of this validation boundary requires the archived raw parquet input bundle.\n- " + VALIDATION_BOUNDARY_STATEMENT,
     )
     text = text.replace(
         "This artifact provides operational smoke validation for a stratified 100-station sample. It does not claim exhaustive validation of the full NOAA corpus. Semantic correctness is verified by tracked upstream-traceable fixtures, tests, and source-document-linked rule families. The selected raw inputs are archived with checksums so reviewers can inspect or rerun the workflow without depending on live NOAA availability once a DOI-backed archive exists.",
-        "This artifact provides operational reproducibility evidence for a stratified 100-station sample. The bounded claim is: given the archived validation inputs, NOAA-Spec deterministically reproduces the archived cleaned outputs and quality evidence. It does not claim exhaustive validation of the full NOAA corpus or exact reconstruction of these validation inputs from upstream NOAA services.",
+        "This artifact provides operational reproducibility evidence for a stratified 100-station sample. " + VALIDATION_BOUNDARY_STATEMENT,
     )
     text = text.replace(
         "- DOI: TO_BE_ADDED_BEFORE_JOSS_SUBMISSION\n- This bundle is intended for external archival before submission; until a DOI is inserted, the archive should be treated as planned.",
@@ -404,7 +407,7 @@ def recompute_checksums_and_archive_manifest(artifact_root: Path) -> Path:
             "checksum_algorithm": "SHA256",
             "checksum_file": "checksums.txt",
             "checksum_file_excluded_from_checksums": True,
-            "claim_scope": "Operational reproducibility from archived validation inputs, not full upstream NOAA reconstruction",
+            "claim_scope": VALIDATION_BOUNDARY_STATEMENT,
             "directory_inventory": directory_inventory,
             "doi": payload.get("doi") or "TODO_BEFORE_DOI",
             "excluded_prior_builds": ["build_20260503"],

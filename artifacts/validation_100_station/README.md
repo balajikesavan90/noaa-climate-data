@@ -7,13 +7,7 @@ artifact for DOI packaging:
 artifacts/validation_100_station/build_20260510
 ```
 
-The DOI artifact is reproducible only within the archived validation boundary:
-given the archived validation inputs, NOAA-Spec deterministically reproduces
-the archived cleaned outputs and quality evidence.
-
-Exact reconstruction of these validation inputs directly from upstream NOAA
-services is not claimed unless upstream source URLs and upstream checksums are
-present for the selected files.
+This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
 
 The purpose of this artifact is to demonstrate that the repository-controlled
 cleaning workflow executes successfully across a broader operational sample
@@ -102,6 +96,8 @@ Frozen Docker metadata:
 ---
 
 # Reviewer Quickstart
+
+This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
 
 From the repository root, verify the extracted DOI artifact:
 
@@ -226,6 +222,8 @@ cleaned CSV remains the required output.
 This artifact is Tier 2 optional evidence. It is not fully reproducible from
 the git repository alone.
 
+This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
+
 It does not claim exhaustive reproducibility validation for the full NOAA corpus.
 
 The DOI artifact allows reviewers to:
@@ -235,8 +233,7 @@ The DOI artifact allows reviewers to:
 * inspect diagnostic outputs
 * rerun the workflow against archived raw parquet inputs
 
-without depending on live NOAA availability. The boundary is
-archived-inputs-to-archived-outputs, not upstream NOAA reconstruction.
+without depending on live NOAA availability.
 
 ---
 
