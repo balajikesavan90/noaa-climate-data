@@ -17,6 +17,23 @@ VALIDATION_BOUNDARY_STATEMENT = (
     "upstream NOAA archives is not claimed because upstream NOAA source URLs "
     "and checksums are not preserved within this artifact."
 )
+LEGACY_PRIMARY_DOI_PLACEHOLDERS = (
+    "TODO_" + "BEFORE_DOI",
+    "TO_BE_ADDED_" + "BEFORE_JOSS_SUBMISSION",
+)
+
+PRIMARY_ARCHIVE_BOUNDARY_STATEMENT = (
+    "The primary DOI archive contains the canonical reproducibility boundary:\n\n"
+    "archived inputs → deterministic NOAA-Spec processing → canonical cleaned outputs"
+)
+
+DOMAINS_SUPPLEMENT_STATEMENT = (
+    "Domain outputs are convenience projections intended to improve interpretability "
+    "for downstream workflows. They are derived from canonical cleaned outputs and "
+    "are not required to reproduce NOAA-Spec's core deterministic cleaning behavior.\n\n"
+    "Domain outputs are archived separately as supplementary artifacts and are "
+    "outside the primary reproducibility claim."
+)
 
 
 REQUIRED_TOP_LEVEL_FILES = {
@@ -340,7 +357,10 @@ def update_run_manifest(artifact_root: Path) -> Path:
     path = artifact_root / "run_manifest.json"
     payload = _read_json(path)
     payload["docker_image_tag"] = payload.get("docker_image_tag", "noaa-spec-review:1.0.0")
-    payload["docker_image_digest"] = payload.get("docker_image_digest", "TODO_BEFORE_DOI")
+    payload["docker_image_digest"] = payload.get(
+        "docker_image_digest",
+        "sha256:dbbaa759a8ccc1ae7f86ccbc1189771643fa56d0fa798e29552c415c04dd030e",
+    )
     payload["reproducibility_boundary"] = "archived-inputs-to-archived-outputs"
     payload["reproducibility_boundary_note"] = VALIDATION_BOUNDARY_STATEMENT
     payload["upstream_noaa_reconstruction_claimed"] = False
@@ -364,10 +384,11 @@ def update_summary_markdown(artifact_root: Path) -> Path:
         "This artifact provides operational smoke validation for a stratified 100-station sample. It does not claim exhaustive validation of the full NOAA corpus. Semantic correctness is verified by tracked upstream-traceable fixtures, tests, and source-document-linked rule families. The selected raw inputs are archived with checksums so reviewers can inspect or rerun the workflow without depending on live NOAA availability once a DOI-backed archive exists.",
         "This artifact provides operational reproducibility evidence for a stratified 100-station sample. " + VALIDATION_BOUNDARY_STATEMENT,
     )
-    text = text.replace(
-        "- DOI: TO_BE_ADDED_BEFORE_JOSS_SUBMISSION\n- This bundle is intended for external archival before submission; until a DOI is inserted, the archive should be treated as planned.",
-        "- DOI: TODO_BEFORE_DOI\n- The DOI placeholder must be replaced before final DOI freeze or JOSS submission.",
-    )
+    for legacy_placeholder in LEGACY_PRIMARY_DOI_PLACEHOLDERS:
+        text = text.replace(
+            f"- DOI: {legacy_placeholder}\n- This bundle is intended for external archival before submission; until a DOI is inserted, the archive should be treated as planned.",
+            "- Primary DOI: TODO_PRIMARY_DOI\n- Supplementary Domains DOI: TODO_DOMAINS_DOI\n- The DOI placeholders must be replaced before final DOI freeze or JOSS submission.",
+        )
     inventory_anchor = "- `archive_manifest.json`"
     if "selected_station_metadata.csv" not in text:
         text = text.replace(
@@ -397,6 +418,9 @@ def recompute_checksums_and_archive_manifest(artifact_root: Path) -> Path:
 
     top_level_files = sorted(path.name for path in artifact_root.iterdir() if path.is_file())
     payload = _read_json(archive_manifest_path) if archive_manifest_path.exists() else {}
+    existing_doi = payload.get("doi")
+    if existing_doi in (None, "", *LEGACY_PRIMARY_DOI_PLACEHOLDERS):
+        existing_doi = "TODO_PRIMARY_DOI"
     payload.update(
         {
             "artifact_name": "validation_100_station_bundle",
@@ -408,10 +432,30 @@ def recompute_checksums_and_archive_manifest(artifact_root: Path) -> Path:
             "checksum_file": "checksums.txt",
             "checksum_file_excluded_from_checksums": True,
             "claim_scope": VALIDATION_BOUNDARY_STATEMENT,
+            "archive_content_classification": {
+                "primary": [
+                    "raw_inputs/",
+                    "canonical_cleaned/",
+                    "quality_reports/",
+                    "checksums.txt",
+                    "metadata files",
+                    "strict parse reports",
+                    "aggregate summaries",
+                ],
+                "supplementary": ["domains/"],
+            },
             "directory_inventory": directory_inventory,
-            "doi": payload.get("doi") or "TODO_BEFORE_DOI",
+            "doi": existing_doi,
             "excluded_prior_builds": ["build_20260503"],
-            "intended_archive": "external DOI archive",
+            "intended_archive": "primary reproducibility DOI archive",
+            "primary_reproducibility_archive": True,
+            "supplementary_domains_archive": False,
+            "supplementary_domains_archive_note": (
+                "Domain outputs are convenience projections derived from canonical "
+                "cleaned outputs and should be archived separately as supplementary "
+                "interpretability artifacts."
+            ),
+            "supplementary_domains_doi": payload.get("supplementary_domains_doi") or "TODO_DOMAINS_DOI",
             "top_level_files": top_level_files,
             "total_bytes": sum(path.stat().st_size for path in files_for_manifest),
             "total_files": len(files_for_manifest),

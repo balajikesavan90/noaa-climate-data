@@ -141,10 +141,10 @@ def test_validate_command_writes_expected_artifacts(
     assert str(first_selected["raw_sha256"]) == expected_raw_sha
 
     run_manifest = pd.read_json(output_root / "run_manifest.json", typ="series")
-    assert "operational smoke validation for a stratified 100-station sample" in run_manifest[
+    assert "deterministic reproducibility from archived validation inputs to archived outputs" in run_manifest[
         "reproducibility_boundary_note"
     ]
-    assert "archived with checksums" in run_manifest["reproducibility_boundary_note"]
+    assert "outside the primary reproducibility claim" in run_manifest["reproducibility_boundary_note"]
 
     station_results = pd.read_csv(output_root / "station_results.csv")
     expected_result_columns = {
@@ -177,7 +177,10 @@ def test_validate_command_writes_expected_artifacts(
     assert "archive_manifest.json" in checksums_text
 
     archive_manifest = pd.read_json(output_root / "archive_manifest.json", typ="series")
-    assert archive_manifest["DOI"] == "TO_BE_ADDED_BEFORE_JOSS_SUBMISSION"
+    assert archive_manifest["doi"] == "TODO_PRIMARY_DOI"
+    assert archive_manifest["supplementary_domains_doi"] == "TODO_DOMAINS_DOI"
+    assert archive_manifest["primary_reproducibility_archive"] == True
+    assert archive_manifest["supplementary_domains_archive"] == False
     actual_files = sorted(path for path in output_root.rglob("*") if path.is_file())
     assert int(archive_manifest["total_files"]) == len(actual_files)
     assert int(archive_manifest["total_bytes"]) == sum(path.stat().st_size for path in actual_files)
@@ -185,7 +188,7 @@ def test_validate_command_writes_expected_artifacts(
 
     summary_text = (output_root / "summary.md").read_text(encoding="utf-8")
     assert "does not prove correctness over the full NOAA corpus" in summary_text
-    assert "intended for DOI-backed archival before submission" in summary_text
+    assert "archived inputs → deterministic NOAA-Spec processing → canonical cleaned outputs" in summary_text
     assert "not manually selected for favorable outcomes" in summary_text
 
 

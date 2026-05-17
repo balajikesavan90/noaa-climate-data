@@ -32,15 +32,20 @@ STATION_CHUNKING_ROW_COUNT_THRESHOLD = 250_000
 STATION_CHUNK_ROW_COUNT = 250_000
 STATION_CHUNKING_THRESHOLD_ENV = "NOAA_STATION_CHUNKING_ROW_COUNT_THRESHOLD"
 STATION_CHUNK_ROW_COUNT_ENV = "NOAA_STATION_CHUNK_ROW_COUNT"
-DOI_PLACEHOLDER = "TO_BE_ADDED_BEFORE_JOSS_SUBMISSION"
+PRIMARY_DOI_PLACEHOLDER = "TODO_PRIMARY_DOI"
+DOMAINS_DOI_PLACEHOLDER = "TODO_DOMAINS_DOI"
 REPRODUCIBILITY_BOUNDARY_NOTE = (
-    "This artifact provides operational smoke validation for a stratified "
-    "100-station sample. It does not claim exhaustive validation of the full "
-    "NOAA corpus. Semantic correctness is verified by tracked upstream-traceable "
-    "fixtures, tests, and source-document-linked rule families. The selected raw "
-    "inputs are archived with checksums so reviewers can inspect or rerun the "
-    "workflow without depending on live NOAA availability once a DOI-backed "
-    "archive exists."
+    "This validation artifact supports deterministic reproducibility from "
+    "archived validation inputs to archived outputs. Reconstruction from upstream "
+    "NOAA archives is not claimed because upstream NOAA source URLs and checksums "
+    "are not preserved within this artifact.\n\n"
+    "The primary DOI archive contains the canonical reproducibility boundary:\n\n"
+    "archived inputs → deterministic NOAA-Spec processing → canonical cleaned outputs\n\n"
+    "Domain outputs are convenience projections intended to improve interpretability "
+    "for downstream workflows. They are derived from canonical cleaned outputs and "
+    "are not required to reproduce NOAA-Spec's core deterministic cleaning behavior.\n\n"
+    "Domain outputs are archived separately as supplementary artifacts and are "
+    "outside the primary reproducibility claim."
 )
 SUMMARY_OPERATIONAL_LANGUAGE = (
     "Small upstream-traceable fixtures verify semantic correctness. The "
@@ -49,9 +54,10 @@ SUMMARY_OPERATIONAL_LANGUAGE = (
     "stratified sample."
 )
 SUMMARY_ARCHIVAL_LANGUAGE = (
-    "The raw inputs are intended for DOI-backed archival before submission so "
-    "the validation evidence can be inspected and rerun without relying on live "
-    "NOAA availability."
+    "This validation artifact supports deterministic reproducibility from "
+    "archived validation inputs to archived outputs. Reconstruction from upstream "
+    "NOAA archives is not claimed because upstream NOAA source URLs and checksums "
+    "are not preserved within this artifact."
 )
 SUMMARY_NON_EXHAUSTIVE_LANGUAGE = (
     "This artifact does not prove correctness over the full NOAA corpus."
@@ -1761,13 +1767,9 @@ def _write_summary(
         [
             "",
             "## Output artifact inventory",
+            "PRIMARY:",
             "- `raw_inputs/`",
             "- `canonical_cleaned/`",
-            *(
-                ["- `domains/`"]
-                if bool(run_manifest.get("domain_outputs_requested"))
-                else []
-            ),
             "- `quality_reports/`",
             "- `station_selection_manifest.csv`",
             "- `run_manifest.json`",
@@ -1778,12 +1780,20 @@ def _write_summary(
             "- `summary.md`",
             "- `archive_manifest.json`",
             "",
+            "SUPPLEMENTARY:",
+            *(
+                ["- `domains/`"]
+                if bool(run_manifest.get("domain_outputs_requested"))
+                else []
+            ),
+            "",
             "## Reproducibility boundary",
             run_manifest["reproducibility_boundary_note"],
             "",
             "## DOI archival status",
-            f"- DOI: {DOI_PLACEHOLDER}",
-            "- This bundle is intended for external archival before submission; until a DOI is inserted, the archive should be treated as planned.",
+            f"- Primary DOI: {PRIMARY_DOI_PLACEHOLDER}",
+            f"- Supplementary Domains DOI: {DOMAINS_DOI_PLACEHOLDER}",
+            "- The DOI placeholders must be replaced before final DOI freeze or JOSS submission.",
             "",
         ]
     )
@@ -1813,13 +1823,32 @@ def _build_archive_manifest_payload(
         "build_id": str(run_manifest["build_id"]),
         "repo_commit_sha": run_manifest["repo_commit_sha"],
         "created_utc": _now_utc_isoformat(),
-        "intended_archive": "external DOI archive before submission",
+        "intended_archive": "primary reproducibility DOI archive",
         "total_files": len(files),
         "total_bytes": sum(path.stat().st_size for path in files),
         "checksum_algorithm": "SHA256",
         "top_level_files": top_level_files,
         "directory_inventory": directory_inventory,
-        "DOI": DOI_PLACEHOLDER,
+        "doi": PRIMARY_DOI_PLACEHOLDER,
+        "primary_reproducibility_archive": True,
+        "supplementary_domains_archive": False,
+        "supplementary_domains_doi": DOMAINS_DOI_PLACEHOLDER,
+        "supplementary_domains_archive_note": (
+            "Domain outputs are convenience projections derived from canonical cleaned "
+            "outputs and should be archived separately as supplementary interpretability artifacts."
+        ),
+        "archive_content_classification": {
+            "primary": [
+                "raw_inputs/",
+                "canonical_cleaned/",
+                "quality_reports/",
+                "checksums.txt",
+                "metadata files",
+                "strict parse reports",
+                "aggregate summaries",
+            ],
+            "supplementary": ["domains/"],
+        },
     }
 
 

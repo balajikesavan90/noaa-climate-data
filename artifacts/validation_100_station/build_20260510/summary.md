@@ -4,6 +4,14 @@
 Small upstream-traceable fixtures verify semantic correctness. The 100-station validation artifact is supplementary operational evidence that the same repository-controlled workflow runs successfully across a broader stratified sample.
 This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
 
+The primary DOI archive contains the canonical reproducibility boundary:
+
+archived inputs → deterministic NOAA-Spec processing → canonical cleaned outputs
+
+Domain outputs are convenience projections intended to improve interpretability for downstream workflows. They are derived from canonical cleaned outputs and are not required to reproduce NOAA-Spec's core deterministic cleaning behavior.
+
+Domain outputs are archived separately as supplementary artifacts and are outside the primary reproducibility claim.
+
 ## What this artifact demonstrates
 - The repository-controlled cleaning workflow completed across a deterministic stratified station sample.
 - The bundle freezes selected raw inputs, cleaned outputs, per-station results, manifests, and checksums for reviewer inspection.
@@ -59,9 +67,9 @@ This validation artifact supports deterministic reproducibility from archived va
 - No station failures were recorded.
 
 ## Output artifact inventory
+PRIMARY:
 - `raw_inputs/`
 - `canonical_cleaned/`
-- `domains/`
 - `quality_reports/`
 - `station_selection_manifest.csv`
 - `run_manifest.json`
@@ -76,9 +84,21 @@ This validation artifact supports deterministic reproducibility from archived va
 - `strict_token_rejection_explanation.md`
 - `archive_manifest.json`
 
+SUPPLEMENTARY:
+- `domains/`
+
 ## Reproducibility boundary
 This artifact provides operational reproducibility evidence for a stratified 100-station sample. This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
 
+The primary DOI archive contains the canonical reproducibility boundary:
+
+archived inputs → deterministic NOAA-Spec processing → canonical cleaned outputs
+
+Domain outputs are convenience projections intended to improve interpretability for downstream workflows. They are derived from canonical cleaned outputs and are not required to reproduce NOAA-Spec's core deterministic cleaning behavior.
+
+Domain outputs are archived separately as supplementary artifacts and are outside the primary reproducibility claim.
+
 ## DOI archival status
-- DOI: TODO_BEFORE_DOI
-- The DOI placeholder must be replaced before final DOI freeze or JOSS submission.
+- Primary DOI: TODO_PRIMARY_DOI
+- Supplementary Domains DOI: TODO_DOMAINS_DOI
+- The DOI placeholders must be replaced before final DOI freeze or JOSS submission.

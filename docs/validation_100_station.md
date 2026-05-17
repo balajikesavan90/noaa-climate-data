@@ -40,30 +40,46 @@ archival.
 
 Canonical build: `build_20260510`
 
-DOI: `TODO_BEFORE_DOI`
+Primary DOI: `TODO_PRIMARY_DOI`
+
+Supplementary Domains DOI: `TODO_DOMAINS_DOI`
 
 Docker image: `noaa-spec-review:latest`
 
 Docker image digest: `sha256:dbbaa759a8ccc1ae7f86ccbc1189771643fa56d0fa798e29552c415c04dd030e`
 
+## Reproducibility Boundary
+
 This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
 
-Required contents:
+The primary DOI archive contains the canonical reproducibility boundary:
 
-- selected 100 station raw parquet input files
+archived inputs → deterministic NOAA-Spec processing → canonical cleaned outputs
+
+Domain outputs are convenience projections intended to improve interpretability for downstream workflows. They are derived from canonical cleaned outputs and are not required to reproduce NOAA-Spec's core deterministic cleaning behavior.
+
+Domain outputs are archived separately as supplementary artifacts and are outside the primary reproducibility claim.
+
+Primary archive contents:
+
+- `raw_inputs/`
+- `canonical_cleaned/`
+- `quality_reports/`
+- `checksums.txt`
 - `station_selection_manifest.csv`
 - `selected_station_metadata.csv`
 - `run_manifest.json`
 - `station_results.csv`
-- `canonical_cleaned/`
-- `quality_reports/`
 - `strict_parse_summary_report.json`
 - `strict_parse_summary_report.md`
 - `strict_token_rejection_explanation.md`
 - `aggregate_quality_summary.json`
 - `aggregate_quality_summary.md`
 - `summary.md`
-- `checksums.txt`
+
+Supplementary archive contents:
+
+- `domains/`
 
 ## Reviewer quickstart
 
@@ -165,5 +181,7 @@ or claiming NOAA-wide exhaustiveness.
 For JOSS or later archival packaging, review `summary.md`, `checksums.txt`, and
 `archive_manifest.json`, then archive the resulting `build_20260510` bundle in
 an external repository or data archive that can mint a DOI. Replace
-`TODO_BEFORE_DOI` before final citation. Local rerun is optional and requires
-the archived input bundle for this DOI boundary.
+`TODO_PRIMARY_DOI` before final citation. Archive `domains/` separately as the
+supplementary interpretability artifact and replace `TODO_DOMAINS_DOI` where
+domain artifacts are discussed. Local rerun is optional and requires the
+archived input bundle for this DOI boundary.

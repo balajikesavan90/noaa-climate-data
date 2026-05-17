@@ -32,7 +32,17 @@ outputs are not tracked in this repository. Tier 2 is optional, future
 DOI-backed validation evidence; it is not required for the core reproducibility
 claim.
 
+## Reproducibility Boundary
+
 This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
+
+The primary DOI archive contains the canonical reproducibility boundary:
+
+archived inputs → deterministic NOAA-Spec processing → canonical cleaned outputs
+
+Domain outputs are convenience projections intended to improve interpretability for downstream workflows. They are derived from canonical cleaned outputs and are not required to reproduce NOAA-Spec's core deterministic cleaning behavior.
+
+Domain outputs are archived separately as supplementary artifacts and are outside the primary reproducibility claim.
 
 Not claimed: full upstream NOAA retrieval reproducibility for every curated
 fixture, NOAA downloading, multi-station orchestration, exhaustive NOAA
