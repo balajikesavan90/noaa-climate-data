@@ -1,0 +1,59 @@
+{
+  "archived_raw_input_path": "raw_inputs/10435099999.parquet",
+  "domain_output_paths": {
+    "clouds": "domains/clouds/10435099999_clouds.csv",
+    "core_meteorology": "domains/core_meteorology/10435099999_core_meteorology.csv",
+    "precipitation": "domains/precipitation/10435099999_precipitation.csv",
+    "pressure_temperature": "domains/pressure_temperature/10435099999_pressure_temperature.csv",
+    "quality_codes": "domains/quality_codes/10435099999_quality_codes.csv",
+    "remarks": "domains/remarks/10435099999_remarks.csv",
+    "visibility": "domains/visibility/10435099999_visibility.csv",
+    "wind": "domains/wind/10435099999_wind.csv"
+  },
+  "input_rows": 42827,
+  "original_source_path": "/media/balaji-kesavan/LaCie/NOAA_Data/10435099999/LocationData_Raw.parquet",
+  "output_rows": 42827,
+  "parse_error_rows": 0,
+  "raw_sha256": "821e6e5ea96040db6f2f1fea9e2c7609435d0aeee9446000e1749b3942c31315",
+  "rows_with_any_usable_metric": 42824,
+  "station_id": "10435099999",
+  "strict_parse_summary": {
+    "malformed_identifier_columns": [],
+    "malformed_section_identifier_columns": [],
+    "skipped_encoded_column_count": 0,
+    "skipped_encoded_columns": [],
+    "supported_prefix_family_identifiers": [
+      "AG1",
+      "GJ1"
+    ],
+    "token_rejection_count": 1,
+    "token_rejection_examples": [
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "9,9,999,9,+011,1",
+        "reason": "token_width_mismatch",
+        "row_index": 38011,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "10435099999",
+        "token_sample": "+011"
+      }
+    ],
+    "token_rejection_suppressed_log_count": 0,
+    "token_rejections_by_identifier": {
+      "MD1": 1
+    },
+    "token_rejections_by_identifier_part": {
+      "MD1.part_5": 1
+    },
+    "token_rejections_by_reason": {
+      "token_width_mismatch": 1
+    },
+    "unknown_identifier_columns": [],
+    "unsupported_identifier_columns": []
+  },
+  "warnings_count": 1
+}

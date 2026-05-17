@@ -178,6 +178,10 @@ def test_validate_command_writes_expected_artifacts(
 
     archive_manifest = pd.read_json(output_root / "archive_manifest.json", typ="series")
     assert archive_manifest["DOI"] == "TO_BE_ADDED_BEFORE_JOSS_SUBMISSION"
+    actual_files = sorted(path for path in output_root.rglob("*") if path.is_file())
+    assert int(archive_manifest["total_files"]) == len(actual_files)
+    assert int(archive_manifest["total_bytes"]) == sum(path.stat().st_size for path in actual_files)
+    assert not (output_root / ".runtime").exists()
 
     summary_text = (output_root / "summary.md").read_text(encoding="utf-8")
     assert "does not prove correctness over the full NOAA corpus" in summary_text
@@ -418,3 +422,4 @@ def test_validation_chunked_station_processing_writes_outputs(
             assert payload["chunked_processing"]["chunk_row_count"] == 1
     assert chunked_report_count > 0
     assert any((output_root / "domains" / "wind").glob("*_wind.csv"))
+    assert not (output_root / ".runtime").exists()

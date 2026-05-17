@@ -1,0 +1,19 @@
+{
+  "build_id": "20260510",
+  "command": "/home/balaji-kesavan/Documents/AI_Projects/noaa-spec/.venv/bin/noaa-spec dev build-validation-bundle --emit-domains --source-root /media/balaji-kesavan/LaCie/NOAA_Data --output-root artifacts/validation_100_station/build_20260510 --build-id 20260510 --count 100 --strategy size-stratified --seed 20260510",
+  "dependency_lock_hash": "3cd1b6148f01d530a4342aea25203bb56a3fb36a5e596bc9bf694cf5451f8758",
+  "domain_outputs_requested": true,
+  "git_dirty_status": "clean",
+  "output_root": "/home/balaji-kesavan/Documents/AI_Projects/noaa-spec/artifacts/validation_100_station/build_20260510",
+  "package_version": "1.0.0",
+  "platform": "Linux-6.17.0-19-generic-x86_64-with-glibc2.39",
+  "python_version": "3.12.3",
+  "repo_commit_sha": "03d378f10b8f6da683051bac712d03e75669ff94",
+  "reproducibility_boundary_note": "This artifact provides operational smoke validation for a stratified 100-station sample. It does not claim exhaustive validation of the full NOAA corpus. Semantic correctness is verified by tracked upstream-traceable fixtures, tests, and source-document-linked rule families. The selected raw inputs are archived with checksums so reviewers can inspect or rerun the workflow without depending on live NOAA availability once a DOI-backed archive exists.",
+  "sampling_strategy": "size-stratified",
+  "seed": 20260510,
+  "source_root": "/media/balaji-kesavan/LaCie/NOAA_Data",
+  "station_count_requested": 100,
+  "station_count_selected": 100,
+  "timestamp_utc": "2026-05-13T01:22:21Z"
+}

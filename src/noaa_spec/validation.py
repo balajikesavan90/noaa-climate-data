@@ -274,19 +274,14 @@ def run_validation_workflow(
         bundle_strict_summary=bundle_strict_summary,
     )
 
-    archive_manifest_path = output_root / "archive_manifest.json"
-    _write_json(
-        archive_manifest_path,
-        _build_archive_manifest_payload(output_root=output_root, run_manifest=run_manifest),
-    )
-
     checksums_path = output_root / "checksums.txt"
-    _write_checksums(checksums_path=checksums_path, output_root=output_root)
-    _write_json(
-        archive_manifest_path,
-        _build_archive_manifest_payload(output_root=output_root, run_manifest=run_manifest),
+    archive_manifest_path = output_root / "archive_manifest.json"
+    _finalize_archive_manifest_and_checksums(
+        archive_manifest_path=archive_manifest_path,
+        checksums_path=checksums_path,
+        output_root=output_root,
+        run_manifest=run_manifest,
     )
-    _write_checksums(checksums_path=checksums_path, output_root=output_root)
 
     return {
         "build_id": resolved_build_id,
@@ -1308,6 +1303,7 @@ def _process_station_candidate_chunked(
     finally:
         if runtime_root.exists():
             shutil.rmtree(runtime_root)
+        _remove_empty_runtime_dirs(output_root)
 
 
 def _write_domain_outputs(
@@ -1827,6 +1823,44 @@ def _build_archive_manifest_payload(
     }
 
 
+def _finalize_archive_manifest_and_checksums(
+    *,
+    archive_manifest_path: Path,
+    checksums_path: Path,
+    output_root: Path,
+    run_manifest: dict[str, Any],
+) -> None:
+    # archive_manifest.json describes the full file tree, while checksums.txt
+    # contains the archive manifest checksum. Iterate until file sizes stabilize;
+    # checksum line lengths are fixed, so this converges quickly.
+    previous_archive_size: int | None = None
+    previous_checksums_size: int | None = None
+    for _ in range(5):
+        _write_json(
+            archive_manifest_path,
+            _build_archive_manifest_payload(
+                output_root=output_root,
+                run_manifest=run_manifest,
+            ),
+        )
+        _write_checksums(checksums_path=checksums_path, output_root=output_root)
+        archive_size = archive_manifest_path.stat().st_size
+        checksums_size = checksums_path.stat().st_size
+        if (
+            archive_size == previous_archive_size
+            and checksums_size == previous_checksums_size
+        ):
+            return
+        previous_archive_size = archive_size
+        previous_checksums_size = checksums_size
+
+    _write_json(
+        archive_manifest_path,
+        _build_archive_manifest_payload(output_root=output_root, run_manifest=run_manifest),
+    )
+    _write_checksums(checksums_path=checksums_path, output_root=output_root)
+
+
 def _write_checksums(*, checksums_path: Path, output_root: Path) -> None:
     paths = sorted(
         path
@@ -1835,6 +1869,25 @@ def _write_checksums(*, checksums_path: Path, output_root: Path) -> None:
     )
     lines = [f"{_sha256_file(path)}  {path.relative_to(output_root).as_posix()}" for path in paths]
     checksums_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _remove_empty_runtime_dirs(output_root: Path) -> None:
+    runtime_root = output_root / ".runtime"
+    if not runtime_root.exists():
+        return
+    for path in sorted(
+        (item for item in runtime_root.rglob("*") if item.is_dir()),
+        key=lambda item: len(item.parts),
+        reverse=True,
+    ):
+        try:
+            path.rmdir()
+        except OSError:
+            pass
+    try:
+        runtime_root.rmdir()
+    except OSError:
+        pass
 
 
 def _selected_size_summary(selected_sizes: list[int]) -> dict[str, int]:
