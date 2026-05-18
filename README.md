@@ -89,7 +89,7 @@ standard local installation.
 
 ### Tier 2: DOI-backed, optional
 
-Tier 2 is the `build_20260510` 100-station operational validation run. It is
+Tier 2 is the `build_20260517` 100-station operational validation run. It is
 not reproducible from this repository alone because the large raw inputs and
 canonical outputs are archived outside the normal source checkout. Tier 2 is
 optional and is not required for the core `noaa-spec clean` reproducibility

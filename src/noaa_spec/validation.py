@@ -32,8 +32,12 @@ STATION_CHUNKING_ROW_COUNT_THRESHOLD = 250_000
 STATION_CHUNK_ROW_COUNT = 250_000
 STATION_CHUNKING_THRESHOLD_ENV = "NOAA_STATION_CHUNKING_ROW_COUNT_THRESHOLD"
 STATION_CHUNK_ROW_COUNT_ENV = "NOAA_STATION_CHUNK_ROW_COUNT"
+DOCKER_IMAGE_ENV = "NOAA_SPEC_DOCKER_IMAGE"
+DOCKER_IMAGE_ID_ENV = "NOAA_SPEC_DOCKER_IMAGE_ID"
+DOCKER_IMAGE_DIGEST_ENV = "NOAA_SPEC_DOCKER_IMAGE_DIGEST"
 PRIMARY_DOI_PLACEHOLDER = "TODO_PRIMARY_DOI"
 DOMAINS_DOI_PLACEHOLDER = "TODO_DOMAINS_DOI"
+REPRODUCIBILITY_BOUNDARY_ID = "archived-validation-inputs-to-canonical-outputs"
 REPRODUCIBILITY_BOUNDARY_NOTE = (
     "This validation artifact supports deterministic reproducibility from "
     "archived validation inputs to archived outputs. Reconstruction from upstream "
@@ -168,12 +172,16 @@ def run_validation_workflow(
         "build_id": resolved_build_id,
         "repo_commit_sha": git_metadata["repo_commit_sha"],
         "git_dirty_status": git_metadata["git_dirty_status"],
+        "git_tag": git_metadata["git_tag"],
         "timestamp_utc": _now_utc_isoformat(),
         "command": command_text,
         "python_version": platform.python_version(),
         "platform": platform.platform(),
         "package_version": __version__,
         "dependency_lock_hash": _dependency_lock_hash(),
+        "docker_image": _env_or_none(DOCKER_IMAGE_ENV),
+        "docker_image_id": _env_or_none(DOCKER_IMAGE_ID_ENV),
+        "docker_image_digest": _env_or_none(DOCKER_IMAGE_DIGEST_ENV),
         "source_root": str(source_root),
         "output_root": str(output_root),
         "station_count_requested": count,
@@ -181,7 +189,9 @@ def run_validation_workflow(
         "sampling_strategy": strategy,
         "seed": seed,
         "domain_outputs_requested": emit_domains,
+        "reproducibility_boundary": REPRODUCIBILITY_BOUNDARY_ID,
         "reproducibility_boundary_note": REPRODUCIBILITY_BOUNDARY_NOTE,
+        "upstream_noaa_reconstruction_claimed": False,
     }
 
     results_rows: list[dict[str, Any]] = []
@@ -279,6 +289,21 @@ def run_validation_workflow(
         run_manifest=run_manifest,
         bundle_strict_summary=bundle_strict_summary,
     )
+    selected_station_metadata_path = _write_selected_station_metadata(
+        output_root=output_root,
+        selection_rows=selection_rows,
+        results_rows=results_rows,
+    )
+    aggregate_summary = _write_aggregate_quality_summary(
+        output_root=output_root,
+        run_manifest=run_manifest,
+        results_rows=results_rows,
+        total_runtime=total_runtime,
+    )
+    _write_strict_token_rejection_explanation(
+        output_root=output_root,
+        aggregate_summary=aggregate_summary,
+    )
 
     checksums_path = output_root / "checksums.txt"
     archive_manifest_path = output_root / "archive_manifest.json"
@@ -295,6 +320,7 @@ def run_validation_workflow(
         "station_selection_manifest": selection_manifest_path,
         "run_manifest": run_manifest_path,
         "station_results": station_results_path,
+        "selected_station_metadata": selected_station_metadata_path,
         "summary": summary_path,
         "checksums": checksums_path,
         "archive_manifest": archive_manifest_path,
@@ -794,6 +820,301 @@ def _write_strict_parse_summary_report(
         lines.append("- None observed.")
 
     markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _selected_station_metadata_columns() -> list[str]:
+    return [
+        "station_id",
+        "station_name",
+        "latitude",
+        "longitude",
+        "min_date",
+        "max_date",
+        "input_rows",
+        "output_rows",
+        "raw_input_size_bytes",
+        "size_stratum",
+        "raw_input_sha256",
+        "canonical_output_sha256",
+    ]
+
+
+def _write_selected_station_metadata(
+    *,
+    output_root: Path,
+    selection_rows: list[dict[str, Any]],
+    results_rows: list[dict[str, Any]],
+) -> Path:
+    selected_by_station = {
+        str(row["station_id"]): row
+        for row in selection_rows
+        if row.get("selection_status") == "selected"
+    }
+    metadata_rows: list[dict[str, Any]] = []
+    for result in sorted(results_rows, key=lambda row: str(row.get("station_id") or "")):
+        station_id = str(result.get("station_id") or "")
+        selection = selected_by_station.get(station_id, {})
+        raw_path_value = str(result.get("archived_raw_input_path") or "")
+        raw_path = output_root / raw_path_value if raw_path_value else None
+        raw_metadata = (
+            _read_archived_station_metadata(raw_path)
+            if raw_path is not None and raw_path.exists()
+            else {}
+        )
+        metadata_rows.append(
+            {
+                "station_id": station_id,
+                "station_name": raw_metadata.get("station_name", ""),
+                "latitude": raw_metadata.get("latitude", ""),
+                "longitude": raw_metadata.get("longitude", ""),
+                "min_date": raw_metadata.get("min_date", ""),
+                "max_date": raw_metadata.get("max_date", ""),
+                "input_rows": result.get("input_rows", ""),
+                "output_rows": result.get("output_rows", ""),
+                "raw_input_size_bytes": selection.get("file_size_bytes", ""),
+                "size_stratum": selection.get("size_stratum", ""),
+                "raw_input_sha256": result.get("raw_sha256", "") or selection.get("raw_sha256", ""),
+                "canonical_output_sha256": result.get("canonical_output_sha256", ""),
+            }
+        )
+
+    path = output_root / "selected_station_metadata.csv"
+    write_deterministic_csv(
+        pd.DataFrame(metadata_rows, columns=_selected_station_metadata_columns()),
+        path,
+        sort_by=("station_id",),
+    )
+    return path
+
+
+def _read_archived_station_metadata(path: Path) -> dict[str, str]:
+    try:
+        if path.suffix.lower() == ".parquet":
+            columns = ["NAME", "LATITUDE", "LONGITUDE", "DATE"]
+            frame = pd.read_parquet(path, columns=columns)
+        else:
+            frame = pd.read_csv(
+                path,
+                dtype=str,
+                compression="infer",
+                usecols=lambda column: column in {"NAME", "LATITUDE", "LONGITUDE", "DATE"},
+            )
+    except Exception:
+        return {}
+
+    if frame.empty:
+        return {}
+    first = frame.iloc[0]
+    metadata: dict[str, str] = {}
+    for source_column, output_key in (
+        ("NAME", "station_name"),
+        ("LATITUDE", "latitude"),
+        ("LONGITUDE", "longitude"),
+    ):
+        if source_column not in frame.columns:
+            metadata[output_key] = ""
+            continue
+        value = first.get(source_column)
+        metadata[output_key] = "" if pd.isna(value) else str(value)
+    if "DATE" in frame.columns and not frame["DATE"].empty:
+        metadata["min_date"] = "" if frame["DATE"].isna().all() else str(frame["DATE"].min())
+        metadata["max_date"] = "" if frame["DATE"].isna().all() else str(frame["DATE"].max())
+    else:
+        metadata["min_date"] = ""
+        metadata["max_date"] = ""
+    return metadata
+
+
+def _build_aggregate_quality_summary(
+    *,
+    output_root: Path,
+    run_manifest: dict[str, Any],
+    results_rows: list[dict[str, Any]],
+    total_runtime: float,
+) -> dict[str, Any]:
+    strict_summary = _read_json(output_root / "strict_parse_summary_report.json")
+    token_summary = strict_summary.get("token_validation_rejections", {})
+    warnings_by_station = Counter(
+        {
+            str(row.get("station_id") or ""): int(row.get("warnings_count") or 0)
+            for row in results_rows
+        }
+    )
+    status_counts = Counter(str(row.get("status") or "") for row in results_rows)
+    unsupported_identifiers: Counter[str] = Counter()
+    skipped_identifiers: Counter[str] = Counter()
+    parse_error_rows = 0
+    runtime_values = [
+        float(row.get("runtime_seconds") or 0.0)
+        for row in results_rows
+        if str(row.get("runtime_seconds") or "") != ""
+    ]
+
+    for report_path in sorted((output_root / "quality_reports").glob("*_quality_report.json")):
+        report = _read_json(report_path)
+        parse_error_rows += int(report.get("parse_error_rows") or 0)
+        strict = report.get("strict_parse_summary", {})
+        unsupported_identifiers.update(str(value) for value in strict.get("unsupported_identifier_columns", ()))
+        skipped_identifiers.update(str(value) for value in strict.get("skipped_encoded_columns", ()))
+
+    total_input_rows = sum(int(row.get("input_rows") or 0) for row in results_rows)
+    total_output_rows = sum(int(row.get("output_rows") or 0) for row in results_rows)
+    return {
+        "artifact_id": "aggregate_quality_summary",
+        "schema_version": "1.0.0",
+        "build_id": run_manifest["build_id"],
+        "created_utc": _now_utc_isoformat(),
+        "total_stations": len(results_rows),
+        "successful_stations": status_counts.get("success", 0),
+        "failed_stations": status_counts.get("failed", 0),
+        "not_run_stations": status_counts.get("not_run", 0),
+        "station_status_counts": dict(sorted(status_counts.items())),
+        "total_input_rows": total_input_rows,
+        "total_output_rows": total_output_rows,
+        "row_parity": total_input_rows == total_output_rows,
+        "parse_error_rows": parse_error_rows,
+        "total_warnings": sum(warnings_by_station.values()),
+        "stations_with_warnings": sum(1 for count in warnings_by_station.values() if count > 0),
+        "strict_token_rejection_total": int(token_summary.get("total_token_rejection_count") or 0),
+        "strict_token_affected_station_count": int(token_summary.get("affected_station_count") or 0),
+        "strict_token_rejections_by_identifier": token_summary.get("token_rejections_by_identifier", {}),
+        "strict_token_rejections_by_reason": token_summary.get("token_rejections_by_reason", {}),
+        "strict_token_rejections_by_identifier_part": token_summary.get(
+            "token_rejections_by_identifier_part", {}
+        ),
+        "unsupported_identifiers": dict(sorted(unsupported_identifiers.items())),
+        "skipped_identifiers": dict(sorted(skipped_identifiers.items())),
+        "top_affected_stations_by_warning_count": [
+            {"station_id": station_id, "warnings_count": count}
+            for station_id, count in sorted(
+                warnings_by_station.items(),
+                key=lambda item: (-item[1], item[0]),
+            )[:10]
+        ],
+        "top_affected_stations_by_strict_rejection_count": token_summary.get(
+            "top_affected_stations", []
+        ),
+        "runtime_summary_seconds": {
+            "total": total_runtime,
+            "min": min(runtime_values) if runtime_values else 0.0,
+            "max": max(runtime_values) if runtime_values else 0.0,
+            "mean": (sum(runtime_values) / len(runtime_values)) if runtime_values else 0.0,
+        },
+    }
+
+
+def _write_aggregate_quality_summary(
+    *,
+    output_root: Path,
+    run_manifest: dict[str, Any],
+    results_rows: list[dict[str, Any]],
+    total_runtime: float,
+) -> dict[str, Any]:
+    payload = _build_aggregate_quality_summary(
+        output_root=output_root,
+        run_manifest=run_manifest,
+        results_rows=results_rows,
+        total_runtime=total_runtime,
+    )
+    _write_json(output_root / "aggregate_quality_summary.json", payload)
+
+    lines = [
+        "# Aggregate Quality Summary",
+        "",
+        f"- Total stations: {payload['total_stations']}",
+        f"- Successful stations: {payload['successful_stations']}",
+        f"- Failed stations: {payload['failed_stations']}",
+        f"- Not-run stations: {payload['not_run_stations']}",
+        f"- Total input rows: {payload['total_input_rows']}",
+        f"- Total output rows: {payload['total_output_rows']}",
+        f"- Row parity: {payload['row_parity']}",
+        f"- Parse error rows: {payload['parse_error_rows']}",
+        f"- Total warnings: {payload['total_warnings']}",
+        f"- Stations with warnings: {payload['stations_with_warnings']}",
+        f"- Strict token rejections: {payload['strict_token_rejection_total']}",
+        f"- Strict token affected stations: {payload['strict_token_affected_station_count']}",
+        f"- Total runtime seconds: {payload['runtime_summary_seconds']['total']:.6f}",
+        "",
+        "## Strict Token Rejections By Identifier",
+        "",
+        *_count_lines(payload["strict_token_rejections_by_identifier"]),
+        "",
+        "## Unsupported Identifiers",
+        "",
+        *_count_lines(payload["unsupported_identifiers"]),
+        "",
+        "## Skipped Identifiers",
+        "",
+        *_count_lines(payload["skipped_identifiers"]),
+        "",
+        "## Top Affected Stations By Warning Count",
+        "",
+    ]
+    if payload["top_affected_stations_by_warning_count"]:
+        lines.extend(
+            f"- {entry['station_id']}: {entry['warnings_count']}"
+            for entry in payload["top_affected_stations_by_warning_count"]
+        )
+    else:
+        lines.append("- None observed.")
+    (output_root / "aggregate_quality_summary.md").write_text(
+        "\n".join(lines) + "\n",
+        encoding="utf-8",
+    )
+    return payload
+
+
+def _count_lines(mapping: dict[str, Any]) -> list[str]:
+    if not mapping:
+        return ["- None observed."]
+    return [f"- {key}: {mapping[key]}" for key in sorted(mapping)]
+
+
+def _write_strict_token_rejection_explanation(
+    *,
+    output_root: Path,
+    aggregate_summary: dict[str, Any],
+) -> Path:
+    top_identifiers = aggregate_summary["strict_token_rejections_by_identifier"]
+    lines = [
+        "# Strict Token Rejection Explanation",
+        "",
+        "Strict token rejections are diagnostics emitted when an optional encoded NOAA section is present but one or more parsed tokens do not match the token width or shape expected by the current rule table.",
+        "",
+        "They are non-fatal observability signals. The validation workflow records them so reviewers can inspect real-world optional-section irregularity without converting those irregularities into row loss or silent claims of decoded scientific correctness.",
+        "",
+        "## Observed Counts",
+        "",
+        f"- Total strict token rejections: {aggregate_summary['strict_token_rejection_total']}",
+        f"- Affected stations: {aggregate_summary['strict_token_affected_station_count']}",
+        f"- Total input rows: {aggregate_summary['total_input_rows']}",
+        f"- Total output rows: {aggregate_summary['total_output_rows']}",
+        f"- Row parity preserved: {aggregate_summary['row_parity']}",
+        f"- Parse error rows: {aggregate_summary['parse_error_rows']}",
+        "",
+        "## Dominant Identifiers",
+        "",
+        *_count_lines(top_identifiers),
+        "",
+        "## Interpretation",
+        "",
+        "A strict token rejection does not mean a station failed, a row was dropped, or the canonical row count changed. Row parity is reported separately in `station_results.csv` and `aggregate_quality_summary.json`.",
+        "",
+        "Unsupported, skipped, or malformed optional encoded sections are surfaced in per-station quality reports through fields such as `skipped_encoded_columns`, `unsupported_identifier_columns`, `malformed_identifier_columns`, and `token_rejection_examples`.",
+        "",
+        "These diagnostics do not imply upstream NOAA reconstruction. The reproducibility claim remains bounded to archived validation inputs and canonical outputs.",
+        "",
+        "## Future Work",
+        "",
+        "- Review high-volume optional encoded families against NOAA documentation and representative raw examples.",
+        "- Promote common optional-section divergences into documented rule-provenance decisions where appropriate.",
+        "- Add broader aggregate field-completeness and nullification reports for DOI-scale validation artifacts.",
+        "- Expand upstream-traceable fixtures for optional encoded families that dominate strict diagnostics.",
+        "",
+    ]
+    path = output_root / "strict_token_rejection_explanation.md"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
 
 
 def _process_station_candidate(
@@ -1772,10 +2093,14 @@ def _write_summary(
             "- `canonical_cleaned/`",
             "- `quality_reports/`",
             "- `station_selection_manifest.csv`",
+            "- `selected_station_metadata.csv`",
             "- `run_manifest.json`",
             "- `station_results.csv`",
+            "- `aggregate_quality_summary.json`",
+            "- `aggregate_quality_summary.md`",
             "- `strict_parse_summary_report.json`",
             "- `strict_parse_summary_report.md`",
+            "- `strict_token_rejection_explanation.md`",
             "- `checksums.txt`",
             "- `summary.md`",
             "- `archive_manifest.json`",
@@ -1810,13 +2135,18 @@ def _build_archive_manifest_payload(
     directory_inventory = []
     for directory in sorted(path for path in output_root.iterdir() if path.is_dir()):
         dir_files = sorted(path for path in directory.rglob("*") if path.is_file())
-        directory_inventory.append(
-            {
-                "path": directory.name,
-                "file_count": len(dir_files),
-                "total_bytes": sum(path.stat().st_size for path in dir_files),
-            }
-        )
+        entry = {
+            "path": directory.name,
+            "file_count": len(dir_files),
+            "total_bytes": sum(path.stat().st_size for path in dir_files),
+            "archive_classification": "supplementary" if directory.name == "domains" else "primary",
+        }
+        if directory.name == "domains":
+            entry["supplementary_not_primary"] = True
+        directory_inventory.append(entry)
+
+    primary_paths = _primary_archive_paths(output_root)
+    supplementary_paths = _supplementary_archive_paths(output_root)
     return {
         "artifact_name": "validation_100_station_bundle",
         "artifact_version": str(run_manifest["build_id"]),
@@ -1826,6 +2156,10 @@ def _build_archive_manifest_payload(
         "intended_archive": "primary reproducibility DOI archive",
         "total_files": len(files),
         "total_bytes": sum(path.stat().st_size for path in files),
+        "primary_total_files": len(primary_paths),
+        "primary_total_bytes": sum(path.stat().st_size for path in primary_paths),
+        "supplementary_total_files": len(supplementary_paths),
+        "supplementary_total_bytes": sum(path.stat().st_size for path in supplementary_paths),
         "checksum_algorithm": "SHA256",
         "top_level_files": top_level_files,
         "directory_inventory": directory_inventory,
@@ -1842,14 +2176,58 @@ def _build_archive_manifest_payload(
                 "raw_inputs/",
                 "canonical_cleaned/",
                 "quality_reports/",
+                "station_results.csv",
+                "station_selection_manifest.csv",
+                "selected_station_metadata.csv",
+                "run_manifest.json",
+                "archive_manifest.json",
                 "checksums.txt",
-                "metadata files",
-                "strict parse reports",
-                "aggregate summaries",
+                "summary.md",
+                "aggregate_quality_summary.json",
+                "aggregate_quality_summary.md",
+                "strict_parse_summary_report.json",
+                "strict_parse_summary_report.md",
+                "strict_token_rejection_explanation.md",
             ],
             "supplementary": ["domains/"],
         },
     }
+
+
+def _primary_archive_paths(output_root: Path) -> list[Path]:
+    primary_entries = [
+        "raw_inputs",
+        "canonical_cleaned",
+        "quality_reports",
+        "station_results.csv",
+        "station_selection_manifest.csv",
+        "selected_station_metadata.csv",
+        "run_manifest.json",
+        "archive_manifest.json",
+        "checksums.txt",
+        "summary.md",
+        "aggregate_quality_summary.json",
+        "aggregate_quality_summary.md",
+        "strict_parse_summary_report.json",
+        "strict_parse_summary_report.md",
+        "strict_token_rejection_explanation.md",
+    ]
+    return _existing_archive_paths(output_root=output_root, entries=primary_entries)
+
+
+def _supplementary_archive_paths(output_root: Path) -> list[Path]:
+    return _existing_archive_paths(output_root=output_root, entries=["domains"])
+
+
+def _existing_archive_paths(*, output_root: Path, entries: list[str]) -> list[Path]:
+    paths: list[Path] = []
+    for entry in entries:
+        path = output_root / entry
+        if path.is_file():
+            paths.append(path)
+        elif path.is_dir():
+            paths.extend(sorted(item for item in path.rglob("*") if item.is_file()))
+    return paths
 
 
 def _finalize_archive_manifest_and_checksums(
@@ -2030,6 +2408,10 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _read_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def _relative_to_root(path: Path, root: Path) -> str:
     return path.relative_to(root).as_posix()
 
@@ -2043,7 +2425,17 @@ def _git_metadata() -> dict[str, str | None]:
     commit = _run_git_command(["git", "rev-parse", "HEAD"], repo_root)
     dirty_output = _run_git_command(["git", "status", "--porcelain"], repo_root)
     dirty_status = None if dirty_output is None else ("dirty" if dirty_output else "clean")
-    return {"repo_commit_sha": commit, "git_dirty_status": dirty_status}
+    git_tag = _run_git_command(["git", "describe", "--tags", "--exact-match"], repo_root)
+    return {
+        "repo_commit_sha": commit,
+        "git_dirty_status": dirty_status,
+        "git_tag": git_tag,
+    }
+
+
+def _env_or_none(name: str) -> str | None:
+    value = os.environ.get(name, "").strip()
+    return value or None
 
 
 def _run_git_command(command: list[str], cwd: Path) -> str | None:

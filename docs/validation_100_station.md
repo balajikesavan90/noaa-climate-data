@@ -2,7 +2,7 @@
 
 The repository contains maintainer tooling to produce a 100-station operational
 validation artifact. The canonical DOI candidate is
-`artifacts/validation_100_station/build_20260510`.
+`artifacts/validation_100_station/build_20260517`.
 
 This is Tier 2 optional evidence. It is not fully reproducible from the
 repository alone because large archived raw inputs and canonical cleaned outputs
@@ -38,7 +38,7 @@ archival.
 
 ## Archived validation bundle
 
-Canonical build: `build_20260510`
+Canonical build: `build_20260517`
 
 Primary DOI: `TODO_PRIMARY_DOI`
 
@@ -69,6 +69,7 @@ Primary archive contents:
 - `station_selection_manifest.csv`
 - `selected_station_metadata.csv`
 - `run_manifest.json`
+- `archive_manifest.json`
 - `station_results.csv`
 - `strict_parse_summary_report.json`
 - `strict_parse_summary_report.md`
@@ -86,15 +87,15 @@ Supplementary archive contents:
 Verify the extracted DOI artifact from the repository root:
 
 ```bash
-python3 scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260510
+python3 scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260517
 ```
 
 Inspect the manifests:
 
 ```bash
-python3 -m json.tool artifacts/validation_100_station/build_20260510/run_manifest.json
-python3 -m json.tool artifacts/validation_100_station/build_20260510/archive_manifest.json
-sed -n '1,40p' artifacts/validation_100_station/build_20260510/station_results.csv
+python3 -m json.tool artifacts/validation_100_station/build_20260517/run_manifest.json
+python3 -m json.tool artifacts/validation_100_station/build_20260517/archive_manifest.json
+sed -n '1,40p' artifacts/validation_100_station/build_20260517/station_results.csv
 ```
 
 Optional single-station rerun:
@@ -102,17 +103,23 @@ Optional single-station rerun:
 ```bash
 mkdir -p /tmp/noaa-spec-validation-check
 mkdir -p /tmp/noaa-spec-validation-check/source
-cp artifacts/validation_100_station/build_20260510/raw_inputs/01121099999.parquet \
+STATION_ID=$(python3 - <<'PY'
+import csv
+with open("artifacts/validation_100_station/build_20260517/selected_station_metadata.csv", newline="", encoding="utf-8") as handle:
+    print(next(csv.DictReader(handle))["station_id"])
+PY
+)
+cp "artifacts/validation_100_station/build_20260517/raw_inputs/${STATION_ID}.parquet" \
   /tmp/noaa-spec-validation-check/source/
 noaa-spec dev build-validation-bundle \
   --source-root /tmp/noaa-spec-validation-check/source \
   --output-root /tmp/noaa-spec-validation-check/out \
   --count 1 \
-  --seed 20260510 \
+  --seed 20260517 \
   --build-id reviewer-single-station
-sha256sum /tmp/noaa-spec-validation-check/out/canonical_cleaned/01121099999_cleaned.csv
-grep 'canonical_cleaned/01121099999_cleaned.csv' \
-  artifacts/validation_100_station/build_20260510/checksums.txt
+sha256sum "/tmp/noaa-spec-validation-check/out/canonical_cleaned/${STATION_ID}_cleaned.csv"
+grep "canonical_cleaned/${STATION_ID}_cleaned.csv" \
+  artifacts/validation_100_station/build_20260517/checksums.txt
 ```
 
 ## C. Reproduce the 100-station validation locally
@@ -130,10 +137,10 @@ input bundle. Then run:
 ```bash
 noaa-spec dev build-validation-bundle \
   --source-root /path/to/downloaded/stations \
-  --output-root artifacts/validation_100_station/build_20260510_rerun \
+  --output-root artifacts/validation_100_station/build_20260517_rerun \
   --count 100 \
   --strategy size-stratified \
-  --seed 20260510 \
+  --seed 20260517 \
   --emit-domains
 ```
 
@@ -179,7 +186,7 @@ or claiming NOAA-wide exhaustiveness.
 ## External archival
 
 For JOSS or later archival packaging, review `summary.md`, `checksums.txt`, and
-`archive_manifest.json`, then archive the resulting `build_20260510` bundle in
+`archive_manifest.json`, then archive the resulting `build_20260517` bundle in
 an external repository or data archive that can mint a DOI. Replace
 `TODO_PRIMARY_DOI` before final citation. Archive `domains/` separately as the
 supplementary interpretability artifact and replace `TODO_DOMAINS_DOI` where

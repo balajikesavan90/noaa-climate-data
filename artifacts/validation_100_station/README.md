@@ -4,7 +4,7 @@ This directory documents the canonical 100-station operational validation
 artifact for DOI packaging:
 
 ```text
-artifacts/validation_100_station/build_20260510
+artifacts/validation_100_station/build_20260517
 ```
 
 This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
@@ -65,7 +65,7 @@ The tracked metadata records that a local validation workflow:
 # Directory Structure
 
 ```text
-build_20260510/
+build_20260517/
 ├── archive_manifest.json
 ├── aggregate_quality_summary.json
 ├── aggregate_quality_summary.md
@@ -92,10 +92,18 @@ Primary DOI archive (`TODO_PRIMARY_DOI`):
 * `raw_inputs/`
 * `canonical_cleaned/`
 * `quality_reports/`
+* `station_results.csv`
+* `station_selection_manifest.csv`
+* `selected_station_metadata.csv`
+* `run_manifest.json`
+* `archive_manifest.json`
 * `checksums.txt`
-* metadata files
-* strict parse reports
-* aggregate summaries
+* `summary.md`
+* `aggregate_quality_summary.json`
+* `aggregate_quality_summary.md`
+* `strict_parse_summary_report.json`
+* `strict_parse_summary_report.md`
+* `strict_token_rejection_explanation.md`
 
 Supplementary Domains DOI archive (`TODO_DOMAINS_DOI`):
 
@@ -118,7 +126,7 @@ This validation artifact supports deterministic reproducibility from archived va
 From the repository root, verify the extracted DOI artifact:
 
 ```bash
-python3 scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260510
+python3 scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260517
 ```
 
 This verifies `checksums.txt`, required files, the expected 100 raw inputs, 100
@@ -128,26 +136,32 @@ row-count parity, and `selected_station_metadata.csv`.
 Inspect the main manifests:
 
 ```bash
-python3 -m json.tool artifacts/validation_100_station/build_20260510/run_manifest.json
-python3 -m json.tool artifacts/validation_100_station/build_20260510/archive_manifest.json
-sed -n '1,40p' artifacts/validation_100_station/build_20260510/station_results.csv
+python3 -m json.tool artifacts/validation_100_station/build_20260517/run_manifest.json
+python3 -m json.tool artifacts/validation_100_station/build_20260517/archive_manifest.json
+sed -n '1,40p' artifacts/validation_100_station/build_20260517/station_results.csv
 ```
 
 Optional small rerun check for one archived station:
 
 ```bash
 mkdir -p /tmp/noaa-spec-validation-check/source
-cp artifacts/validation_100_station/build_20260510/raw_inputs/01121099999.parquet \
+STATION_ID=$(python3 - <<'PY'
+import csv
+with open("artifacts/validation_100_station/build_20260517/selected_station_metadata.csv", newline="", encoding="utf-8") as handle:
+    print(next(csv.DictReader(handle))["station_id"])
+PY
+)
+cp "artifacts/validation_100_station/build_20260517/raw_inputs/${STATION_ID}.parquet" \
   /tmp/noaa-spec-validation-check/source/
 noaa-spec dev build-validation-bundle \
   --source-root /tmp/noaa-spec-validation-check/source \
   --output-root /tmp/noaa-spec-validation-check/out \
   --count 1 \
-  --seed 20260510 \
+  --seed 20260517 \
   --build-id reviewer-single-station
-sha256sum /tmp/noaa-spec-validation-check/out/canonical_cleaned/01121099999_cleaned.csv
-grep 'canonical_cleaned/01121099999_cleaned.csv' \
-  artifacts/validation_100_station/build_20260510/checksums.txt
+sha256sum "/tmp/noaa-spec-validation-check/out/canonical_cleaned/${STATION_ID}_cleaned.csv"
+grep "canonical_cleaned/${STATION_ID}_cleaned.csv" \
+  artifacts/validation_100_station/build_20260517/checksums.txt
 ```
 
 The full 100-station rerun is optional and expensive; it is not required for a

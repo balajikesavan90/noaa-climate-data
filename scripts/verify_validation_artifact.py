@@ -6,6 +6,7 @@ import csv
 import hashlib
 import json
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 import sys
 from typing import Any
@@ -37,13 +38,17 @@ DOMAINS_SUPPLEMENT_STATEMENT = (
 
 
 REQUIRED_TOP_LEVEL_FILES = {
+    "aggregate_quality_summary.json",
+    "aggregate_quality_summary.md",
     "archive_manifest.json",
     "checksums.txt",
     "run_manifest.json",
+    "selected_station_metadata.csv",
     "station_results.csv",
     "station_selection_manifest.csv",
     "strict_parse_summary_report.json",
     "strict_parse_summary_report.md",
+    "strict_token_rejection_explanation.md",
     "summary.md",
 }
 
@@ -63,6 +68,21 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
 
 def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _now_utc_isoformat() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _artifact_build_id(artifact_root: Path) -> str:
+    run_manifest = artifact_root / "run_manifest.json"
+    if run_manifest.exists():
+        try:
+            return str(_read_json(run_manifest).get("build_id") or "")
+        except json.JSONDecodeError:
+            pass
+    name = artifact_root.name
+    return name.removeprefix("build_")
 
 
 def verify_checksums(artifact_root: Path) -> list[str]:
@@ -93,7 +113,12 @@ def verify_checksums(artifact_root: Path) -> list[str]:
     return failures
 
 
-def verify_artifact(artifact_root: Path, *, verify_hashes: bool = True) -> list[str]:
+def verify_artifact(
+    artifact_root: Path,
+    *,
+    verify_hashes: bool = True,
+    verify_domains: bool = False,
+) -> list[str]:
     artifact_root = artifact_root.resolve()
     failures: list[str] = []
     if not artifact_root.exists():
@@ -133,8 +158,31 @@ def verify_artifact(artifact_root: Path, *, verify_hashes: bool = True) -> list[
         if input_total != output_total:
             failures.append(f"summed input_rows ({input_total}) != summed output_rows ({output_total})")
 
-    if not (artifact_root / "selected_station_metadata.csv").exists():
-        failures.append("missing selected_station_metadata.csv")
+    if verify_domains:
+        domain_root = artifact_root / "domains"
+        expected_domains = {
+            "clouds",
+            "core_meteorology",
+            "precipitation",
+            "pressure_temperature",
+            "quality_codes",
+            "remarks",
+            "visibility",
+            "wind",
+        }
+        if not domain_root.is_dir():
+            failures.append("missing supplementary domains directory")
+        else:
+            for domain in sorted(expected_domains):
+                domain_dir = domain_root / domain
+                if not domain_dir.is_dir():
+                    failures.append(f"missing supplementary domain directory: domains/{domain}")
+                    continue
+                actual_count = len(list(domain_dir.glob(f"*_{domain}.csv")))
+                if actual_count != 100:
+                    failures.append(
+                        f"domains/{domain} contains {actual_count} *_{domain}.csv files, expected 100"
+                    )
 
     if verify_hashes:
         failures.extend(verify_checksums(artifact_root))
@@ -243,9 +291,12 @@ def build_aggregate_quality_summary(artifact_root: Path) -> dict[str, Any]:
     return {
         "artifact_id": "aggregate_quality_summary",
         "schema_version": "1.0.0",
-        "build_id": "20260510",
+        "build_id": _artifact_build_id(artifact_root),
+        "created_utc": _now_utc_isoformat(),
         "total_stations": len(station_results),
         "successful_stations": successful_stations,
+        "failed_stations": sum(1 for row in station_results if row.get("status") == "failed"),
+        "not_run_stations": sum(1 for row in station_results if row.get("status") == "not_run"),
         "total_input_rows": total_input_rows,
         "total_output_rows": total_output_rows,
         "row_parity": total_input_rows == total_output_rows,
@@ -338,7 +389,7 @@ def write_strict_token_rejection_explanation(artifact_root: Path) -> Path:
             "",
             "Unsupported or malformed optional encoded sections are surfaced in per-station quality reports through fields such as `skipped_encoded_columns`, `unsupported_identifier_columns`, `malformed_identifier_columns`, and `token_rejection_examples`. The cleaner does not silently convert those diagnostics into a claim of decoded scientific correctness for the affected optional payloads.",
             "",
-            "Reviewers should infer that the workflow observed substantial optional-section irregularity and recorded it explicitly. Reviewers should not infer that the 7.3M count represents row loss, station failure, or silent removal of observations.",
+            "Reviewers should infer that the workflow observed optional-section irregularity and recorded it explicitly. Reviewers should not infer that the reported count represents row loss, station failure, or silent removal of observations.",
             "",
             "## Future Work",
             "",
@@ -356,12 +407,10 @@ def write_strict_token_rejection_explanation(artifact_root: Path) -> Path:
 def update_run_manifest(artifact_root: Path) -> Path:
     path = artifact_root / "run_manifest.json"
     payload = _read_json(path)
-    payload["docker_image_tag"] = payload.get("docker_image_tag", "noaa-spec-review:1.0.0")
-    payload["docker_image_digest"] = payload.get(
-        "docker_image_digest",
-        "sha256:dbbaa759a8ccc1ae7f86ccbc1189771643fa56d0fa798e29552c415c04dd030e",
-    )
-    payload["reproducibility_boundary"] = "archived-inputs-to-archived-outputs"
+    payload["docker_image"] = payload.get("docker_image")
+    payload["docker_image_id"] = payload.get("docker_image_id")
+    payload["docker_image_digest"] = payload.get("docker_image_digest")
+    payload["reproducibility_boundary"] = "archived-validation-inputs-to-canonical-outputs"
     payload["reproducibility_boundary_note"] = VALIDATION_BOUNDARY_STATEMENT
     payload["upstream_noaa_reconstruction_claimed"] = False
     payload["archived_input_format"] = "parquet"
@@ -408,25 +457,28 @@ def recompute_checksums_and_archive_manifest(artifact_root: Path) -> Path:
     for directory_name in ["canonical_cleaned", "domains", "quality_reports", "raw_inputs"]:
         directory = artifact_root / directory_name
         files = sorted(path for path in directory.rglob("*") if path.is_file()) if directory.exists() else []
-        directory_inventory.append(
-            {
-                "file_count": len(files),
-                "path": directory_name,
-                "total_bytes": sum(path.stat().st_size for path in files),
-            }
-        )
+        entry = {
+            "file_count": len(files),
+            "path": directory_name,
+            "total_bytes": sum(path.stat().st_size for path in files),
+            "archive_classification": "supplementary" if directory_name == "domains" else "primary",
+        }
+        if directory_name == "domains":
+            entry["supplementary_not_primary"] = True
+        directory_inventory.append(entry)
 
     top_level_files = sorted(path.name for path in artifact_root.iterdir() if path.is_file())
     payload = _read_json(archive_manifest_path) if archive_manifest_path.exists() else {}
     existing_doi = payload.get("doi")
     if existing_doi in (None, "", *LEGACY_PRIMARY_DOI_PLACEHOLDERS):
         existing_doi = "TODO_PRIMARY_DOI"
+    build_id = _artifact_build_id(artifact_root)
     payload.update(
         {
             "artifact_name": "validation_100_station_bundle",
             "artifact_root": str(artifact_root),
-            "artifact_version": "20260510",
-            "build_id": "20260510",
+            "artifact_version": build_id,
+            "build_id": build_id,
             "canonical": True,
             "checksum_algorithm": "SHA256",
             "checksum_file": "checksums.txt",
@@ -437,10 +489,18 @@ def recompute_checksums_and_archive_manifest(artifact_root: Path) -> Path:
                     "raw_inputs/",
                     "canonical_cleaned/",
                     "quality_reports/",
+                    "station_results.csv",
+                    "station_selection_manifest.csv",
+                    "selected_station_metadata.csv",
+                    "run_manifest.json",
+                    "archive_manifest.json",
                     "checksums.txt",
-                    "metadata files",
-                    "strict parse reports",
-                    "aggregate summaries",
+                    "summary.md",
+                    "aggregate_quality_summary.json",
+                    "aggregate_quality_summary.md",
+                    "strict_parse_summary_report.json",
+                    "strict_parse_summary_report.md",
+                    "strict_token_rejection_explanation.md",
                 ],
                 "supplementary": ["domains/"],
             },
@@ -502,9 +562,18 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Run structural checks without hashing every file.",
     )
+    parser.add_argument(
+        "--verify-domains",
+        action="store_true",
+        help="Also verify the supplementary domains/ tree contains 8 x 100 domain files.",
+    )
     args = parser.parse_args(argv)
 
-    failures = verify_artifact(args.artifact_path, verify_hashes=not args.skip_hashes)
+    failures = verify_artifact(
+        args.artifact_path,
+        verify_hashes=not args.skip_hashes,
+        verify_domains=args.verify_domains,
+    )
     if failures:
         print("FAIL: validation artifact verification failed")
         for failure in failures:
@@ -513,6 +582,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print("PASS: validation artifact verification succeeded")
     print(f"Artifact directory: {args.artifact_path}")
+    if (args.artifact_path / "domains").exists() and not args.verify_domains:
+        print("Supplementary domains present; use --verify-domains to validate them.")
     return 0
 
 

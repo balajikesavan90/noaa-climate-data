@@ -113,6 +113,9 @@ def test_validate_command_writes_expected_artifacts(
             "test-build",
         ],
     )
+    monkeypatch.setenv("NOAA_SPEC_DOCKER_IMAGE", "noaa-spec-review:1.0.0")
+    monkeypatch.setenv("NOAA_SPEC_DOCKER_IMAGE_ID", "sha256:local-image-id")
+    monkeypatch.setenv("NOAA_SPEC_DOCKER_IMAGE_DIGEST", "sha256:local-digest")
     cli.main()
 
     selection_manifest = pd.read_csv(output_root / "station_selection_manifest.csv")
@@ -145,6 +148,11 @@ def test_validate_command_writes_expected_artifacts(
         "reproducibility_boundary_note"
     ]
     assert "outside the primary reproducibility claim" in run_manifest["reproducibility_boundary_note"]
+    assert run_manifest["reproducibility_boundary"] == "archived-validation-inputs-to-canonical-outputs"
+    assert run_manifest["docker_image"] == "noaa-spec-review:1.0.0"
+    assert run_manifest["docker_image_id"] == "sha256:local-image-id"
+    assert run_manifest["docker_image_digest"] == "sha256:local-digest"
+    assert "git_tag" in run_manifest.index
 
     station_results = pd.read_csv(output_root / "station_results.csv")
     expected_result_columns = {
@@ -172,8 +180,12 @@ def test_validate_command_writes_expected_artifacts(
     assert "station_results.csv" in checksums_text
     assert "run_manifest.json" in checksums_text
     assert "summary.md" in checksums_text
+    assert "selected_station_metadata.csv" in checksums_text
+    assert "aggregate_quality_summary.json" in checksums_text
+    assert "aggregate_quality_summary.md" in checksums_text
     assert "strict_parse_summary_report.json" in checksums_text
     assert "strict_parse_summary_report.md" in checksums_text
+    assert "strict_token_rejection_explanation.md" in checksums_text
     assert "archive_manifest.json" in checksums_text
 
     archive_manifest = pd.read_json(output_root / "archive_manifest.json", typ="series")
@@ -181,15 +193,49 @@ def test_validate_command_writes_expected_artifacts(
     assert archive_manifest["supplementary_domains_doi"] == "TODO_DOMAINS_DOI"
     assert archive_manifest["primary_reproducibility_archive"] == True
     assert archive_manifest["supplementary_domains_archive"] == False
+    assert "primary_total_files" in archive_manifest.index
+    assert "supplementary_total_files" in archive_manifest.index
     actual_files = sorted(path for path in output_root.rglob("*") if path.is_file())
     assert int(archive_manifest["total_files"]) == len(actual_files)
     assert int(archive_manifest["total_bytes"]) == sum(path.stat().st_size for path in actual_files)
     assert not (output_root / ".runtime").exists()
 
+    selected_metadata = pd.read_csv(output_root / "selected_station_metadata.csv")
+    assert list(selected_metadata.columns) == [
+        "station_id",
+        "station_name",
+        "latitude",
+        "longitude",
+        "min_date",
+        "max_date",
+        "input_rows",
+        "output_rows",
+        "raw_input_size_bytes",
+        "size_stratum",
+        "raw_input_sha256",
+        "canonical_output_sha256",
+    ]
+    assert len(selected_metadata) == 8
+
+    aggregate_quality = json.loads(
+        (output_root / "aggregate_quality_summary.json").read_text(encoding="utf-8")
+    )
+    assert aggregate_quality["total_stations"] == 8
+    assert aggregate_quality["successful_stations"] == 8
+    assert aggregate_quality["failed_stations"] == 0
+    assert aggregate_quality["row_parity"] is True
+    assert (output_root / "aggregate_quality_summary.md").exists()
+    assert "archived validation inputs and canonical outputs" in (
+        output_root / "strict_token_rejection_explanation.md"
+    ).read_text(encoding="utf-8")
+
     summary_text = (output_root / "summary.md").read_text(encoding="utf-8")
     assert "does not prove correctness over the full NOAA corpus" in summary_text
     assert "archived inputs → deterministic NOAA-Spec processing → canonical cleaned outputs" in summary_text
     assert "not manually selected for favorable outcomes" in summary_text
+    assert "- `selected_station_metadata.csv`" in summary_text
+    assert "- `aggregate_quality_summary.json`" in summary_text
+    assert "- `strict_token_rejection_explanation.md`" in summary_text
 
 
 def test_validation_bundle_reports_strict_token_diagnostics(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -252,6 +298,9 @@ def test_validation_bundle_reports_strict_token_diagnostics(tmp_path: Path, monk
     assert strict_report_json["token_validation_rejections"]["affected_station_count"] == 1
     assert "Strict token-level validation rejections are observability signals." in summary_text
     assert "They did not cause station-level failure or row loss in this validation run." in summary_text
+    assert "Total strict token rejections: 1" in (
+        output_root / "strict_token_rejection_explanation.md"
+    ).read_text(encoding="utf-8")
     assert int(station_payload["input_rows"]) == int(station_payload["output_rows"]) == len(canonical_frame)
 
 
@@ -311,6 +360,17 @@ def test_validation_bundle_can_emit_optional_domain_outputs(
     summary_text = (output_root / "summary.md").read_text(encoding="utf-8")
     assert "- Domain outputs generated: True" in summary_text
     assert "- `domains/`" in summary_text
+
+    archive_manifest = json.loads((output_root / "archive_manifest.json").read_text(encoding="utf-8"))
+    domain_inventory = [
+        entry
+        for entry in archive_manifest["directory_inventory"]
+        if entry["path"] == "domains"
+    ]
+    assert domain_inventory
+    assert domain_inventory[0]["archive_classification"] == "supplementary"
+    assert domain_inventory[0]["supplementary_not_primary"] is True
+    assert archive_manifest["supplementary_total_files"] == 32
 
 
 def test_validation_worker_crash_is_recorded_without_losing_manifests(

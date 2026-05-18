@@ -7,8 +7,10 @@ from pathlib import Path
 
 from scripts.verify_validation_artifact import (
     generate_selected_station_metadata,
+    recompute_checksums_and_archive_manifest,
     verify_artifact,
     write_aggregate_quality_summary,
+    write_strict_token_rejection_explanation,
 )
 
 
@@ -104,14 +106,17 @@ def _write_minimal_artifact(root: Path) -> None:
         + "\n",
         encoding="utf-8",
     )
+    (root / "run_manifest.json").write_text('{"build_id":"test-build"}\n', encoding="utf-8")
+    for name in ["archive_manifest.json", "aggregate_quality_summary.json"]:
+        (root / name).write_text("{}\n", encoding="utf-8")
     for name in [
-        "archive_manifest.json",
-        "run_manifest.json",
+        "aggregate_quality_summary.md",
         "strict_parse_summary_report.md",
+        "strict_token_rejection_explanation.md",
         "summary.md",
         "selected_station_metadata.csv",
     ]:
-        (root / name).write_text("{}\n" if name.endswith(".json") else "placeholder\n", encoding="utf-8")
+        (root / name).write_text("placeholder\n", encoding="utf-8")
 
     checksum_lines = []
     for path in sorted(root.rglob("*")):
@@ -160,3 +165,60 @@ def test_write_aggregate_quality_summary_from_existing_reports(tmp_path: Path) -
     assert payload["total_warnings"] == 1
     assert payload["strict_token_rejection_total"] == 1
     assert payload["unsupported_identifiers"] == {"HL1": 1}
+
+
+def test_write_strict_token_rejection_explanation_uses_actual_counts(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact"
+    artifact.mkdir()
+    _write_minimal_artifact(artifact)
+    write_aggregate_quality_summary(artifact)
+
+    path = write_strict_token_rejection_explanation(artifact)
+    text = path.read_text(encoding="utf-8")
+
+    assert "Total strict token rejections: 1" in text
+    assert "Affected stations: 1" in text
+    assert "HL1: 1" in text
+    assert "7.3M" not in text
+
+
+def test_recompute_archive_manifest_classifies_domains_as_supplementary(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact"
+    artifact.mkdir()
+    _write_minimal_artifact(artifact)
+    for domain in [
+        "clouds",
+        "core_meteorology",
+        "precipitation",
+        "pressure_temperature",
+        "quality_codes",
+        "remarks",
+        "visibility",
+        "wind",
+    ]:
+        domain_dir = artifact / "domains" / domain
+        domain_dir.mkdir(parents=True)
+        for index in range(100):
+            station_id = f"{index:011d}"
+            (domain_dir / f"{station_id}_{domain}.csv").write_text("STATION,DATE\n", encoding="utf-8")
+
+    manifest_path = recompute_checksums_and_archive_manifest(artifact)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    domain_inventory = [
+        entry for entry in payload["directory_inventory"] if entry["path"] == "domains"
+    ]
+
+    assert domain_inventory
+    assert payload["build_id"] == "test-build"
+    assert domain_inventory[0].get("supplementary_not_primary") is True
+    assert "domains/" in payload["archive_content_classification"]["supplementary"]
+
+
+def test_verify_artifact_treats_domains_as_optional_supplement(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact"
+    artifact.mkdir()
+    _write_minimal_artifact(artifact)
+
+    assert verify_artifact(artifact, verify_hashes=False) == []
+    failures = verify_artifact(artifact, verify_hashes=False, verify_domains=True)
+    assert "missing supplementary domains directory" in failures
