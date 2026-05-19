@@ -260,3 +260,7 @@ artifacts/validation_100_station/build_*/checksums.txt
 !artifacts/validation_100_station/build_*/station_results.csv
 !artifacts/validation_100_station/build_*/strict_parse_summary_report.md
 !artifacts/validation_100_station/build_*/strict_parse_summary_report.json
+
+# Release artifacts
+release_artifacts/
+*.tar.gz
