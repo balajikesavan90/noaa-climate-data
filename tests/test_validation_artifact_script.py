@@ -107,7 +107,11 @@ def _write_minimal_artifact(root: Path) -> None:
         encoding="utf-8",
     )
     (root / "run_manifest.json").write_text('{"build_id":"test-build"}\n', encoding="utf-8")
-    for name in ["archive_manifest.json", "aggregate_quality_summary.json"]:
+    for name in [
+        "archive_manifest_primary.json",
+        "archive_manifest_domains.json",
+        "aggregate_quality_summary.json",
+    ]:
         (root / name).write_text("{}\n", encoding="utf-8")
     for name in [
         "aggregate_quality_summary.md",
@@ -120,9 +124,11 @@ def _write_minimal_artifact(root: Path) -> None:
 
     checksum_lines = []
     for path in sorted(root.rglob("*")):
-        if path.is_file() and path.name != "checksums.txt":
+        if path.is_file() and path.name != "checksums_primary.txt":
             checksum_lines.append(f"{_sha256(path)}  {path.relative_to(root).as_posix()}")
-    (root / "checksums.txt").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
+    (root / "checksums_primary.txt").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
+    (root / "checksums_domains.txt").write_text("", encoding="utf-8")
+    recompute_checksums_and_archive_manifest(root)
 
 
 def test_verify_validation_artifact_accepts_minimal_valid_fixture(tmp_path: Path) -> None:
@@ -204,14 +210,34 @@ def test_recompute_archive_manifest_classifies_domains_as_supplementary(tmp_path
 
     manifest_path = recompute_checksums_and_archive_manifest(artifact)
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    domains_payload = json.loads((artifact / "archive_manifest_domains.json").read_text(encoding="utf-8"))
     domain_inventory = [
-        entry for entry in payload["directory_inventory"] if entry["path"] == "domains"
+        entry for entry in domains_payload["directory_inventory"] if entry["path"] == "domains"
     ]
 
+    assert payload["archive_type"] == "primary"
+    assert domains_payload["archive_type"] == "supplementary_domains"
     assert domain_inventory
     assert payload["build_id"] == "test-build"
-    assert domain_inventory[0].get("supplementary_not_primary") is True
-    assert "domains/" in payload["archive_content_classification"]["supplementary"]
+    assert domains_payload["build_id"] == "test-build"
+
+
+def test_split_checksums_respect_archive_boundaries(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact"
+    artifact.mkdir()
+    _write_minimal_artifact(artifact)
+    domain_dir = artifact / "domains" / "wind"
+    domain_dir.mkdir(parents=True)
+    (domain_dir / "00000000000_wind.csv").write_text("STATION,DATE\n", encoding="utf-8")
+
+    recompute_checksums_and_archive_manifest(artifact)
+    primary_text = (artifact / "checksums_primary.txt").read_text(encoding="utf-8")
+    domains_text = (artifact / "checksums_domains.txt").read_text(encoding="utf-8")
+
+    assert "domains/" not in primary_text
+    assert "archive_manifest_primary.json" in primary_text
+    assert "domains/wind/00000000000_wind.csv" in domains_text
+    assert all("  domains/" in line for line in domains_text.splitlines() if line)
 
 
 def test_verify_artifact_treats_domains_as_optional_supplement(tmp_path: Path) -> None:
@@ -222,3 +248,88 @@ def test_verify_artifact_treats_domains_as_optional_supplement(tmp_path: Path) -
     assert verify_artifact(artifact, verify_hashes=False) == []
     failures = verify_artifact(artifact, verify_hashes=False, verify_domains=True)
     assert "missing supplementary domains directory" in failures
+
+
+def test_verify_artifact_passes_with_domains_present_when_verifying_all(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact"
+    artifact.mkdir()
+    _write_minimal_artifact(artifact)
+    for domain in [
+        "clouds",
+        "core_meteorology",
+        "precipitation",
+        "pressure_temperature",
+        "quality_codes",
+        "remarks",
+        "visibility",
+        "wind",
+    ]:
+        domain_dir = artifact / "domains" / domain
+        domain_dir.mkdir(parents=True)
+        for index in range(100):
+            station_id = f"{index:011d}"
+            (domain_dir / f"{station_id}_{domain}.csv").write_text("STATION,DATE\n", encoding="utf-8")
+
+    recompute_checksums_and_archive_manifest(artifact)
+
+    assert verify_artifact(artifact, verify_all=True) == []
+
+
+def test_extracted_archives_verify_independently(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact"
+    primary = tmp_path / "primary"
+    domains = tmp_path / "domains_archive"
+    artifact.mkdir()
+    _write_minimal_artifact(artifact)
+    for domain in [
+        "clouds",
+        "core_meteorology",
+        "precipitation",
+        "pressure_temperature",
+        "quality_codes",
+        "remarks",
+        "visibility",
+        "wind",
+    ]:
+        domain_dir = artifact / "domains" / domain
+        domain_dir.mkdir(parents=True)
+        for index in range(100):
+            station_id = f"{index:011d}"
+            (domain_dir / f"{station_id}_{domain}.csv").write_text("STATION,DATE\n", encoding="utf-8")
+    recompute_checksums_and_archive_manifest(artifact)
+
+    primary.mkdir()
+    domains.mkdir()
+    for relative in [
+        "raw_inputs",
+        "canonical_cleaned",
+        "quality_reports",
+        "station_results.csv",
+        "station_selection_manifest.csv",
+        "selected_station_metadata.csv",
+        "run_manifest.json",
+        "archive_manifest_primary.json",
+        "checksums_primary.txt",
+        "summary.md",
+        "aggregate_quality_summary.json",
+        "aggregate_quality_summary.md",
+        "strict_parse_summary_report.json",
+        "strict_parse_summary_report.md",
+        "strict_token_rejection_explanation.md",
+    ]:
+        source = artifact / relative
+        target = primary / relative
+        if source.is_dir():
+            import shutil
+
+            shutil.copytree(source, target)
+        else:
+            target.write_bytes(source.read_bytes())
+    import shutil
+
+    shutil.copytree(artifact / "domains", domains / "domains")
+    for relative in ["archive_manifest_domains.json", "checksums_domains.txt"]:
+        (domains / relative).write_bytes((artifact / relative).read_bytes())
+
+    assert verify_artifact(primary) == []
+    assert verify_artifact(domains, verify_domains=True) == []

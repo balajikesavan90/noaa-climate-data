@@ -174,8 +174,9 @@ def test_validate_command_writes_expected_artifacts(
     assert expected_result_columns.issubset(station_results.columns)
     assert set(station_results["status"]) == {"success"}
 
-    checksums_text = (output_root / "checksums.txt").read_text(encoding="utf-8")
+    checksums_text = (output_root / "checksums_primary.txt").read_text(encoding="utf-8")
     assert "raw_inputs/" in checksums_text
+    assert "domains/" not in checksums_text
     assert "station_selection_manifest.csv" in checksums_text
     assert "station_results.csv" in checksums_text
     assert "run_manifest.json" in checksums_text
@@ -186,16 +187,13 @@ def test_validate_command_writes_expected_artifacts(
     assert "strict_parse_summary_report.json" in checksums_text
     assert "strict_parse_summary_report.md" in checksums_text
     assert "strict_token_rejection_explanation.md" in checksums_text
-    assert "archive_manifest.json" in checksums_text
+    assert "archive_manifest_primary.json" in checksums_text
 
-    archive_manifest = pd.read_json(output_root / "archive_manifest.json", typ="series")
+    archive_manifest = pd.read_json(output_root / "archive_manifest_primary.json", typ="series")
+    assert archive_manifest["archive_type"] == "primary"
     assert archive_manifest["doi"] == "TODO_PRIMARY_DOI"
-    assert archive_manifest["supplementary_domains_doi"] == "TODO_DOMAINS_DOI"
-    assert archive_manifest["primary_reproducibility_archive"] == True
-    assert archive_manifest["supplementary_domains_archive"] == False
-    assert "primary_total_files" in archive_manifest.index
-    assert "supplementary_total_files" in archive_manifest.index
-    actual_files = sorted(path for path in output_root.rglob("*") if path.is_file())
+    assert "TODO_DOMAINS_DOI" not in (output_root / "archive_manifest_primary.json").read_text(encoding="utf-8")
+    actual_files = validation._primary_archive_paths(output_root)
     assert int(archive_manifest["total_files"]) == len(actual_files)
     assert int(archive_manifest["total_bytes"]) == sum(path.stat().st_size for path in actual_files)
     assert not (output_root / ".runtime").exists()
@@ -361,16 +359,18 @@ def test_validation_bundle_can_emit_optional_domain_outputs(
     assert "- Domain outputs generated: True" in summary_text
     assert "- `domains/`" in summary_text
 
-    archive_manifest = json.loads((output_root / "archive_manifest.json").read_text(encoding="utf-8"))
+    archive_manifest = json.loads((output_root / "archive_manifest_domains.json").read_text(encoding="utf-8"))
     domain_inventory = [
         entry
         for entry in archive_manifest["directory_inventory"]
         if entry["path"] == "domains"
     ]
     assert domain_inventory
-    assert domain_inventory[0]["archive_classification"] == "supplementary"
-    assert domain_inventory[0]["supplementary_not_primary"] is True
-    assert archive_manifest["supplementary_total_files"] == 32
+    assert archive_manifest["archive_type"] == "supplementary_domains"
+    assert archive_manifest["doi"] == "TODO_DOMAINS_DOI"
+    assert "TODO_PRIMARY_DOI" not in (output_root / "archive_manifest_domains.json").read_text(encoding="utf-8")
+    assert domain_inventory[0]["archive_classification"] == "supplementary_domains"
+    assert len((output_root / "checksums_domains.txt").read_text(encoding="utf-8").splitlines()) == 32
 
 
 def test_validation_worker_crash_is_recorded_without_losing_manifests(

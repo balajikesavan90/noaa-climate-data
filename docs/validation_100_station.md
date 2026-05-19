@@ -2,7 +2,7 @@
 
 The repository contains maintainer tooling to produce a 100-station operational
 validation artifact. The canonical DOI candidate is
-`artifacts/validation_100_station/build_20260517`.
+`artifacts/validation_100_station/build_20260518`.
 
 This is Tier 2 optional evidence. It is not fully reproducible from the
 repository alone because large archived raw inputs and canonical cleaned outputs
@@ -38,7 +38,7 @@ archival.
 
 ## Archived validation bundle
 
-Canonical build: `build_20260517`
+Canonical build: `build_20260518`
 
 Primary DOI: `TODO_PRIMARY_DOI`
 
@@ -52,11 +52,14 @@ Docker image digest: `sha256:dbbaa759a8ccc1ae7f86ccbc1189771643fa56d0fa798e29552
 
 This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
 
-The primary DOI archive contains the canonical reproducibility boundary:
+The primary DOI archive is the canonical deterministic cleaning artifact and
+contains the canonical reproducibility boundary:
 
 archived inputs → deterministic NOAA-Spec processing → canonical cleaned outputs
 
-Domain outputs are convenience projections intended to improve interpretability for downstream workflows. They are derived from canonical cleaned outputs and are not required to reproduce NOAA-Spec's core deterministic cleaning behavior.
+The supplementary DOI archive contains convenience domain projections derived
+from canonical outputs. Domain outputs are not required to reproduce
+NOAA-Spec's core deterministic cleaning behavior.
 
 Domain outputs are archived separately as supplementary artifacts and are outside the primary reproducibility claim.
 
@@ -65,11 +68,11 @@ Primary archive contents:
 - `raw_inputs/`
 - `canonical_cleaned/`
 - `quality_reports/`
-- `checksums.txt`
+- `checksums_primary.txt`
 - `station_selection_manifest.csv`
 - `selected_station_metadata.csv`
 - `run_manifest.json`
-- `archive_manifest.json`
+- `archive_manifest_primary.json`
 - `station_results.csv`
 - `strict_parse_summary_report.json`
 - `strict_parse_summary_report.md`
@@ -81,21 +84,23 @@ Primary archive contents:
 Supplementary archive contents:
 
 - `domains/`
+- `archive_manifest_domains.json`
+- `checksums_domains.txt`
 
 ## Reviewer quickstart
 
 Verify the extracted DOI artifact from the repository root:
 
 ```bash
-python3 scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260517
+python3 scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260518
 ```
 
 Inspect the manifests:
 
 ```bash
-python3 -m json.tool artifacts/validation_100_station/build_20260517/run_manifest.json
-python3 -m json.tool artifacts/validation_100_station/build_20260517/archive_manifest.json
-sed -n '1,40p' artifacts/validation_100_station/build_20260517/station_results.csv
+python3 -m json.tool artifacts/validation_100_station/build_20260518/run_manifest.json
+python3 -m json.tool artifacts/validation_100_station/build_20260518/archive_manifest_primary.json
+sed -n '1,40p' artifacts/validation_100_station/build_20260518/station_results.csv
 ```
 
 Optional single-station rerun:
@@ -105,21 +110,21 @@ mkdir -p /tmp/noaa-spec-validation-check
 mkdir -p /tmp/noaa-spec-validation-check/source
 STATION_ID=$(python3 - <<'PY'
 import csv
-with open("artifacts/validation_100_station/build_20260517/selected_station_metadata.csv", newline="", encoding="utf-8") as handle:
+with open("artifacts/validation_100_station/build_20260518/selected_station_metadata.csv", newline="", encoding="utf-8") as handle:
     print(next(csv.DictReader(handle))["station_id"])
 PY
 )
-cp "artifacts/validation_100_station/build_20260517/raw_inputs/${STATION_ID}.parquet" \
+cp "artifacts/validation_100_station/build_20260518/raw_inputs/${STATION_ID}.parquet" \
   /tmp/noaa-spec-validation-check/source/
 noaa-spec dev build-validation-bundle \
   --source-root /tmp/noaa-spec-validation-check/source \
   --output-root /tmp/noaa-spec-validation-check/out \
   --count 1 \
-  --seed 20260517 \
+  --seed 20260518 \
   --build-id reviewer-single-station
 sha256sum "/tmp/noaa-spec-validation-check/out/canonical_cleaned/${STATION_ID}_cleaned.csv"
 grep "canonical_cleaned/${STATION_ID}_cleaned.csv" \
-  artifacts/validation_100_station/build_20260517/checksums.txt
+  artifacts/validation_100_station/build_20260518/checksums_primary.txt
 ```
 
 ## C. Reproduce the 100-station validation locally
@@ -137,10 +142,10 @@ input bundle. Then run:
 ```bash
 noaa-spec dev build-validation-bundle \
   --source-root /path/to/downloaded/stations \
-  --output-root artifacts/validation_100_station/build_20260517_rerun \
+  --output-root artifacts/validation_100_station/build_20260518 \
   --count 100 \
   --strategy size-stratified \
-  --seed 20260517 \
+  --seed 20260518 \
   --emit-domains
 ```
 
@@ -163,10 +168,12 @@ The output directory contains:
 - `aggregate_quality_summary.json`
 - `aggregate_quality_summary.md`
 - `summary.md`
-- `checksums.txt`
-- `archive_manifest.json`
+- `checksums_primary.txt`
+- `archive_manifest_primary.json`
+- `checksums_domains.txt`
+- `archive_manifest_domains.json`
 
-The selection manifest records the auditable deterministic sample and the copied raw-input provenance. The run manifest records environment metadata and the reproducibility boundary. The results table records per-station status, row counts, runtime, raw checksums, and output checksums. The checksum file covers the key generated artifacts so the validation package can be archived externally.
+The selection manifest records the auditable deterministic sample and the copied raw-input provenance. The run manifest records environment metadata and the reproducibility boundary. The results table records per-station status, row counts, runtime, raw checksums, and output checksums. `checksums_primary.txt` covers only primary archive contents, while `checksums_domains.txt` covers only `domains/*` supplementary outputs.
 
 Strict-parse flags in the per-station quality reports are observability signals,
 not parse failures and not silent cleaning behavior. Unsupported optional
@@ -185,10 +192,36 @@ or claiming NOAA-wide exhaustiveness.
 
 ## External archival
 
-For JOSS or later archival packaging, review `summary.md`, `checksums.txt`, and
-`archive_manifest.json`, then archive the resulting `build_20260517` bundle in
-an external repository or data archive that can mint a DOI. Replace
-`TODO_PRIMARY_DOI` before final citation. Archive `domains/` separately as the
-supplementary interpretability artifact and replace `TODO_DOMAINS_DOI` where
-domain artifacts are discussed. Local rerun is optional and requires the
-archived input bundle for this DOI boundary.
+For JOSS or later archival packaging, review `summary.md`,
+`checksums_primary.txt`, `archive_manifest_primary.json`,
+`checksums_domains.txt`, and `archive_manifest_domains.json`, then package two
+archives:
+
+```bash
+tar -czf \
+  release_artifacts/noaa-spec-validation-primary-v1.0.2.tar.gz \
+  -C artifacts/validation_100_station/build_20260518 \
+  raw_inputs canonical_cleaned quality_reports run_manifest.json \
+  selected_station_metadata.csv station_results.csv station_selection_manifest.csv \
+  aggregate_quality_summary.json aggregate_quality_summary.md \
+  strict_parse_summary_report.json strict_parse_summary_report.md \
+  strict_token_rejection_explanation.md summary.md \
+  archive_manifest_primary.json checksums_primary.txt
+
+tar -czf \
+  release_artifacts/noaa-spec-validation-domains-v1.0.2.tar.gz \
+  -C artifacts/validation_100_station/build_20260518 \
+  domains archive_manifest_domains.json checksums_domains.txt
+```
+
+Verify extracted archives independently:
+
+```bash
+python3 scripts/verify_validation_artifact.py /path/to/extracted-primary
+python3 scripts/verify_validation_artifact.py /path/to/extracted-domains --verify-domains
+```
+
+Replace `TODO_PRIMARY_DOI` only in primary archive documentation before final
+citation. Replace `TODO_DOMAINS_DOI` only where supplementary domain artifacts
+are discussed. Local rerun is optional and requires the archived input bundle
+for this DOI boundary.

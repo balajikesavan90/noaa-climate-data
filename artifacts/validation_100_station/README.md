@@ -4,16 +4,19 @@ This directory documents the canonical 100-station operational validation
 artifact for DOI packaging:
 
 ```text
-artifacts/validation_100_station/build_20260517
+artifacts/validation_100_station/build_20260518
 ```
 
 This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
 
-The primary DOI archive contains the canonical reproducibility boundary:
+The primary DOI archive is the canonical deterministic cleaning artifact and
+contains the canonical reproducibility boundary:
 
 archived inputs → deterministic NOAA-Spec processing → canonical cleaned outputs
 
-Domain outputs are convenience projections intended to improve interpretability for downstream workflows. They are derived from canonical cleaned outputs and are not required to reproduce NOAA-Spec's core deterministic cleaning behavior.
+The supplementary DOI archive contains convenience domain projections derived
+from canonical outputs. Domain outputs are not required to reproduce
+NOAA-Spec's core deterministic cleaning behavior.
 
 Domain outputs are archived separately as supplementary artifacts and are outside the primary reproducibility claim.
 
@@ -65,11 +68,13 @@ The tracked metadata records that a local validation workflow:
 # Directory Structure
 
 ```text
-build_20260517/
-├── archive_manifest.json
+build_20260518/
+├── archive_manifest_primary.json
+├── archive_manifest_domains.json
 ├── aggregate_quality_summary.json
 ├── aggregate_quality_summary.md
-├── checksums.txt
+├── checksums_primary.txt
+├── checksums_domains.txt
 ├── canonical_cleaned/
 ├── domains/                 # emitted with --emit-domains
 ├── raw_inputs/
@@ -96,8 +101,8 @@ Primary DOI archive (`TODO_PRIMARY_DOI`):
 * `station_selection_manifest.csv`
 * `selected_station_metadata.csv`
 * `run_manifest.json`
-* `archive_manifest.json`
-* `checksums.txt`
+* `archive_manifest_primary.json`
+* `checksums_primary.txt`
 * `summary.md`
 * `aggregate_quality_summary.json`
 * `aggregate_quality_summary.md`
@@ -108,6 +113,8 @@ Primary DOI archive (`TODO_PRIMARY_DOI`):
 Supplementary Domains DOI archive (`TODO_DOMAINS_DOI`):
 
 * `domains/`
+* `archive_manifest_domains.json`
+* `checksums_domains.txt`
 
 The DOI placeholders must be replaced before the final frozen archives are cited.
 
@@ -126,19 +133,25 @@ This validation artifact supports deterministic reproducibility from archived va
 From the repository root, verify the extracted DOI artifact:
 
 ```bash
-python3 scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260517
+python3 scripts/verify_validation_artifact.py artifacts/validation_100_station/build_20260518
 ```
 
-This verifies `checksums.txt`, required files, the expected 100 raw inputs, 100
+This verifies `checksums_primary.txt`, required files, the expected 100 raw inputs, 100
 canonical cleaned outputs, 100 quality reports, 100 successful station results,
 row-count parity, and `selected_station_metadata.csv`.
+
+To verify a supplementary domains archive independently:
+
+```bash
+python3 scripts/verify_validation_artifact.py /path/to/extracted-domains --verify-domains
+```
 
 Inspect the main manifests:
 
 ```bash
-python3 -m json.tool artifacts/validation_100_station/build_20260517/run_manifest.json
-python3 -m json.tool artifacts/validation_100_station/build_20260517/archive_manifest.json
-sed -n '1,40p' artifacts/validation_100_station/build_20260517/station_results.csv
+python3 -m json.tool artifacts/validation_100_station/build_20260518/run_manifest.json
+python3 -m json.tool artifacts/validation_100_station/build_20260518/archive_manifest_primary.json
+sed -n '1,40p' artifacts/validation_100_station/build_20260518/station_results.csv
 ```
 
 Optional small rerun check for one archived station:
@@ -147,21 +160,21 @@ Optional small rerun check for one archived station:
 mkdir -p /tmp/noaa-spec-validation-check/source
 STATION_ID=$(python3 - <<'PY'
 import csv
-with open("artifacts/validation_100_station/build_20260517/selected_station_metadata.csv", newline="", encoding="utf-8") as handle:
+with open("artifacts/validation_100_station/build_20260518/selected_station_metadata.csv", newline="", encoding="utf-8") as handle:
     print(next(csv.DictReader(handle))["station_id"])
 PY
 )
-cp "artifacts/validation_100_station/build_20260517/raw_inputs/${STATION_ID}.parquet" \
+cp "artifacts/validation_100_station/build_20260518/raw_inputs/${STATION_ID}.parquet" \
   /tmp/noaa-spec-validation-check/source/
 noaa-spec dev build-validation-bundle \
   --source-root /tmp/noaa-spec-validation-check/source \
   --output-root /tmp/noaa-spec-validation-check/out \
   --count 1 \
-  --seed 20260517 \
+  --seed 20260518 \
   --build-id reviewer-single-station
 sha256sum "/tmp/noaa-spec-validation-check/out/canonical_cleaned/${STATION_ID}_cleaned.csv"
 grep "canonical_cleaned/${STATION_ID}_cleaned.csv" \
-  artifacts/validation_100_station/build_20260517/checksums.txt
+  artifacts/validation_100_station/build_20260518/checksums_primary.txt
 ```
 
 The full 100-station rerun is optional and expensive; it is not required for a
@@ -254,11 +267,14 @@ the git repository alone.
 
 This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.
 
-The primary DOI archive contains the canonical reproducibility boundary:
+The primary DOI archive is the canonical deterministic cleaning artifact and
+contains the canonical reproducibility boundary:
 
 archived inputs → deterministic NOAA-Spec processing → canonical cleaned outputs
 
-Domain outputs are convenience projections intended to improve interpretability for downstream workflows. They are derived from canonical cleaned outputs and are not required to reproduce NOAA-Spec's core deterministic cleaning behavior.
+The supplementary DOI archive contains convenience domain projections derived
+from canonical outputs. Domain outputs are not required to reproduce
+NOAA-Spec's core deterministic cleaning behavior.
 
 Domain outputs are archived separately as supplementary artifacts and are outside the primary reproducibility claim.
 
@@ -297,5 +313,28 @@ Primary DOI status:
 Supplementary Domains DOI status:
 
 * `TODO_DOMAINS_DOI`
+
+Primary archive packaging example:
+
+```bash
+tar -czf \
+  release_artifacts/noaa-spec-validation-primary-v1.0.2.tar.gz \
+  -C artifacts/validation_100_station/build_20260518 \
+  raw_inputs canonical_cleaned quality_reports run_manifest.json \
+  selected_station_metadata.csv station_results.csv station_selection_manifest.csv \
+  aggregate_quality_summary.json aggregate_quality_summary.md \
+  strict_parse_summary_report.json strict_parse_summary_report.md \
+  strict_token_rejection_explanation.md summary.md \
+  archive_manifest_primary.json checksums_primary.txt
+```
+
+Supplementary domains archive packaging example:
+
+```bash
+tar -czf \
+  release_artifacts/noaa-spec-validation-domains-v1.0.2.tar.gz \
+  -C artifacts/validation_100_station/build_20260518 \
+  domains archive_manifest_domains.json checksums_domains.txt
+```
 
 ---

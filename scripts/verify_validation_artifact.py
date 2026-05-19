@@ -40,8 +40,8 @@ DOMAINS_SUPPLEMENT_STATEMENT = (
 REQUIRED_TOP_LEVEL_FILES = {
     "aggregate_quality_summary.json",
     "aggregate_quality_summary.md",
-    "archive_manifest.json",
-    "checksums.txt",
+    "archive_manifest_primary.json",
+    "checksums_primary.txt",
     "run_manifest.json",
     "selected_station_metadata.csv",
     "station_results.csv",
@@ -50,6 +50,11 @@ REQUIRED_TOP_LEVEL_FILES = {
     "strict_parse_summary_report.md",
     "strict_token_rejection_explanation.md",
     "summary.md",
+}
+
+REQUIRED_DOMAINS_TOP_LEVEL_FILES = {
+    "archive_manifest_domains.json",
+    "checksums_domains.txt",
 }
 
 
@@ -85,11 +90,11 @@ def _artifact_build_id(artifact_root: Path) -> str:
     return name.removeprefix("build_")
 
 
-def verify_checksums(artifact_root: Path) -> list[str]:
+def verify_checksums(artifact_root: Path, checksum_filename: str) -> list[str]:
     failures: list[str] = []
-    checksums_path = artifact_root / "checksums.txt"
+    checksums_path = artifact_root / checksum_filename
     if not checksums_path.exists():
-        return ["missing checksums.txt"]
+        return [f"missing {checksum_filename}"]
 
     for line_number, raw_line in enumerate(checksums_path.read_text(encoding="utf-8").splitlines(), start=1):
         line = raw_line.strip()
@@ -98,7 +103,7 @@ def verify_checksums(artifact_root: Path) -> list[str]:
         try:
             expected_hash, relative_path = line.split(maxsplit=1)
         except ValueError:
-            failures.append(f"malformed checksums.txt line {line_number}: {raw_line!r}")
+            failures.append(f"malformed {checksum_filename} line {line_number}: {raw_line!r}")
             continue
 
         target = artifact_root / relative_path
@@ -113,18 +118,24 @@ def verify_checksums(artifact_root: Path) -> list[str]:
     return failures
 
 
-def verify_artifact(
-    artifact_root: Path,
-    *,
-    verify_hashes: bool = True,
-    verify_domains: bool = False,
-) -> list[str]:
-    artifact_root = artifact_root.resolve()
+def _verify_root(artifact_root: Path) -> list[str]:
     failures: list[str] = []
     if not artifact_root.exists():
         return [f"artifact path does not exist: {artifact_root}"]
     if not artifact_root.is_dir():
         return [f"artifact path is not a directory: {artifact_root}"]
+    return failures
+
+
+def verify_primary_artifact(
+    artifact_root: Path,
+    *,
+    verify_hashes: bool = True,
+) -> list[str]:
+    artifact_root = artifact_root.resolve()
+    failures: list[str] = _verify_root(artifact_root)
+    if failures:
+        return failures
 
     for name in sorted(REQUIRED_TOP_LEVEL_FILES):
         if not (artifact_root / name).exists():
@@ -158,36 +169,99 @@ def verify_artifact(
         if input_total != output_total:
             failures.append(f"summed input_rows ({input_total}) != summed output_rows ({output_total})")
 
-    if verify_domains:
-        domain_root = artifact_root / "domains"
-        expected_domains = {
-            "clouds",
-            "core_meteorology",
-            "precipitation",
-            "pressure_temperature",
-            "quality_codes",
-            "remarks",
-            "visibility",
-            "wind",
-        }
-        if not domain_root.is_dir():
-            failures.append("missing supplementary domains directory")
-        else:
-            for domain in sorted(expected_domains):
-                domain_dir = domain_root / domain
-                if not domain_dir.is_dir():
-                    failures.append(f"missing supplementary domain directory: domains/{domain}")
-                    continue
-                actual_count = len(list(domain_dir.glob(f"*_{domain}.csv")))
-                if actual_count != 100:
-                    failures.append(
-                        f"domains/{domain} contains {actual_count} *_{domain}.csv files, expected 100"
-                    )
-
     if verify_hashes:
-        failures.extend(verify_checksums(artifact_root))
+        failures.extend(verify_checksums(artifact_root, "checksums_primary.txt"))
+
+    manifest_path = artifact_root / "archive_manifest_primary.json"
+    if manifest_path.exists():
+        try:
+            payload = _read_json(manifest_path)
+            if payload.get("archive_type") != "primary":
+                failures.append(
+                    f"archive_manifest_primary.json archive_type is {payload.get('archive_type')!r}, expected 'primary'"
+                )
+            if payload.get("checksum_file") != "checksums_primary.txt":
+                failures.append("archive_manifest_primary.json checksum_file is not checksums_primary.txt")
+        except json.JSONDecodeError as exc:
+            failures.append(f"archive_manifest_primary.json is not valid JSON: {exc}")
 
     return failures
+
+
+def verify_domains_artifact(
+    artifact_root: Path,
+    *,
+    verify_hashes: bool = True,
+) -> list[str]:
+    artifact_root = artifact_root.resolve()
+    failures: list[str] = _verify_root(artifact_root)
+    if failures:
+        return failures
+
+    for name in sorted(REQUIRED_DOMAINS_TOP_LEVEL_FILES):
+        if not (artifact_root / name).exists():
+            failures.append(f"missing required supplementary file: {name}")
+
+    domain_root = artifact_root / "domains"
+    expected_domains = {
+        "clouds",
+        "core_meteorology",
+        "precipitation",
+        "pressure_temperature",
+        "quality_codes",
+        "remarks",
+        "visibility",
+        "wind",
+    }
+    if not domain_root.is_dir():
+        failures.append("missing supplementary domains directory")
+    else:
+        for domain in sorted(expected_domains):
+            domain_dir = domain_root / domain
+            if not domain_dir.is_dir():
+                failures.append(f"missing supplementary domain directory: domains/{domain}")
+                continue
+            actual_count = len(list(domain_dir.glob(f"*_{domain}.csv")))
+            if actual_count != 100:
+                failures.append(
+                    f"domains/{domain} contains {actual_count} *_{domain}.csv files, expected 100"
+                )
+
+    if verify_hashes:
+        failures.extend(verify_checksums(artifact_root, "checksums_domains.txt"))
+
+    manifest_path = artifact_root / "archive_manifest_domains.json"
+    if manifest_path.exists():
+        try:
+            payload = _read_json(manifest_path)
+            if payload.get("archive_type") != "supplementary_domains":
+                failures.append(
+                    "archive_manifest_domains.json archive_type is "
+                    f"{payload.get('archive_type')!r}, expected 'supplementary_domains'"
+                )
+            if payload.get("checksum_file") != "checksums_domains.txt":
+                failures.append("archive_manifest_domains.json checksum_file is not checksums_domains.txt")
+        except json.JSONDecodeError as exc:
+            failures.append(f"archive_manifest_domains.json is not valid JSON: {exc}")
+
+    return failures
+
+
+def verify_artifact(
+    artifact_root: Path,
+    *,
+    verify_hashes: bool = True,
+    verify_domains: bool = False,
+    verify_all: bool = False,
+) -> list[str]:
+    if verify_all:
+        return verify_primary_artifact(artifact_root, verify_hashes=verify_hashes) + verify_domains_artifact(
+            artifact_root,
+            verify_hashes=verify_hashes,
+        )
+    if verify_domains:
+        return verify_domains_artifact(artifact_root, verify_hashes=verify_hashes)
+    return verify_primary_artifact(artifact_root, verify_hashes=verify_hashes)
 
 
 def _read_parquet_station_metadata(path: Path) -> dict[str, str]:
@@ -436,9 +510,9 @@ def update_summary_markdown(artifact_root: Path) -> Path:
     for legacy_placeholder in LEGACY_PRIMARY_DOI_PLACEHOLDERS:
         text = text.replace(
             f"- DOI: {legacy_placeholder}\n- This bundle is intended for external archival before submission; until a DOI is inserted, the archive should be treated as planned.",
-            "- Primary DOI: TODO_PRIMARY_DOI\n- Supplementary Domains DOI: TODO_DOMAINS_DOI\n- The DOI placeholders must be replaced before final DOI freeze or JOSS submission.",
+            "- Primary DOI: TODO_PRIMARY_DOI\n- The DOI placeholder must be replaced before final DOI freeze or JOSS submission.",
         )
-    inventory_anchor = "- `archive_manifest.json`"
+    inventory_anchor = "- `archive_manifest_primary.json`"
     if "selected_station_metadata.csv" not in text:
         text = text.replace(
             inventory_anchor,
@@ -449,109 +523,146 @@ def update_summary_markdown(artifact_root: Path) -> Path:
 
 
 def recompute_checksums_and_archive_manifest(artifact_root: Path) -> Path:
-    checksums_path = artifact_root / "checksums.txt"
-    archive_manifest_path = artifact_root / "archive_manifest.json"
+    checksums_primary_path = artifact_root / "checksums_primary.txt"
+    checksums_domains_path = artifact_root / "checksums_domains.txt"
+    archive_manifest_primary_path = artifact_root / "archive_manifest_primary.json"
+    archive_manifest_domains_path = artifact_root / "archive_manifest_domains.json"
 
-    files_for_manifest = sorted(path for path in artifact_root.rglob("*") if path.is_file())
-    directory_inventory = []
-    for directory_name in ["canonical_cleaned", "domains", "quality_reports", "raw_inputs"]:
-        directory = artifact_root / directory_name
-        files = sorted(path for path in directory.rglob("*") if path.is_file()) if directory.exists() else []
-        entry = {
-            "file_count": len(files),
-            "path": directory_name,
-            "total_bytes": sum(path.stat().st_size for path in files),
-            "archive_classification": "supplementary" if directory_name == "domains" else "primary",
-        }
-        if directory_name == "domains":
-            entry["supplementary_not_primary"] = True
-        directory_inventory.append(entry)
-
-    top_level_files = sorted(path.name for path in artifact_root.iterdir() if path.is_file())
-    payload = _read_json(archive_manifest_path) if archive_manifest_path.exists() else {}
-    existing_doi = payload.get("doi")
-    if existing_doi in (None, "", *LEGACY_PRIMARY_DOI_PLACEHOLDERS):
-        existing_doi = "TODO_PRIMARY_DOI"
     build_id = _artifact_build_id(artifact_root)
-    payload.update(
-        {
-            "artifact_name": "validation_100_station_bundle",
+
+    primary_entries = [
+        "raw_inputs",
+        "canonical_cleaned",
+        "quality_reports",
+        "station_results.csv",
+        "station_selection_manifest.csv",
+        "selected_station_metadata.csv",
+        "run_manifest.json",
+        "archive_manifest_primary.json",
+        "checksums_primary.txt",
+        "summary.md",
+        "aggregate_quality_summary.json",
+        "aggregate_quality_summary.md",
+        "strict_parse_summary_report.json",
+        "strict_parse_summary_report.md",
+        "strict_token_rejection_explanation.md",
+    ]
+    domain_entries = ["domains", "archive_manifest_domains.json", "checksums_domains.txt"]
+
+    def existing_paths(entries: list[str]) -> list[Path]:
+        paths: list[Path] = []
+        for entry in entries:
+            path = artifact_root / entry
+            if path.is_file():
+                paths.append(path)
+            elif path.is_dir():
+                paths.extend(sorted(item for item in path.rglob("*") if item.is_file()))
+        return sorted(paths)
+
+    def write_checksums(path: Path, files: list[Path]) -> None:
+        lines = [
+            f"{_sha256(file_path)}  {file_path.relative_to(artifact_root).as_posix()}"
+            for file_path in files
+            if file_path.resolve() != path.resolve()
+        ]
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    def directory_inventory(files: list[Path], archive_type: str) -> list[dict[str, Any]]:
+        inventory = []
+        directory_names = sorted(
+            {path.relative_to(artifact_root).parts[0] for path in files if len(path.relative_to(artifact_root).parts) > 1}
+        )
+        for directory_name in directory_names:
+            directory = artifact_root / directory_name
+            directory_files = [path for path in files if path.is_relative_to(directory)]
+            inventory.append(
+                {
+                    "archive_classification": archive_type,
+                    "file_count": len(directory_files),
+                    "path": directory_name,
+                    "total_bytes": sum(path.stat().st_size for path in directory_files),
+                }
+            )
+        return inventory
+
+    for _ in range(5):
+        primary_files = existing_paths(primary_entries)
+        domain_files = existing_paths(domain_entries)
+        primary_payload = {
+            "archive_type": "primary",
+            "artifact_name": "validation_100_station_primary",
             "artifact_root": str(artifact_root),
             "artifact_version": build_id,
             "build_id": build_id,
-            "canonical": True,
             "checksum_algorithm": "SHA256",
-            "checksum_file": "checksums.txt",
-            "checksum_file_excluded_from_checksums": True,
+            "checksum_file": "checksums_primary.txt",
             "claim_scope": VALIDATION_BOUNDARY_STATEMENT,
-            "archive_content_classification": {
-                "primary": [
-                    "raw_inputs/",
-                    "canonical_cleaned/",
-                    "quality_reports/",
-                    "station_results.csv",
-                    "station_selection_manifest.csv",
-                    "selected_station_metadata.csv",
-                    "run_manifest.json",
-                    "archive_manifest.json",
-                    "checksums.txt",
-                    "summary.md",
-                    "aggregate_quality_summary.json",
-                    "aggregate_quality_summary.md",
-                    "strict_parse_summary_report.json",
-                    "strict_parse_summary_report.md",
-                    "strict_token_rejection_explanation.md",
-                ],
-                "supplementary": ["domains/"],
-            },
-            "directory_inventory": directory_inventory,
-            "doi": existing_doi,
-            "excluded_prior_builds": ["build_20260503"],
-            "intended_archive": "primary reproducibility DOI archive",
-            "primary_reproducibility_archive": True,
-            "supplementary_domains_archive": False,
-            "supplementary_domains_archive_note": (
-                "Domain outputs are convenience projections derived from canonical "
-                "cleaned outputs and should be archived separately as supplementary "
-                "interpretability artifacts."
-            ),
-            "supplementary_domains_doi": payload.get("supplementary_domains_doi") or "TODO_DOMAINS_DOI",
-            "top_level_files": top_level_files,
-            "total_bytes": sum(path.stat().st_size for path in files_for_manifest),
-            "total_files": len(files_for_manifest),
+            "directory_inventory": directory_inventory(primary_files, "primary"),
+            "doi": "TODO_PRIMARY_DOI",
+            "file_count": len(primary_files),
+            "byte_count": sum(path.stat().st_size for path in primary_files),
+            "generated_timestamp_utc": _now_utc_isoformat(),
+            "git_sha": None,
+            "git_tag": None,
+            "manifest_file": "archive_manifest_primary.json",
+            "top_level_files": sorted({path.relative_to(artifact_root).parts[0] for path in primary_files}),
+            "total_bytes": sum(path.stat().st_size for path in primary_files),
+            "total_files": len(primary_files),
         }
+        domain_payload = {
+            "archive_type": "supplementary_domains",
+            "artifact_name": "validation_100_station_domains",
+            "artifact_root": str(artifact_root),
+            "artifact_version": build_id,
+            "build_id": build_id,
+            "checksum_algorithm": "SHA256",
+            "checksum_file": "checksums_domains.txt",
+            "claim_scope": DOMAINS_SUPPLEMENT_STATEMENT,
+            "directory_inventory": directory_inventory(domain_files, "supplementary_domains"),
+            "doi": "TODO_DOMAINS_DOI",
+            "file_count": len(domain_files),
+            "byte_count": sum(path.stat().st_size for path in domain_files),
+            "generated_timestamp_utc": _now_utc_isoformat(),
+            "git_sha": None,
+            "git_tag": None,
+            "manifest_file": "archive_manifest_domains.json",
+            "top_level_files": sorted({path.relative_to(artifact_root).parts[0] for path in domain_files}),
+            "total_bytes": sum(path.stat().st_size for path in domain_files),
+            "total_files": len(domain_files),
+        }
+        archive_manifest_primary_path.write_text(
+            json.dumps(primary_payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        archive_manifest_domains_path.write_text(
+            json.dumps(domain_payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        write_checksums(checksums_primary_path, existing_paths(primary_entries))
+        write_checksums(checksums_domains_path, existing_paths(["domains"]))
+
+    # Final refresh includes the settled manifest/checksum file sizes.
+    primary_files = existing_paths(primary_entries)
+    domain_files = existing_paths(domain_entries)
+    primary_payload["directory_inventory"] = directory_inventory(primary_files, "primary")
+    primary_payload["file_count"] = primary_payload["total_files"] = len(primary_files)
+    primary_payload["byte_count"] = primary_payload["total_bytes"] = sum(path.stat().st_size for path in primary_files)
+    primary_payload["top_level_files"] = sorted({path.relative_to(artifact_root).parts[0] for path in primary_files})
+    domain_payload["directory_inventory"] = directory_inventory(domain_files, "supplementary_domains")
+    domain_payload["file_count"] = domain_payload["total_files"] = len(domain_files)
+    domain_payload["byte_count"] = domain_payload["total_bytes"] = sum(path.stat().st_size for path in domain_files)
+    domain_payload["top_level_files"] = sorted({path.relative_to(artifact_root).parts[0] for path in domain_files})
+    archive_manifest_primary_path.write_text(
+        json.dumps(primary_payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
-    payload.pop("DOI", None)
-    archive_manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-    checksum_lines = []
-    for path in sorted(path for path in artifact_root.rglob("*") if path.is_file()):
-        relative = path.relative_to(artifact_root).as_posix()
-        if relative == "checksums.txt":
-            continue
-        checksum_lines.append(f"{_sha256(path)}  {relative}")
-    checksums_path.write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
-
-    # The checksum file size is now final, so refresh manifest totals without
-    # changing hash lengths for any checksummed file.
-    files_for_manifest = sorted(path for path in artifact_root.rglob("*") if path.is_file())
-    payload["top_level_files"] = sorted(path.name for path in artifact_root.iterdir() if path.is_file())
-    payload["total_bytes"] = sum(path.stat().st_size for path in files_for_manifest)
-    payload["total_files"] = len(files_for_manifest)
-    archive_manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-    # Refresh only the manifest checksum after the final manifest write. This
-    # keeps checksums.txt excluded from its own checksum while archive_manifest
-    # remains covered.
-    refreshed_lines = []
-    for line in checksum_lines:
-        _, relative = line.split(maxsplit=1)
-        if relative == "archive_manifest.json":
-            refreshed_lines.append(f"{_sha256(archive_manifest_path)}  {relative}")
-        else:
-            refreshed_lines.append(line)
-    checksums_path.write_text("\n".join(refreshed_lines) + "\n", encoding="utf-8")
-    return archive_manifest_path
+    archive_manifest_domains_path.write_text(
+        json.dumps(domain_payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    write_checksums(checksums_primary_path, existing_paths(primary_entries))
+    write_checksums(checksums_domains_path, existing_paths(["domains"]))
+    return archive_manifest_primary_path
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -565,14 +676,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--verify-domains",
         action="store_true",
-        help="Also verify the supplementary domains/ tree contains 8 x 100 domain files.",
+        help="Verify a supplementary domains archive instead of the primary archive.",
+    )
+    parser.add_argument(
+        "--verify-all",
+        action="store_true",
+        help="Verify primary and supplementary domains contents in one combined build directory.",
     )
     args = parser.parse_args(argv)
+
+    if args.verify_domains and args.verify_all:
+        parser.error("--verify-domains and --verify-all are mutually exclusive")
 
     failures = verify_artifact(
         args.artifact_path,
         verify_hashes=not args.skip_hashes,
         verify_domains=args.verify_domains,
+        verify_all=args.verify_all,
     )
     if failures:
         print("FAIL: validation artifact verification failed")
@@ -582,8 +702,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print("PASS: validation artifact verification succeeded")
     print(f"Artifact directory: {args.artifact_path}")
-    if (args.artifact_path / "domains").exists() and not args.verify_domains:
-        print("Supplementary domains present; use --verify-domains to validate them.")
+    if (args.artifact_path / "domains").exists() and not (args.verify_domains or args.verify_all):
+        print("Supplementary domains present; use --verify-all to validate them with the primary archive.")
     return 0
 
 

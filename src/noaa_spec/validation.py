@@ -305,11 +305,15 @@ def run_validation_workflow(
         aggregate_summary=aggregate_summary,
     )
 
-    checksums_path = output_root / "checksums.txt"
-    archive_manifest_path = output_root / "archive_manifest.json"
-    _finalize_archive_manifest_and_checksums(
-        archive_manifest_path=archive_manifest_path,
-        checksums_path=checksums_path,
+    checksums_primary_path = output_root / "checksums_primary.txt"
+    checksums_domains_path = output_root / "checksums_domains.txt"
+    archive_manifest_primary_path = output_root / "archive_manifest_primary.json"
+    archive_manifest_domains_path = output_root / "archive_manifest_domains.json"
+    _finalize_archive_manifests_and_checksums(
+        archive_manifest_primary_path=archive_manifest_primary_path,
+        archive_manifest_domains_path=archive_manifest_domains_path,
+        checksums_primary_path=checksums_primary_path,
+        checksums_domains_path=checksums_domains_path,
         output_root=output_root,
         run_manifest=run_manifest,
     )
@@ -322,8 +326,10 @@ def run_validation_workflow(
         "station_results": station_results_path,
         "selected_station_metadata": selected_station_metadata_path,
         "summary": summary_path,
-        "checksums": checksums_path,
-        "archive_manifest": archive_manifest_path,
+        "checksums_primary": checksums_primary_path,
+        "checksums_domains": checksums_domains_path,
+        "archive_manifest_primary": archive_manifest_primary_path,
+        "archive_manifest_domains": archive_manifest_domains_path,
         "selected_station_count": len(selected_candidates),
         "failure_count": sum(1 for row in results_rows if row["status"] != "success"),
         "failed": failure_seen,
@@ -2068,7 +2074,8 @@ def _write_summary(
         f"- Total output rows: {total_output_rows}",
         f"- Total runtime (seconds): {total_runtime:.6f}",
         f"- Domain outputs generated: {bool(run_manifest.get('domain_outputs_requested'))}",
-        f"- Checksum file: {summary_path.parent / 'checksums.txt'}",
+        f"- Primary checksum file: {summary_path.parent / 'checksums_primary.txt'}",
+        f"- Supplementary domains checksum file: {summary_path.parent / 'checksums_domains.txt'}",
         "",
         "## Strict token diagnostics",
         f"- Strict token rejection count: {token_summary['total_token_rejection_count']}",
@@ -2101,13 +2108,17 @@ def _write_summary(
             "- `strict_parse_summary_report.json`",
             "- `strict_parse_summary_report.md`",
             "- `strict_token_rejection_explanation.md`",
-            "- `checksums.txt`",
+            "- `checksums_primary.txt`",
             "- `summary.md`",
-            "- `archive_manifest.json`",
+            "- `archive_manifest_primary.json`",
             "",
             "SUPPLEMENTARY:",
             *(
-                ["- `domains/`"]
+                [
+                    "- `domains/`",
+                    "- `archive_manifest_domains.json`",
+                    "- `checksums_domains.txt`",
+                ]
                 if bool(run_manifest.get("domain_outputs_requested"))
                 else []
             ),
@@ -2117,8 +2128,7 @@ def _write_summary(
             "",
             "## DOI archival status",
             f"- Primary DOI: {PRIMARY_DOI_PLACEHOLDER}",
-            f"- Supplementary Domains DOI: {DOMAINS_DOI_PLACEHOLDER}",
-            "- The DOI placeholders must be replaced before final DOI freeze or JOSS submission.",
+            "- The DOI placeholder must be replaced before final DOI freeze or JOSS submission.",
             "",
         ]
     )
@@ -2129,68 +2139,87 @@ def _build_archive_manifest_payload(
     *,
     output_root: Path,
     run_manifest: dict[str, Any],
+    archive_type: str,
 ) -> dict[str, Any]:
-    files = sorted(path for path in output_root.rglob("*") if path.is_file())
-    top_level_files = sorted(path.name for path in output_root.iterdir() if path.is_file())
-    directory_inventory = []
-    for directory in sorted(path for path in output_root.iterdir() if path.is_dir()):
-        dir_files = sorted(path for path in directory.rglob("*") if path.is_file())
-        entry = {
-            "path": directory.name,
-            "file_count": len(dir_files),
-            "total_bytes": sum(path.stat().st_size for path in dir_files),
-            "archive_classification": "supplementary" if directory.name == "domains" else "primary",
-        }
-        if directory.name == "domains":
-            entry["supplementary_not_primary"] = True
-        directory_inventory.append(entry)
+    if archive_type == "primary":
+        archive_paths = _primary_archive_paths(output_root)
+        checksum_file = "checksums_primary.txt"
+        manifest_file = "archive_manifest_primary.json"
+        intended_archive = "primary DOI archive"
+        doi = PRIMARY_DOI_PLACEHOLDER
+        content_classification = [
+            "raw_inputs/",
+            "canonical_cleaned/",
+            "quality_reports/",
+            "station_results.csv",
+            "station_selection_manifest.csv",
+            "selected_station_metadata.csv",
+            "run_manifest.json",
+            "archive_manifest_primary.json",
+            "checksums_primary.txt",
+            "summary.md",
+            "aggregate_quality_summary.json",
+            "aggregate_quality_summary.md",
+            "strict_parse_summary_report.json",
+            "strict_parse_summary_report.md",
+            "strict_token_rejection_explanation.md",
+        ]
+    elif archive_type == "supplementary_domains":
+        archive_paths = _domains_archive_paths(output_root)
+        checksum_file = "checksums_domains.txt"
+        manifest_file = "archive_manifest_domains.json"
+        intended_archive = "supplementary domains DOI archive"
+        doi = DOMAINS_DOI_PLACEHOLDER
+        content_classification = [
+            "domains/",
+            "archive_manifest_domains.json",
+            "checksums_domains.txt",
+        ]
+    else:
+        raise ValueError(f"unknown archive_type: {archive_type}")
 
-    primary_paths = _primary_archive_paths(output_root)
-    supplementary_paths = _supplementary_archive_paths(output_root)
+    top_level_files = sorted({path.relative_to(output_root).parts[0] for path in archive_paths})
+    directory_inventory = []
+    for directory_name in sorted({path.relative_to(output_root).parts[0] for path in archive_paths if len(path.relative_to(output_root).parts) > 1}):
+        directory = output_root / directory_name
+        dir_files = sorted(path for path in archive_paths if path.is_relative_to(directory))
+        directory_inventory.append(
+            {
+                "path": directory_name,
+                "file_count": len(dir_files),
+                "total_bytes": sum(path.stat().st_size for path in dir_files),
+                "archive_classification": archive_type,
+            }
+        )
+
     return {
-        "artifact_name": "validation_100_station_bundle",
+        "archive_type": archive_type,
+        "artifact_name": "validation_100_station_primary" if archive_type == "primary" else "validation_100_station_domains",
         "artifact_version": str(run_manifest["build_id"]),
         "build_id": str(run_manifest["build_id"]),
         "repo_commit_sha": run_manifest["repo_commit_sha"],
+        "git_sha": run_manifest["repo_commit_sha"],
+        "git_tag": run_manifest["git_tag"],
         "created_utc": _now_utc_isoformat(),
-        "intended_archive": "primary reproducibility DOI archive",
-        "total_files": len(files),
-        "total_bytes": sum(path.stat().st_size for path in files),
-        "primary_total_files": len(primary_paths),
-        "primary_total_bytes": sum(path.stat().st_size for path in primary_paths),
-        "supplementary_total_files": len(supplementary_paths),
-        "supplementary_total_bytes": sum(path.stat().st_size for path in supplementary_paths),
+        "generated_timestamp_utc": _now_utc_isoformat(),
+        "intended_archive": intended_archive,
+        "total_files": len(archive_paths),
+        "total_bytes": sum(path.stat().st_size for path in archive_paths),
+        "file_count": len(archive_paths),
+        "byte_count": sum(path.stat().st_size for path in archive_paths),
         "checksum_algorithm": "SHA256",
+        "checksum_file": checksum_file,
+        "manifest_file": manifest_file,
         "top_level_files": top_level_files,
         "directory_inventory": directory_inventory,
-        "doi": PRIMARY_DOI_PLACEHOLDER,
-        "primary_reproducibility_archive": True,
-        "supplementary_domains_archive": False,
-        "supplementary_domains_doi": DOMAINS_DOI_PLACEHOLDER,
-        "supplementary_domains_archive_note": (
-            "Domain outputs are convenience projections derived from canonical cleaned "
-            "outputs and should be archived separately as supplementary interpretability artifacts."
+        "doi": doi,
+        "primary_doi": PRIMARY_DOI_PLACEHOLDER if archive_type == "primary" else None,
+        "domains_doi": DOMAINS_DOI_PLACEHOLDER if archive_type == "supplementary_domains" else None,
+        "claim_scope": REPRODUCIBILITY_BOUNDARY_NOTE if archive_type == "primary" else (
+            "Convenience domain projections derived from canonical outputs. "
+            "Domain outputs are not required to reproduce NOAA-Spec's core deterministic cleaning behavior."
         ),
-        "archive_content_classification": {
-            "primary": [
-                "raw_inputs/",
-                "canonical_cleaned/",
-                "quality_reports/",
-                "station_results.csv",
-                "station_selection_manifest.csv",
-                "selected_station_metadata.csv",
-                "run_manifest.json",
-                "archive_manifest.json",
-                "checksums.txt",
-                "summary.md",
-                "aggregate_quality_summary.json",
-                "aggregate_quality_summary.md",
-                "strict_parse_summary_report.json",
-                "strict_parse_summary_report.md",
-                "strict_token_rejection_explanation.md",
-            ],
-            "supplementary": ["domains/"],
-        },
+        "archive_content_classification": content_classification,
     }
 
 
@@ -2203,8 +2232,8 @@ def _primary_archive_paths(output_root: Path) -> list[Path]:
         "station_selection_manifest.csv",
         "selected_station_metadata.csv",
         "run_manifest.json",
-        "archive_manifest.json",
-        "checksums.txt",
+        "archive_manifest_primary.json",
+        "checksums_primary.txt",
         "summary.md",
         "aggregate_quality_summary.json",
         "aggregate_quality_summary.md",
@@ -2215,7 +2244,14 @@ def _primary_archive_paths(output_root: Path) -> list[Path]:
     return _existing_archive_paths(output_root=output_root, entries=primary_entries)
 
 
-def _supplementary_archive_paths(output_root: Path) -> list[Path]:
+def _domains_archive_paths(output_root: Path) -> list[Path]:
+    return _existing_archive_paths(
+        output_root=output_root,
+        entries=["domains", "archive_manifest_domains.json", "checksums_domains.txt"],
+    )
+
+
+def _domains_checksum_paths(output_root: Path) -> list[Path]:
     return _existing_archive_paths(output_root=output_root, entries=["domains"])
 
 
@@ -2230,50 +2266,76 @@ def _existing_archive_paths(*, output_root: Path, entries: list[str]) -> list[Pa
     return paths
 
 
-def _finalize_archive_manifest_and_checksums(
+def _finalize_archive_manifests_and_checksums(
     *,
-    archive_manifest_path: Path,
-    checksums_path: Path,
+    archive_manifest_primary_path: Path,
+    archive_manifest_domains_path: Path,
+    checksums_primary_path: Path,
+    checksums_domains_path: Path,
     output_root: Path,
     run_manifest: dict[str, Any],
 ) -> None:
-    # archive_manifest.json describes the full file tree, while checksums.txt
-    # contains the archive manifest checksum. Iterate until file sizes stabilize;
-    # checksum line lengths are fixed, so this converges quickly.
-    previous_archive_size: int | None = None
-    previous_checksums_size: int | None = None
+    # Manifests include byte counts for their archive boundaries. Iterate until
+    # manifest/checksum sizes stabilize; checksum line lengths are fixed, so
+    # this converges quickly.
+    previous_sizes: tuple[int, int, int, int] | None = None
     for _ in range(5):
         _write_json(
-            archive_manifest_path,
+            archive_manifest_primary_path,
             _build_archive_manifest_payload(
                 output_root=output_root,
                 run_manifest=run_manifest,
+                archive_type="primary",
             ),
         )
-        _write_checksums(checksums_path=checksums_path, output_root=output_root)
-        archive_size = archive_manifest_path.stat().st_size
-        checksums_size = checksums_path.stat().st_size
-        if (
-            archive_size == previous_archive_size
-            and checksums_size == previous_checksums_size
-        ):
+        _write_json(
+            archive_manifest_domains_path,
+            _build_archive_manifest_payload(
+                output_root=output_root,
+                run_manifest=run_manifest,
+                archive_type="supplementary_domains",
+            ),
+        )
+        _write_checksums(checksums_path=checksums_primary_path, paths=_primary_archive_paths(output_root))
+        _write_checksums(checksums_path=checksums_domains_path, paths=_domains_checksum_paths(output_root))
+        sizes = (
+            archive_manifest_primary_path.stat().st_size,
+            archive_manifest_domains_path.stat().st_size,
+            checksums_primary_path.stat().st_size,
+            checksums_domains_path.stat().st_size,
+        )
+        if sizes == previous_sizes:
             return
-        previous_archive_size = archive_size
-        previous_checksums_size = checksums_size
+        previous_sizes = sizes
 
     _write_json(
-        archive_manifest_path,
-        _build_archive_manifest_payload(output_root=output_root, run_manifest=run_manifest),
+        archive_manifest_primary_path,
+        _build_archive_manifest_payload(
+            output_root=output_root,
+            run_manifest=run_manifest,
+            archive_type="primary",
+        ),
     )
-    _write_checksums(checksums_path=checksums_path, output_root=output_root)
+    _write_json(
+        archive_manifest_domains_path,
+        _build_archive_manifest_payload(
+            output_root=output_root,
+            run_manifest=run_manifest,
+            archive_type="supplementary_domains",
+        ),
+    )
+    _write_checksums(checksums_path=checksums_primary_path, paths=_primary_archive_paths(output_root))
+    _write_checksums(checksums_path=checksums_domains_path, paths=_domains_checksum_paths(output_root))
 
 
-def _write_checksums(*, checksums_path: Path, output_root: Path) -> None:
+def _write_checksums(*, checksums_path: Path, paths: list[Path]) -> None:
+    checksums_resolved = checksums_path.resolve()
     paths = sorted(
         path
-        for path in output_root.rglob("*")
-        if path.is_file() and path.resolve() != checksums_path.resolve()
+        for path in paths
+        if path.is_file() and path.resolve() != checksums_resolved
     )
+    output_root = checksums_path.parent
     lines = [f"{_sha256_file(path)}  {path.relative_to(output_root).as_posix()}" for path in paths]
     checksums_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
