@@ -1,0 +1,85 @@
+{
+  "archived_raw_input_path": "raw_inputs/72256399999.parquet",
+  "domain_output_paths": {
+    "clouds": "domains/clouds/72256399999_clouds.csv",
+    "core_meteorology": "domains/core_meteorology/72256399999_core_meteorology.csv",
+    "precipitation": "domains/precipitation/72256399999_precipitation.csv",
+    "pressure_temperature": "domains/pressure_temperature/72256399999_pressure_temperature.csv",
+    "quality_codes": "domains/quality_codes/72256399999_quality_codes.csv",
+    "remarks": "domains/remarks/72256399999_remarks.csv",
+    "visibility": "domains/visibility/72256399999_visibility.csv",
+    "wind": "domains/wind/72256399999_wind.csv"
+  },
+  "input_rows": 216326,
+  "original_source_path": "/media/balaji-kesavan/LaCie/NOAA_Data/72256399999/LocationData_Raw.parquet",
+  "output_rows": 216326,
+  "parse_error_rows": 0,
+  "raw_sha256": "4339ba01bec7e25a56c6eb5aeed88bb51a63c76f94bdee05d02d17d418036e25",
+  "rows_with_any_usable_metric": 216310,
+  "station_id": "72256399999",
+  "strict_parse_summary": {
+    "malformed_identifier_columns": [],
+    "malformed_section_identifier_columns": [],
+    "skipped_encoded_column_count": 0,
+    "skipped_encoded_columns": [],
+    "supported_prefix_family_identifiers": [
+      "AG1",
+      "AJ1"
+    ],
+    "token_rejection_count": 11,
+    "token_rejection_examples": [
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "SA1",
+        "part_index": 1,
+        "raw_section_sample": "+999,9",
+        "reason": "token_width_mismatch",
+        "row_index": 125279,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "72256399999",
+        "token_sample": "+999"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "SA1",
+        "part_index": 1,
+        "raw_section_sample": "+999,9",
+        "reason": "token_width_mismatch",
+        "row_index": 125281,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "72256399999",
+        "token_sample": "+999"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "SA1",
+        "part_index": 1,
+        "raw_section_sample": "+999,9",
+        "reason": "token_width_mismatch",
+        "row_index": 127221,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "72256399999",
+        "token_sample": "+999"
+      }
+    ],
+    "token_rejection_suppressed_log_count": 1,
+    "token_rejections_by_identifier": {
+      "SA1": 11
+    },
+    "token_rejections_by_identifier_part": {
+      "SA1.part_1": 11
+    },
+    "token_rejections_by_reason": {
+      "token_width_mismatch": 11
+    },
+    "unknown_identifier_columns": [],
+    "unsupported_identifier_columns": []
+  },
+  "warnings_count": 11
+}

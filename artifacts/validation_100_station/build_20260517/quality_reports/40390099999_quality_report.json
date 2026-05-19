@@ -1,0 +1,36 @@
+{
+  "archived_raw_input_path": "raw_inputs/40390099999.parquet",
+  "domain_output_paths": {
+    "clouds": "domains/clouds/40390099999_clouds.csv",
+    "core_meteorology": "domains/core_meteorology/40390099999_core_meteorology.csv",
+    "precipitation": "domains/precipitation/40390099999_precipitation.csv",
+    "pressure_temperature": "domains/pressure_temperature/40390099999_pressure_temperature.csv",
+    "quality_codes": "domains/quality_codes/40390099999_quality_codes.csv",
+    "remarks": "domains/remarks/40390099999_remarks.csv",
+    "visibility": "domains/visibility/40390099999_visibility.csv",
+    "wind": "domains/wind/40390099999_wind.csv"
+  },
+  "input_rows": 5,
+  "original_source_path": "/media/balaji-kesavan/LaCie/NOAA_Data/40390099999/LocationData_Raw.parquet",
+  "output_rows": 5,
+  "parse_error_rows": 0,
+  "raw_sha256": "997b1ee213dfa5a8297a9c5e9f94315e041d3972b5b2f3e2a8a181bf803dbbe3",
+  "rows_with_any_usable_metric": 5,
+  "station_id": "40390099999",
+  "strict_parse_summary": {
+    "malformed_identifier_columns": [],
+    "malformed_section_identifier_columns": [],
+    "skipped_encoded_column_count": 0,
+    "skipped_encoded_columns": [],
+    "supported_prefix_family_identifiers": [],
+    "token_rejection_count": 0,
+    "token_rejection_examples": [],
+    "token_rejection_suppressed_log_count": 0,
+    "token_rejections_by_identifier": {},
+    "token_rejections_by_identifier_part": {},
+    "token_rejections_by_reason": {},
+    "unknown_identifier_columns": [],
+    "unsupported_identifier_columns": []
+  },
+  "warnings_count": 0
+}

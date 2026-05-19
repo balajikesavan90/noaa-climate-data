@@ -1,0 +1,209 @@
+{
+  "artifact_id": "strict_parse_summary_report",
+  "build_id": "20260517",
+  "created_utc": "2026-05-18T10:26:29Z",
+  "schema_version": "1.0.0",
+  "token_validation_rejections": {
+    "affected_station_count": 70,
+    "diagnostic_note": "Strict token-level validation rejections are observability signals. They identify optional-section payloads that did not match declared token-width expectations. They did not cause station-level failure or row loss in this validation run.",
+    "token_rejection_examples": [
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "9,9,999,9,-021,1",
+        "reason": "token_width_mismatch",
+        "row_index": 13229,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "01059099999",
+        "token_sample": "-021"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "9,9,999,9,+005,1",
+        "reason": "token_width_mismatch",
+        "row_index": 3108,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "01059099999",
+        "token_sample": "+005"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "9,9,999,9,+002,1",
+        "reason": "token_width_mismatch",
+        "row_index": 5534,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "01059099999",
+        "token_sample": "+002"
+      },
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "3,99,0110,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 12,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "01059099999",
+        "token_sample": "0110"
+      },
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "3,99,0060,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 123969,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "01059099999",
+        "token_sample": "0060"
+      },
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "3,99,0080,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 123980,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "01059099999",
+        "token_sample": "0080"
+      },
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "3,99,0160,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 29,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "01059099999",
+        "token_sample": "0160"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 1,
+        "identifier": "OD1",
+        "part_index": 5,
+        "raw_section_sample": "3,99,0110,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 12,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "01059099999",
+        "token_sample": "999"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 1,
+        "identifier": "OD1",
+        "part_index": 5,
+        "raw_section_sample": "3,99,0060,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 123969,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "01059099999",
+        "token_sample": "999"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "SA1",
+        "part_index": 1,
+        "raw_section_sample": "+023,9",
+        "reason": "token_width_mismatch",
+        "row_index": 4191,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "01066099999",
+        "token_sample": "+023"
+      }
+    ],
+    "token_rejections_by_identifier": {
+      "MD1": 309043,
+      "MK1": 34,
+      "OD1": 1824771,
+      "OD2": 367710,
+      "OD3": 128752,
+      "SA1": 51224
+    },
+    "token_rejections_by_identifier_part": {
+      "MD1.part_5": 309043,
+      "MK1.part_2": 16,
+      "MK1.part_5": 18,
+      "OD1.part_3": 912391,
+      "OD1.part_5": 912380,
+      "OD2.part_3": 183855,
+      "OD2.part_5": 183855,
+      "OD3.part_3": 64376,
+      "OD3.part_5": 64376,
+      "SA1.part_1": 51224
+    },
+    "token_rejections_by_reason": {
+      "token_pattern_mismatch": 34,
+      "token_width_mismatch": 2681500
+    },
+    "top_affected_stations": [
+      {
+        "station_id": "06375099999",
+        "token_rejection_count": 692821
+      },
+      {
+        "station_id": "06633099999",
+        "token_rejection_count": 367220
+      },
+      {
+        "station_id": "99848399999",
+        "token_rejection_count": 217775
+      },
+      {
+        "station_id": "99420099999",
+        "token_rejection_count": 202238
+      },
+      {
+        "station_id": "27277099999",
+        "token_rejection_count": 130794
+      },
+      {
+        "station_id": "07315099999",
+        "token_rejection_count": 121930
+      },
+      {
+        "station_id": "42165099999",
+        "token_rejection_count": 113230
+      },
+      {
+        "station_id": "01441099999",
+        "token_rejection_count": 97706
+      },
+      {
+        "station_id": "86609099999",
+        "token_rejection_count": 84216
+      },
+      {
+        "station_id": "41594099999",
+        "token_rejection_count": 65797
+      }
+    ],
+    "total_token_rejection_count": 2681534
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "archived_raw_input_path": "raw_inputs/34560099999.parquet",
+  "chunked_processing": {
+    "chunk_count": 2,
+    "chunk_row_count": 250000,
+    "chunking_threshold": 250000
+  },
+  "domain_output_paths": {
+    "clouds": "domains/clouds/34560099999_clouds.csv",
+    "core_meteorology": "domains/core_meteorology/34560099999_core_meteorology.csv",
+    "precipitation": "domains/precipitation/34560099999_precipitation.csv",
+    "pressure_temperature": "domains/pressure_temperature/34560099999_pressure_temperature.csv",
+    "quality_codes": "domains/quality_codes/34560099999_quality_codes.csv",
+    "remarks": "domains/remarks/34560099999_remarks.csv",
+    "visibility": "domains/visibility/34560099999_visibility.csv",
+    "wind": "domains/wind/34560099999_wind.csv"
+  },
+  "input_rows": 485176,
+  "original_source_path": "/media/balaji-kesavan/LaCie/NOAA_Data/34560099999/LocationData_Raw.parquet",
+  "output_rows": 485176,
+  "parse_error_rows": 0,
+  "raw_sha256": "4c33547ff91701dfbe6d2db2043694cdce34a8d7046582fe78478b9da4f09829",
+  "rows_with_any_usable_metric": 485164,
+  "station_id": "34560099999",
+  "strict_parse_summary": {
+    "malformed_identifier_columns": [],
+    "malformed_section_identifier_columns": [],
+    "skipped_encoded_column_count": 1,
+    "skipped_encoded_columns": [
+      "HL1"
+    ],
+    "supported_prefix_family_identifiers": [
+      "AG1",
+      "AJ1",
+      "GJ1"
+    ],
+    "token_rejection_count": 39121,
+    "token_rejection_examples": [
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "2,1,015,1,+030,1",
+        "reason": "token_width_mismatch",
+        "row_index": 3168,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "34560099999",
+        "token_sample": "+030"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "2,1,012,1,+005,1",
+        "reason": "token_width_mismatch",
+        "row_index": 3171,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "34560099999",
+        "token_sample": "+005"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "9,9,999,9,+000,1",
+        "reason": "token_width_mismatch",
+        "row_index": 3378,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "34560099999",
+        "token_sample": "+000"
+      },
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "4,99,0100,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 42,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "34560099999",
+        "token_sample": "0100"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 1,
+        "identifier": "OD1",
+        "part_index": 5,
+        "raw_section_sample": "4,99,0100,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 42,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "34560099999",
+        "token_sample": "999"
+      },
+      {
+        "actual_width": 4,
+        "expected_width": 3,
+        "identifier": "OD1",
+        "part_index": 3,
+        "raw_section_sample": "3,99,0100,1,999",
+        "reason": "token_width_mismatch",
+        "row_index": 49,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "34560099999",
+        "token_sample": "0100"
+      }
+    ],
+    "token_rejection_suppressed_log_count": 39101,
+    "token_rejections_by_identifier": {
+      "MD1": 49,
+      "OD1": 26496,
+      "OD2": 12572,
+      "SA1": 4
+    },
+    "token_rejections_by_identifier_part": {
+      "MD1.part_5": 49,
+      "OD1.part_3": 13248,
+      "OD1.part_5": 13248,
+      "OD2.part_3": 6286,
+      "OD2.part_5": 6286,
+      "SA1.part_1": 4
+    },
+    "token_rejections_by_reason": {
+      "token_width_mismatch": 39121
+    },
+    "unknown_identifier_columns": [
+      "HL1"
+    ],
+    "unsupported_identifier_columns": [
+      "HL1"
+    ]
+  },
+  "warnings_count": 39122
+}
