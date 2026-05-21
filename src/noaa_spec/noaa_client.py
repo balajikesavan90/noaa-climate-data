@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from io import BytesIO
+import os
 from pathlib import Path
+import socket
 from typing import Iterable
 
 import time
@@ -13,8 +15,23 @@ import pandas as pd
 from .constants import BASE_URL
 
 
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _force_ipv4_if_requested() -> None:
+    if not _env_flag("NOAA_SPEC_FORCE_IPV4"):
+        return
+    try:
+        from urllib3.util import connection as urllib3_connection
+    except ImportError:  # pragma: no cover - requests depends on urllib3
+        return
+    urllib3_connection.allowed_gai_family = lambda: socket.AF_INET
+
+
 def _requests_module():
     try:
+        _force_ipv4_if_requested()
         import requests
     except ImportError as exc:  # pragma: no cover - optional dependency guard
         raise RuntimeError(

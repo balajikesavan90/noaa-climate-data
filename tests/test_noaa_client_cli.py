@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import fcntl
 from pathlib import Path
+import socket
 import sys
 
 import pandas as pd
@@ -27,6 +28,24 @@ class _FakeDateTime:
 
 
 class TestNoaaClient:
+    def test_force_ipv4_env_sets_urllib3_address_family(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        urllib3_connection = pytest.importorskip("urllib3.util.connection")
+        original_allowed_gai_family = urllib3_connection.allowed_gai_family
+        monkeypatch.setenv("NOAA_SPEC_FORCE_IPV4", "1")
+
+        try:
+            noaa_client._force_ipv4_if_requested()
+            assert urllib3_connection.allowed_gai_family() == socket.AF_INET
+        finally:
+            monkeypatch.setattr(
+                urllib3_connection,
+                "allowed_gai_family",
+                original_allowed_gai_family,
+            )
+
     def test_get_years_parses_dirs(self, monkeypatch: pytest.MonkeyPatch) -> None:
         table = pd.DataFrame({0: ["2020/", "2021/", "bad/", "202A/", "2021/", None]})
         monkeypatch.setattr(noaa_client.pd, "read_html", lambda url: [table])
