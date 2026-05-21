@@ -1,0 +1,149 @@
+{
+  "artifact_id": "aggregate_quality_summary",
+  "build_id": "20260518",
+  "created_utc": "2026-05-20T11:24:56Z",
+  "failed_stations": 0,
+  "not_run_stations": 0,
+  "parse_error_rows": 0,
+  "row_parity": true,
+  "runtime_summary_seconds": {
+    "max": 5105.465351342224,
+    "mean": 254.43524388600142,
+    "min": 0.17353927437216043,
+    "total": 25443.52438860014
+  },
+  "schema_version": "1.0.0",
+  "skipped_identifiers": {
+    "AW5": 3,
+    "AW6": 1,
+    "EQD": 1,
+    "HL1": 32
+  },
+  "station_status_counts": {
+    "success": 100
+  },
+  "stations_with_warnings": 75,
+  "strict_token_affected_station_count": 71,
+  "strict_token_rejection_total": 4438272,
+  "strict_token_rejections_by_identifier": {
+    "CH1": 1595282,
+    "CI1": 133306,
+    "MD1": 191141,
+    "MK1": 24,
+    "OD1": 1972573,
+    "OD2": 440989,
+    "OD3": 102956,
+    "SA1": 2001
+  },
+  "strict_token_rejections_by_identifier_part": {
+    "CH1.part_2": 1595282,
+    "CI1.part_1": 133306,
+    "MD1.part_5": 191141,
+    "MK1.part_2": 11,
+    "MK1.part_5": 13,
+    "OD1.part_3": 986418,
+    "OD1.part_5": 986155,
+    "OD2.part_3": 220617,
+    "OD2.part_5": 220372,
+    "OD3.part_3": 51478,
+    "OD3.part_5": 51478,
+    "SA1.part_1": 2001
+  },
+  "strict_token_rejections_by_reason": {
+    "token_pattern_mismatch": 24,
+    "token_width_mismatch": 4438248
+  },
+  "successful_stations": 100,
+  "top_affected_stations_by_strict_rejection_count": [
+    {
+      "station_id": "99999923906",
+      "token_rejection_count": 1728588
+    },
+    {
+      "station_id": "06240099999",
+      "token_rejection_count": 661119
+    },
+    {
+      "station_id": "06635099999",
+      "token_rejection_count": 280664
+    },
+    {
+      "station_id": "99418099999",
+      "token_rejection_count": 228709
+    },
+    {
+      "station_id": "08301099999",
+      "token_rejection_count": 145485
+    },
+    {
+      "station_id": "02831099999",
+      "token_rejection_count": 142562
+    },
+    {
+      "station_id": "02209099999",
+      "token_rejection_count": 127471
+    },
+    {
+      "station_id": "86995099999",
+      "token_rejection_count": 123566
+    },
+    {
+      "station_id": "56964099999",
+      "token_rejection_count": 113283
+    },
+    {
+      "station_id": "03214099999",
+      "token_rejection_count": 90289
+    }
+  ],
+  "top_affected_stations_by_warning_count": [
+    {
+      "station_id": "99999923906",
+      "warnings_count": 1728588
+    },
+    {
+      "station_id": "06240099999",
+      "warnings_count": 661120
+    },
+    {
+      "station_id": "06635099999",
+      "warnings_count": 280664
+    },
+    {
+      "station_id": "99418099999",
+      "warnings_count": 228709
+    },
+    {
+      "station_id": "08301099999",
+      "warnings_count": 145485
+    },
+    {
+      "station_id": "02831099999",
+      "warnings_count": 142562
+    },
+    {
+      "station_id": "02209099999",
+      "warnings_count": 127471
+    },
+    {
+      "station_id": "86995099999",
+      "warnings_count": 123566
+    },
+    {
+      "station_id": "56964099999",
+      "warnings_count": 113284
+    },
+    {
+      "station_id": "03214099999",
+      "warnings_count": 90289
+    }
+  ],
+  "total_input_rows": 15699389,
+  "total_output_rows": 15699389,
+  "total_stations": 100,
+  "total_warnings": 4438309,
+  "unsupported_identifiers": {
+    "EQD": 1,
+    "HL1": 32
+  }
+}

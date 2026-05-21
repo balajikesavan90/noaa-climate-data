@@ -1,0 +1,77 @@
+{
+  "archive_content_classification": [
+    "raw_inputs/",
+    "canonical_cleaned/",
+    "quality_reports/",
+    "station_results.csv",
+    "station_selection_manifest.csv",
+    "selected_station_metadata.csv",
+    "run_manifest.json",
+    "archive_manifest_primary.json",
+    "checksums_primary.txt",
+    "summary.md",
+    "aggregate_quality_summary.json",
+    "aggregate_quality_summary.md",
+    "strict_parse_summary_report.json",
+    "strict_parse_summary_report.md",
+    "strict_token_rejection_explanation.md"
+  ],
+  "archive_type": "primary",
+  "artifact_name": "validation_100_station_primary",
+  "artifact_version": "20260518",
+  "build_id": "20260518",
+  "byte_count": 17938790638,
+  "checksum_algorithm": "SHA256",
+  "checksum_file": "checksums_primary.txt",
+  "claim_scope": "This validation artifact supports deterministic reproducibility from archived validation inputs to archived outputs. Reconstruction from upstream NOAA archives is not claimed because upstream NOAA source URLs and checksums are not preserved within this artifact.\n\nThe primary DOI archive contains the canonical reproducibility boundary:\n\narchived inputs \u2192 deterministic NOAA-Spec processing \u2192 canonical cleaned outputs\n\nDomain outputs are convenience projections intended to improve interpretability for downstream workflows. They are derived from canonical cleaned outputs and are not required to reproduce NOAA-Spec's core deterministic cleaning behavior.\n\nDomain outputs are archived separately as supplementary artifacts and are outside the primary reproducibility claim.",
+  "created_utc": "2026-05-20T11:28:14Z",
+  "directory_inventory": [
+    {
+      "archive_classification": "primary",
+      "file_count": 100,
+      "path": "canonical_cleaned",
+      "total_bytes": 17392881306
+    },
+    {
+      "archive_classification": "primary",
+      "file_count": 100,
+      "path": "quality_reports",
+      "total_bytes": 270088
+    },
+    {
+      "archive_classification": "primary",
+      "file_count": 100,
+      "path": "raw_inputs",
+      "total_bytes": 538640530
+    }
+  ],
+  "doi": "TODO_PRIMARY_DOI",
+  "domains_doi": null,
+  "file_count": 312,
+  "generated_timestamp_utc": "2026-05-20T11:28:14Z",
+  "git_sha": "30d425b7dfd7d041e592e0a9bd621197d2eccba2",
+  "git_tag": null,
+  "intended_archive": "primary DOI archive",
+  "manifest_file": "archive_manifest_primary.json",
+  "primary_doi": "TODO_PRIMARY_DOI",
+  "repo_commit_sha": "30d425b7dfd7d041e592e0a9bd621197d2eccba2",
+  "top_level_files": [
+    "aggregate_quality_summary.json",
+    "aggregate_quality_summary.md",
+    "archive_manifest_primary.json",
+    "canonical_cleaned",
+    "checksums_primary.txt",
+    "quality_reports",
+    "raw_inputs",
+    "run_manifest.json",
+    "selected_station_metadata.csv",
+    "station_results.csv",
+    "station_selection_manifest.csv",
+    "strict_parse_summary_report.json",
+    "strict_parse_summary_report.md",
+    "strict_token_rejection_explanation.md",
+    "summary.md"
+  ],
+  "total_bytes": 17938790638,
+  "total_files": 312
+}

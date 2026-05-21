@@ -1,0 +1,100 @@
+{
+  "archived_raw_input_path": "raw_inputs/27719099999.parquet",
+  "domain_output_paths": {
+    "clouds": "domains/clouds/27719099999_clouds.csv",
+    "core_meteorology": "domains/core_meteorology/27719099999_core_meteorology.csv",
+    "precipitation": "domains/precipitation/27719099999_precipitation.csv",
+    "pressure_temperature": "domains/pressure_temperature/27719099999_pressure_temperature.csv",
+    "quality_codes": "domains/quality_codes/27719099999_quality_codes.csv",
+    "remarks": "domains/remarks/27719099999_remarks.csv",
+    "visibility": "domains/visibility/27719099999_visibility.csv",
+    "wind": "domains/wind/27719099999_wind.csv"
+  },
+  "input_rows": 91573,
+  "original_source_path": "/media/balaji-kesavan/LaCie/NOAA_Data/27719099999/LocationData_Raw.parquet",
+  "output_rows": 91573,
+  "parse_error_rows": 0,
+  "raw_sha256": "25b650bf49e56befe62006a597ba00903487f099f78638dbb9467eeaa7f4be39",
+  "rows_with_any_usable_metric": 91568,
+  "station_id": "27719099999",
+  "strict_parse_summary": {
+    "malformed_identifier_columns": [],
+    "malformed_section_identifier_columns": [],
+    "skipped_encoded_column_count": 1,
+    "skipped_encoded_columns": [
+      "HL1"
+    ],
+    "supported_prefix_family_identifiers": [
+      "AJ1",
+      "AG1",
+      "GJ1"
+    ],
+    "token_rejection_count": 7330,
+    "token_rejection_examples": [
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "9,9,999,9,+014,1",
+        "reason": "token_width_mismatch",
+        "row_index": 2798,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "27719099999",
+        "token_sample": "+014"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "9,9,999,9,+007,1",
+        "reason": "token_width_mismatch",
+        "row_index": 3417,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "27719099999",
+        "token_sample": "+007"
+      },
+      {
+        "actual_width": 3,
+        "expected_width": 4,
+        "identifier": "MD1",
+        "part_index": 5,
+        "raw_section_sample": "9,9,999,9,+000,1",
+        "reason": "token_width_mismatch",
+        "row_index": 4807,
+        "row_sample": null,
+        "source_file": null,
+        "station_id": "27719099999",
+        "token_sample": "+000"
+      }
+    ],
+    "token_rejection_suppressed_log_count": 7320,
+    "token_rejections_by_identifier": {
+      "MD1": 7,
+      "OD1": 5574,
+      "OD2": 1746,
+      "SA1": 3
+    },
+    "token_rejections_by_identifier_part": {
+      "MD1.part_5": 7,
+      "OD1.part_3": 2787,
+      "OD1.part_5": 2787,
+      "OD2.part_3": 873,
+      "OD2.part_5": 873,
+      "SA1.part_1": 3
+    },
+    "token_rejections_by_reason": {
+      "token_width_mismatch": 7330
+    },
+    "unknown_identifier_columns": [
+      "HL1"
+    ],
+    "unsupported_identifier_columns": [
+      "HL1"
+    ]
+  },
+  "warnings_count": 7331
+}
