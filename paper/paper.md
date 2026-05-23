@@ -47,7 +47,7 @@ Existing NOAA tools help users obtain, parse, or locally preprocess ISD data. NO
 
 | Criterion | Local preprocessing scripts | Parsing-oriented tools (`isdparser` [@chamberlain_isdparser], `isd` [@isd_python]) | NOAA-Spec |
 | --- | --- | --- | --- |
-| Sentinel normalization for `TMP=+9999,9` | Each project reimplements a table | Parsed structure can be exposed; downstream workflow chooses missing-value handling | Emits null `temperature_c`, preserves `temperature_quality_code=9`, records `TMP__qc_reason=SENTINEL_MISSING` |
+| Sentinel normalization for `TMP=+9999,9` | Each project reimplements a table | Parsed structure can be exposed; downstream workflow chooses missing-value handling | Emits null `temperature_c`, preserves `temperature_quality_code=9`, records `TMP__qc_reason= SENTINEL_MISSING` |
 | Packed visibility `VIS=999999,9,N,1` | Cleaning policy is project-specific | Parsed structure can be exposed; downstream workflow chooses cleaning policy | Emits null `visibility_m`, preserves visibility QC, keeps variability fields explicit |
 | Stable decoded column names | Requires local naming convention | Analysis tables depend on downstream workflow | Uses documented names such as `temperature_c`, `visibility_m`, and `sea_level_pressure_hpa` |
 | QC preservation as output | Easy to drop while extracting values | Available if retained downstream | Preserved in explicit columns and `__qc_*` sidecars |
