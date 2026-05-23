@@ -19,4 +19,4 @@ __all__ = [
     "noaa_client",
 ]
 
-__version__ = "1.0.0"
+__version__ = "1.0.2"

@@ -4,6 +4,11 @@ This document is the reproducibility reference for NOAA-Spec's core canonical cl
 
 The repository also contains broader infrastructure for domain outputs, quality reports, release manifests, and maintainer validation workflows. Those workflows build on the same canonicalization layer, but the portable in-repository reproducibility checks here are the tracked fixture runs below.
 
+Archived validation evidence is available separately from the repository fixture:
+
+- Primary validation artifacts: https://doi.org/10.5281/zenodo.20320544
+- Domain validation artifacts: https://doi.org/10.5281/zenodo.20320457
+
 ## Clean-Environment Check
 
 Docker provides the simplest clean-environment verification path:
@@ -151,3 +156,5 @@ The portable in-repository reproducibility boundary covers:
 - the bundled tracked fixtures and checksum-backed verification paths
 
 Broader repository workflows such as batch orchestration, release manifests, and internal validation/reporting are maintained in the repository, but they are not represented by a frozen release build in this checkout. Treat those areas as maintainer and research infrastructure unless a specific task points to them.
+
+For archived software citation metadata, use the software DOI: https://doi.org/10.5281/zenodo.20350948.

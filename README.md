@@ -80,6 +80,20 @@ SHA256: b48aba1b8a304451dc3874b963d76275bf79ad68c6f28d9190e0e636f2887597
 
 The script is a thin wrapper around the same `noaa-spec clean` fixture workflow documented in [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
 
+## Citation & Archived Releases
+
+[![Software DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20350948.svg)](https://doi.org/10.5281/zenodo.20350948)
+[![Primary validation DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20320544.svg)](https://doi.org/10.5281/zenodo.20320544)
+[![Domain validation DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20320457.svg)](https://doi.org/10.5281/zenodo.20320457)
+
+Software archive (frozen release): DOI: https://doi.org/10.5281/zenodo.20350948
+
+Primary validation artifacts: DOI: https://doi.org/10.5281/zenodo.20320544
+
+Domain validation artifacts: DOI: https://doi.org/10.5281/zenodo.20320457
+
+The software DOI identifies the archived implementation. The primary validation DOI identifies operational validation artifacts, quality reports, manifests, and provenance evidence. The domain validation DOI identifies domain-specific outputs intended for downstream reuse.
+
 ## Minimal Workflow
 
 The bundled raw NOAA sample in [reproducibility/minimal/station_raw.csv](reproducibility/minimal/station_raw.csv) is tracked in the repository, so the first run does not require finding outside data.

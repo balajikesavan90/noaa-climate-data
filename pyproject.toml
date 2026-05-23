@@ -1,6 +1,6 @@
 [project]
 name = "noaa-spec"
-version = "1.0.0"
+version = "1.0.2"
 description = "Deterministic cleaning for NOAA ISD / Global Hourly observations with stable observation-level output semantics."
 authors = [
     {name = "Balaji Kesavan",email = "balajikesavan29@gmail.com"}
@@ -11,6 +11,12 @@ dependencies = [
     "pandas>=3.0.0,<4.0.0",
     "pyarrow>=16.0.0,<17.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/balajikesavan90/noaa-spec"
+Repository = "https://github.com/balajikesavan90/noaa-spec"
+Documentation = "https://github.com/balajikesavan90/noaa-spec#readme"
+Citation = "https://doi.org/10.5281/zenodo.20350948"
 
 [project.optional-dependencies]
 fetch = [

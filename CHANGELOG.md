@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+### Metadata
+- Added archived software and validation artifact DOI references for Zenodo release discovery.
+- Updated citation metadata for the v1.0.2 archived software release.
+
 ## 1.0.0
 
 ### Core

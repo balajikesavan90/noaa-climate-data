@@ -67,9 +67,13 @@ NOAA-Spec exposes a small public surface:
 
 The public CLI is the `noaa-spec clean` command. The reviewer-visible example is intentionally bounded to the tracked reproducibility fixture so the JOSS claim matches the software surface that users and reviewers can run. The canonical output is intentionally wide (~130 columns) because it preserves all decoded measurement fields and QC context in a single deterministic table; optional derived views (`metadata`, `wind`, `precipitation`, `clouds_visibility`, `pressure_temperature`, `remarks`) provide narrower subsets for common workflows.
 
+The archived software release is available on Zenodo [@noaa_spec_software_archive].
+
 # Reproducibility
 
 The repository includes a tracked raw input, tracked expected canonical output, and checksum-backed verification under `reproducibility/`. For independent reviewer verification, the authoritative path is the Docker workflow documented in the repository. Reviewers can rerun the example and confirm that the emitted CSV matches the expected checksum. The included fixture is intentionally minimal (5 rows) and serves as a deterministic reproducibility check; larger-scale processing is supported but not bundled in-repo. The fixture is the committed reviewer-checkable boundary, while rule-based implementation derived from NOAA documentation and automated tests provide broader confidence across encoded cases. This supports the main software claim: NOAA-Spec makes NOAA-specific interpretation behavior deterministic and inspectable at the observation level.
+
+Archived validation evidence for operational validation outputs and domain-specific outputs is available separately [@noaa_spec_primary_validation; @noaa_spec_domain_validation].
 
 # Limitations
 
