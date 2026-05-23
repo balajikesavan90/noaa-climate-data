@@ -74,7 +74,7 @@ The DOI-backed 100-station validation artifact provides additional operational e
 
 # Research Impact Statement
 
-NOAA-Spec's provides is a reusable, reviewable preprocessing contract for NOAA ISD studies. It reduces repeated interpretation work by making supported NOAA sentinel handling, QC retention, stable naming, documented cleaning contracts, and deterministic serialization available through a citeable CLI. The contribution is demonstrated through reproducibility artifacts, archived validation evidence, automated testing, checksum-backed outputs, and operational validation, without claiming external adoption.
+NOAA-Spec provides is a reusable, reviewable preprocessing contract for NOAA ISD studies. It reduces repeated interpretation work by making supported NOAA sentinel handling, QC retention, stable naming, documented cleaning contracts, and deterministic serialization available through a citeable CLI. The contribution is demonstrated through reproducibility artifacts, archived validation evidence, automated testing, checksum-backed outputs, and operational validation, without claiming external adoption.
 
 Verified repository evidence includes checksum-verified fixtures, upstream-traceable examples, and automated tests covering supported-field contracts and deterministic output behavior. The validation artifact also records 4,438,272 strict-token rejections as diagnostics rather than row-loss failures, supporting transparent handling of optional-section anomalies like format mismatches and malformed tokens.
 
@@ -82,7 +82,7 @@ Verified repository evidence includes checksum-verified fixtures, upstream-trace
 
 Development and writing used AI assistance, including ChatGPT, Codex and GitHub Copilot using LLMs like GPT 5 series and Claude 4 series. These tools were used for implementation assistance, refactoring, test scaffolding, documentation and README editing, paper drafting, architecture review, reproducibility review, copy editing, and reviewer-simulation feedback.
 
-Their scope was assistive: code generation suggestions, refactoring proposals, test-generation drafts, documentation wording, manuscript drafting, and review prompts. The Human author determined the architecture, validation strategy, reproducibility strategy, supported-field contracts, publication decisions, and acceptance or rejection of AI outputs. Human review and validation included automated tests, reproducibility fixtures, checksum comparisons, archived validation-artifact manifests where applicable, and manual review; the human author remains responsible for the submitted software and manuscript.
+Their scope was assistive: code generation suggestions, refactoring proposals, test-generation drafts, documentation wording, manuscript drafting, and review prompts. The human author determined the architecture, validation strategy, reproducibility strategy, supported-field contracts, publication decisions, and acceptance or rejection of AI outputs. Human review and validation included automated tests, reproducibility fixtures, checksum comparisons, archived validation-artifact manifests where applicable, and manual review; the human author remains responsible for the submitted software and manuscript.
 
 # Limitations
 
