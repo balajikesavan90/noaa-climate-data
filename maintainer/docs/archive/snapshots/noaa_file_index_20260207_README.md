@@ -73,8 +73,10 @@ environment no longer has the package installed in editable mode.
 - `materialize-raw-pull-state` backfills `raw_pull_state.csv` from legacy `raw_data_pulled` flags and rewrites `Stations.csv` without operational status columns.
 
 #### Notes
-- Cron schedule runs every 5 minutes.
+- Cron schedule ran every 2 minutes.
 - Schedule started on 2026-02-13.
+- Raw pull state reached completion for all 27,486 stations on 2026-05-30 at 19:08:52 UTC (12:08:52 PDT).
+- Cron schedule paused on 2026-05-30 after raw pull state completion.
 
 ### Data cleaning
 
