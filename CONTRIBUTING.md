@@ -2,7 +2,8 @@
 
 ## Development setup
 
-Use the same Python 3.12 virtual-environment flow documented in the README:
+Use the same Python 3.11 or 3.12 virtual-environment flow documented in the
+README. For example:
 
 ```bash
 python3 -m venv .venv
