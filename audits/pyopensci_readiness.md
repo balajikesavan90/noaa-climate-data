@@ -8,11 +8,11 @@ pyOpenSci's stated scope is broad enough to include scientific Python packages f
 
 NOAA-Spec is plausibly in pyOpenSci scope, but it is not ready for direct submission. The strongest fit is not as a dataset project or analytical method; it is as a deterministic, specification-constrained data processing and validation package for NOAA ISD / Global Hourly observations. The repository has real technical substance: an installable `src/` package, a public `noaa-spec clean` CLI, extensive parser/cleaning tests, reproducibility fixtures, rule provenance documentation, and a DOI-oriented 100-station validation artifact. Those are meaningful strengths for pyOpenSci.
 
-The main risk is packaging and submission readiness, not core functionality. The repository now has a concise package-scope boundary in `docs/design_rationale.md` and a README link to that boundary, but the project still appears not to document PyPI or conda publication status, issue/security/release maintenance infrastructure is incomplete, and the broader validation-artifact story could still be misread as a dataset/release-artifact project rather than a reusable Python package. The 27k-station corpus should help as validation evidence only after it is summarized in a reviewer-facing artifact; it should not become the submitted object.
+The main risk is packaging and submission readiness, not core functionality. The repository now has a concise package-scope boundary in `docs/design_rationale.md`, README links to that boundary, and a small packaging-readiness pass has added security reporting, issue/PR templates, support/release guidance, and CI build/install checks. Full submission still needs actual package publication planning, but the remaining gaps are no longer blockers for a pre-submission inquiry.
 
-Recommendation: Fix blockers before inquiry
+Recommendation: Open pre-submission inquiry first
 
-After those blockers are fixed, a pre-submission inquiry is the right next step. Direct submission now would likely trigger avoidable editor questions about package distribution, user-facing docs, overlap with existing NOAA tools, and whether this is primarily software or an unpublished data publication workflow.
+The inquiry should ask pyOpenSci to confirm scope fit and review timing for the Python package, with validation artifacts framed as supporting evidence rather than the reviewed object.
 
 ## 1. Reviewed Object
 
@@ -135,20 +135,20 @@ Verification performed during this audit:
 | CLI clarity | Pass | `src/noaa_spec/cli.py` provides `clean` and names maintainer commands under `dev`; README documents `noaa-spec clean`. | No | Add a dedicated CLI reference page with examples and error behavior. |
 | Deterministic output | Pass | `src/noaa_spec/deterministic_io.py`; CLI sorts by `STATION`, `DATE`; reproducibility checks pass. | No | Keep checksum fixture verification in CI. |
 | Tests | Pass | 1,995 tests passed locally; tests cover CLI, cleaning, QC, validation, deterministic I/O, reproducibility. | No | Add CI coverage report only if useful; not a submission blocker. |
-| Continuous integration | Partial | `.github/workflows/ci-tests.yml` runs tests, reproducibility fixture, and JOSS PDF build on Ubuntu/Python 3.12. | Yes | Add matrix for Python 3.11/3.12 and separate package build check. |
-| PyPI status | Unknown / likely missing | `pyproject.toml` is package-ready, but repo docs do not state PyPI publication; external spot search did not find an exact `noaa-spec` PyPI project. | Yes | Publish to PyPI or document planned release status before inquiry. |
+| Continuous integration | Pass / pending remote result | `.github/workflows/ci-tests.yml` now tests Python 3.11 and 3.12, builds package artifacts, installs from the built wheel, runs a CLI smoke check, tests, and reproducibility verification. | No | Confirm the updated workflow is green on GitHub. |
+| PyPI status | Partial | `CONTRIBUTING.md` states NOAA-Spec is not documented as published on PyPI and should be installed from source until a PyPI release is made. | No | Publish to PyPI before full submission if scope inquiry is positive. |
 | Conda status | Missing | No conda-forge/conda recipe or documentation found. | No | Not required if PyPI is available, but note absence honestly. |
-| Release process | Partial | `CHANGELOG.md`, version metadata, Docker/reproducibility docs. | Yes | Add `docs/release_process.md` or a maintainer section covering version bump, tests, build, PyPI upload, tag, DOI artifacts. |
+| Release process | Partial / sufficient for inquiry | `CONTRIBUTING.md` now includes a release checklist covering version bump, changelog, tests, reproducibility check, package build, installed-wheel smoke check, tag/release, and PyPI status. | No | Use the checklist for the next tagged release before full submission. |
 | Versioning | Partial | Version is present in package metadata and citation; changelog has `1.0.0`. | No | State semantic versioning or schema/versioning policy. |
 | Changelog | Pass | `CHANGELOG.md` exists and is useful. | No | Keep it current. |
-| Issue templates | Missing | No `.github/ISSUE_TEMPLATE/` found. | No | Add bug report, documentation issue, and feature/request templates. |
-| Pull request template | Missing | No PR template found. | No | Add checklist for tests, docs, schema/provenance impact. |
-| Contributor onboarding | Partial | `CONTRIBUTING.md` has setup, tests, rule-change principles. | No | Add maintainer expectations, review norms, and how to add new field rules. |
+| Issue templates | Pass | `.github/ISSUE_TEMPLATE/bug_report.md`, `documentation.md`, and `feature_request.md` exist. | No | Keep templates short and scoped. |
+| Pull request template | Pass | `.github/pull_request_template.md` includes tests, docs, fixtures, rule provenance, and validation-artifact checks. | No | Keep checklist aligned with project scope. |
+| Contributor onboarding | Partial / sufficient for inquiry | `CONTRIBUTING.md` has setup, tests, support scope, maintenance expectations, rule-change principles, and release checklist. | No | Add more maintainer detail only if review feedback asks for it. |
 | Code of conduct | Partial | `CODE_OF_CONDUCT.md` exists but enforcement contact is generic. | No | Add explicit contact address or mechanism. |
 | Citation metadata | Pass | `CITATION.cff` includes title, repository, abstract, author, ORCID, version, release date. | No | Update release date/version when publishing. |
 | License | Pass | MIT license in `LICENSE`. | No | Add license classifier to `pyproject.toml`. |
-| Security policy | Missing | No `SECURITY.md` found. | No | Add a lightweight vulnerability/reporting policy. |
-| Maintenance handoff | Missing | pyOpenSci cares about long-term maintenance; no maintainer handoff/support policy found. | Yes | Add maintainer guide and support policy before inquiry. |
+| Security policy | Pass | `SECURITY.md` describes local-package security scope and responsible reporting. | No | Keep contact guidance current. |
+| Maintenance handoff | Partial / sufficient for inquiry | `CONTRIBUTING.md` now documents support scope and maintainer expectations. | No | Add handoff specifics before full submission if pyOpenSci requests them. |
 | Overlap analysis | Pass / needs monitoring | README includes a concise comparison with `pandas`, `xarray`, `noaa-sdk`, `meteostat`, Herbie, and custom scripts; `paper/paper.md` has a longer JOSS-oriented comparison. | No | Keep README concise; expand only if pyOpenSci editors ask for deeper landscape detail. |
 | AI usage disclosure | Partial | `paper/paper.md` includes disclosure. | No | Consider adding repository-level disclosure if pyOpenSci asks. |
 
@@ -296,22 +296,22 @@ Not recommended.
 Reasons:
 
 - Package distribution status is unclear.
-- Maintenance/release/support docs are incomplete.
+- Maintenance/release/support docs are now sufficient for inquiry, but should be exercised before full submission.
 - Overlap analysis has been improved, but may still need editor feedback.
 - A minimal first-output guide and compact public API page exist, but a fuller research workflow example is still missing.
 - The repository is still framed around JOSS and validation artifacts more than pyOpenSci package review.
 
 ### Open a pre-submission inquiry now
 
-Possible, but still not ideal.
+Recommended.
 
-This could be reasonable if the question is only "is a deterministic NOAA ISD cleaning package in scope?" However, the inquiry will be more productive after the easy readiness fixes are done, because editors will then evaluate scope rather than obvious infrastructure gaps.
+The easy packaging-readiness gaps have been addressed. The inquiry should stay focused on whether deterministic NOAA ISD cleaning and validation software fits pyOpenSci scope and what pyOpenSci would expect before full submission.
 
 ### Fix blockers first
 
-Recommended.
+No longer required before inquiry.
 
-Fix the package-review blockers, then open a pre-submission inquiry. This uses pyOpenSci editors' time better and gives NOAA-Spec a stronger chance of being evaluated on its actual contribution.
+Remaining work is better handled after scope feedback, especially PyPI publication and any deeper tutorial or maintenance expectations.
 
 ### Abandon pyOpenSci as the next path
 
