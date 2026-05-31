@@ -13,7 +13,8 @@ rule families verify the semantic core. The 100-station validation artifact
 demonstrates that the same repository-controlled workflow runs successfully
 across a broader stratified operational sample. It does not prove universal
 correctness across the NOAA corpus and is not required for the basic user
-workflow.
+workflow. For the package-scope boundary that applies to validation artifacts
+and larger corpora, see [design_rationale.md](design_rationale.md).
 
 ## A. Quick semantic verification
 

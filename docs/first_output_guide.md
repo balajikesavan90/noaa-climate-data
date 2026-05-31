@@ -6,6 +6,21 @@ signals. Start with decoded measurement columns and their NOAA quality-code
 columns. Leave `__qc_*` sidecars for a second pass unless a decoded value is
 empty or surprising.
 
+## Clean One Bundled Station Slice
+
+After installing the package locally or using the repository Docker workflow,
+clean one tracked fixture:
+
+```bash
+noaa-spec clean \
+  reproducibility/real_provenance_example/station_raw.csv \
+  /tmp/noaa-spec-real-provenance.csv
+```
+
+Then inspect a compact first view with your preferred CSV tool. The columns
+below are the first columns to check before reading the full wide output. For
+the complete schema and stability notes, use [schema.md](schema.md).
+
 | Column | Meaning | Why it matters first |
 | --- | --- | --- |
 | `STATION` | NOAA station identifier | Row traceability back to the source observation. |

@@ -26,9 +26,11 @@ specification. The JOSS-facing field families are `WND`, `CIG`, `VIS`, `TMP`,
 `DEW`, and `SLP`, with source/control columns retained.
 
 NOAA-Spec does not download NOAA data, orchestrate station batches, produce
-releases, or run analyses. Optional domain projections can be emitted with
-`--emit-domains`, but the canonical output remains the required public
-artifact.
+releases, run analyses, or introduce a statistical/modeling method. Optional
+domain projections can be emitted with `--emit-domains`, but the canonical
+output remains the required public artifact. See
+[docs/design_rationale.md](docs/design_rationale.md) for the canonical package
+scope and validation-evidence boundary.
 
 Scope is deliberately layered:
 
@@ -40,7 +42,9 @@ Scope is deliberately layered:
   quality reports, strict token diagnostics, validation bundle builder, and
   identifier inspection tools. These are operational diagnostics for
   transparency and auditability, not prerequisites for normal use and not
-  acceptance-critical correctness evidence.
+  acceptance-critical correctness evidence. Larger validation corpora, including
+  any full-corpus or 27k-station validation run, should be treated the same way:
+  evidence about the package, not the primary software object.
 
 ## Reproducibility Tiers
 
@@ -207,6 +211,7 @@ Compact core-column excerpt from the tracked primary fixture:
 | 40435099999 | 2000-03-17T09:00:00 |  | 9 |  | 9.0 |  |  |
 
 For a slightly longer guide, see [docs/first_output_guide.md](docs/first_output_guide.md). For the supported field registry, see [docs/supported_fields.md](docs/supported_fields.md).
+For Python embedding boundaries, see [docs/public_api.md](docs/public_api.md).
 
 ## Core Contribution vs Extended Coverage
 
@@ -270,7 +275,20 @@ study-local script, see [docs/design_rationale.md](docs/design_rationale.md).
 
 ## Relationship to Existing NOAA Tools
 
-Existing NOAA parsers are useful for exposing NOAA records and parsed structures. NOAA-Spec does not claim those tools produce incorrect values. Its narrower contribution is an explicit cleaned-output policy for the documented fields this release supports: documented sentinels become nulls, NOAA QC codes stay in explicit columns, and decoded column names plus CSV serialization are deterministic for the same committed input.
+NOAA-Spec does not claim that other tools produce incorrect values. It operates
+at a narrower layer: an explicit cleaned-output policy for documented NOAA ISD /
+Global Hourly fields. Documented sentinels become nulls, NOAA QC codes stay in
+explicit columns, parser sidecars record cleaning evidence, and decoded column
+names plus CSV serialization are deterministic for the same committed input.
+
+| Tool or approach | Relationship to NOAA-Spec |
+| --- | --- |
+| `pandas` | Complementary general dataframe library. NOAA-Spec uses pandas internally, but provides NOAA-specific sentinel normalization, QC preservation, sidecar evidence, and deterministic serialization policy. |
+| `xarray` | Complementary labeled-array/data-model library for analysis workflows. NOAA-Spec produces cleaned observation-level CSVs before a researcher chooses a downstream table, array, or gridded representation. |
+| `noaa-sdk` | Complementary retrieval/API-oriented package. NOAA-Spec does not download NOAA data; it cleans NOAA ISD / Global Hourly CSV observations already obtained by the user. |
+| `meteostat` | Complementary weather-data access and analysis-oriented ecosystem. NOAA-Spec focuses on transparent canonical cleaning of NOAA ISD / Global Hourly source rows rather than providing a broad weather data service. |
+| Herbie | Complementary retrieval tool for NOAA model/product data. NOAA-Spec targets ISD / Global Hourly station observations and deterministic cleaning, not GRIB/model-product discovery or download. |
+| Custom NOAA parsing scripts | A project-local script can handle one study's preprocessing policy. NOAA-Spec's distinction is a shared, versioned cleaning contract with documented sentinel handling, explicit QC columns, validation sidecars, stable serialization, and reproducibility fixtures. |
 
 ## Local Install (Convenience Path)
 

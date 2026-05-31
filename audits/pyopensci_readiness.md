@@ -1,0 +1,361 @@
+# pyOpenSci Readiness Report for NOAA-Spec
+
+External scope reference checked: pyOpenSci package scope page, https://www.pyopensci.org/software-peer-review/about/package-scope.html, accessed 2026-05-31.
+
+pyOpenSci's stated scope is broad enough to include scientific Python packages for data retrieval, extraction, processing, validation/testing, reproducibility, workflow automation, and focused domains such as geospatial data. It also requires technical readiness: maintainable structure, normal dependency declaration rather than vendoring, documented maintenance workflows, reasonable complexity, evidence of scientific relevance, and a clear overlap analysis when similar packages exist.
+
+## Executive Summary
+
+NOAA-Spec is plausibly in pyOpenSci scope, but it is not ready for direct submission. The strongest fit is not as a dataset project or analytical method; it is as a deterministic, specification-constrained data processing and validation package for NOAA ISD / Global Hourly observations. The repository has real technical substance: an installable `src/` package, a public `noaa-spec clean` CLI, extensive parser/cleaning tests, reproducibility fixtures, rule provenance documentation, and a DOI-oriented 100-station validation artifact. Those are meaningful strengths for pyOpenSci.
+
+The main risk is packaging and submission readiness, not core functionality. The repository now has a concise package-scope boundary in `docs/design_rationale.md` and a README link to that boundary, but the project still appears not to document PyPI or conda publication status, issue/security/release maintenance infrastructure is incomplete, and the broader validation-artifact story could still be misread as a dataset/release-artifact project rather than a reusable Python package. The 27k-station corpus should help as validation evidence only after it is summarized in a reviewer-facing artifact; it should not become the submitted object.
+
+Recommendation: Fix blockers before inquiry
+
+After those blockers are fixed, a pre-submission inquiry is the right next step. Direct submission now would likely trigger avoidable editor questions about package distribution, user-facing docs, overlap with existing NOAA tools, and whether this is primarily software or an unpublished data publication workflow.
+
+## 1. Reviewed Object
+
+Facts:
+
+| Item | Finding |
+| --- | --- |
+| Python package name | `noaa-spec` in `pyproject.toml`; import package is `noaa_spec`. |
+| Repository | `https://github.com/balajikesavan90/noaa-spec` in `CITATION.cff`. |
+| Version inspected | `1.0.0` in `pyproject.toml`, `src/noaa_spec/__init__.py`, and `CITATION.cff`. |
+| Public command | `noaa-spec clean INPUT.csv OUTPUT.csv`, declared in `[project.scripts]` and implemented in `src/noaa_spec/cli.py`. |
+| Core purpose | Deterministic cleaning of NOAA ISD / Global Hourly CSV observations into checksum-stable observation-level cleaned CSVs with sentinel normalization and QC preservation. |
+| Core implementation | `src/noaa_spec/cleaning.py`, `src/noaa_spec/constants.py`, `src/noaa_spec/deterministic_io.py`, `src/noaa_spec/cli.py`. |
+| Optional/maintainer surface | `noaa-spec dev validate-100-stations`, `build-validation-bundle`, and `inspect-identifier` in `src/noaa_spec/cli.py`; validation workflow in `src/noaa_spec/validation.py`; identifier diagnostics in `src/noaa_spec/investigation.py`. |
+
+What should be in scope for pyOpenSci review:
+
+- The installable Python package.
+- The `noaa-spec clean` CLI.
+- The library functions supporting deterministic cleaning, validation sidecars, stable serialization, and optional domain projections.
+- Documentation that helps a researcher clean and inspect NOAA ISD / Global Hourly observations.
+- Tests and reproducibility fixtures that verify the package behavior.
+
+What should not be the primary review object:
+
+- The 27k-station corpus.
+- External DOI archives or publication-release artifacts.
+- Maintainer-only validation-bundle workflows except as evidence that the package can be validated at scale.
+- The JOSS paper itself.
+
+The 27k-station corpus is validation evidence / downstream research artifact, not the package itself. It can strengthen a pyOpenSci case only if reduced into transparent, reproducible summary evidence that demonstrates package reliability without making reviewers evaluate an unpublished data corpus.
+
+## 2. pyOpenSci Scope Fit
+
+### 2.1 Scientific workflow fit
+
+| Workflow area | Fit | Evidence in repo | Notes |
+| --- | ---: | --- | --- |
+| Data collection/retrieval | Weak fit | `src/noaa_spec/constants.py` defines `BASE_URL`, and docs link NOAA source URLs in `README.md` and `reproducibility/TRACEABLE_FIXTURES.md`. | The README explicitly says NOAA-Spec does not download NOAA data. Do not pitch this as a retrieval package unless a documented downloader becomes a public feature. |
+| Data extraction | Strong fit | `src/noaa_spec/cleaning.py` parses packed NOAA fields such as `WND`, `CIG`, `VIS`, `TMP`, `DEW`, `SLP`, optional sections, remarks, and EQD/QNN metadata; supported field registry is in `docs/supported_fields.md`. | This is one of the best scope categories. NOAA packed CSV tokens are structured scientific data requiring domain-specific extraction. |
+| Data processing/munging | Strong fit | Sentinel-to-null normalization, scale factors, range/domain checks, QC preservation, and stable output naming are documented in `README.md`, `docs/schema.md`, `docs/rule_provenance.md`, and tested in `tests/test_cleaning.py`. | This is the clearest pyOpenSci category. |
+| Data validation/testing | Strong fit | QC sidecars and strict parse summaries are implemented in `src/noaa_spec/cleaning.py`; validation workflow in `src/noaa_spec/validation.py`; tests include `tests/test_qc_comprehensive.py`, `tests/test_validation.py`, and `tests/test_validation_artifact_script.py`. | Strong, provided the pitch stays on automated validation of NOAA data quality and parser behavior, not novel scientific inference. |
+| Reproducibility/automation | Partial to strong fit | `scripts/verify_reproducibility.sh`, `reproducibility/checksums.sha256`, `REPRODUCIBILITY.md`, deterministic I/O helper, GitHub Actions CI. | Strong internally, but user-facing release and maintenance automation needs clearer documentation before submission. |
+| Scientific communication/collaboration | Partial fit | `CITATION.cff`, `paper/paper.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, MIT license. | Missing issue templates, security policy, and fuller maintainer/release docs weaken the collaboration case. |
+
+### 2.2 Best-fit pyOpenSci categories
+
+| pyOpenSci category | Fit level | Evidence in repo | Risk / gap |
+| ------------------ | --------: | ---------------- | ---------- |
+| Data retrieval | Weak | NOAA URLs in fixtures and docs; `BASE_URL` constant. | The public package does not retrieve data. Claiming retrieval would overstate scope. |
+| Data extraction | Strong | Packed-field parsing and expansion in `src/noaa_spec/cleaning.py`; field definitions in `src/noaa_spec/constants.py`; supported field docs in `docs/supported_fields.md`. | Must clearly separate fully supported core fields from experimental/partial implemented families. |
+| Data processing and munging | Strong | Sentinel normalization, scale conversion, output naming, and deterministic CSV serialization in `src/noaa_spec/cleaning.py` and `src/noaa_spec/deterministic_io.py`; worked examples in `README.md` and `docs/schema.md`. | README should include a more pyOpenSci-oriented research workflow example, not only reviewer/reproducibility framing. |
+| Data validation and testing | Strong | QC sidecars, strict-token diagnostics, validation artifacts, 1,995 passing tests, 100-station validation summary. | Validation artifact has DOI placeholders and is not repo-native; full-corpus/27k validation is not documented in this checkout. |
+| Workflow automation and versioning | Partial | CLI, Docker workflow, checksum verification, CI in `.github/workflows/ci-tests.yml`, validation bundle commands. | Release process, PyPI/conda publishing workflow, and maintainer handoff are underdocumented. |
+| Geospatial/environmental research relevance | Partial to strong | NOAA ISD / Global Hourly weather observations, station coordinates in source/control columns, climate/meteorology focus in `paper/paper.md`, station validation metadata. | Package does not appear to provide geospatial analysis; position as environmental/climate data preprocessing, not geospatial analysis software. |
+
+### 2.3 Out-of-scope risks
+
+Facts:
+
+- The README explicitly narrows the public surface to `noaa-spec clean INPUT.csv OUTPUT.csv`.
+- `docs/supported_fields.md` states the output column set depends on source fields present and that unsupported encoded identifiers are not decoded.
+- `docs/validation_100_station.md` and `artifacts/validation_100_station/README.md` repeatedly state that the 100-station artifact is optional validation evidence and does not prove universal correctness.
+- The README now includes a concise relationship-to-existing-tools table; `paper/paper.md` still contains the longer JOSS-oriented comparison.
+
+Risks:
+
+- Too narrow: possible but manageable. The package is domain-specific and focused, but source LOC is substantial and the supported field/rule surface is not trivial.
+- Too domain-specific: likely acceptable if framed as environmental/climate data preprocessing. pyOpenSci explicitly reviews domain-specific scientific Python software.
+- Dataset project rather than software: real risk. The repository contains validation artifacts, DOI placeholders, release-manifest language, and corpus language that can dominate the story if not controlled.
+- Proof-of-concept: moderate risk. The test suite and validation artifacts argue against this, but missing distribution/release evidence could make it look pre-release.
+- Novel analytical/statistical method: low risk if positioned correctly. NOAA-Spec is deterministic preprocessing and validation, not modeling or statistical inference.
+- Overlap with existing NOAA/weather/climate tools: reduced but still important. The README comparison now covers general dataframe libraries, retrieval-oriented tools, and custom scripts, but pyOpenSci may still ask for more detail in a pre-submission inquiry.
+
+Recommendation:
+
+Use `docs/design_rationale.md` as the canonical package-scope boundary. Avoid framing NOAA-Spec as a full NOAA data platform, downloader, publication pipeline, climate analysis framework, or novel scientific method.
+
+## 3. Scientific Use Case and Research Relevance
+
+Facts:
+
+- NOAA-Spec enables a researcher to turn raw NOAA ISD / Global Hourly CSV rows into a stable observation-level cleaned CSV before downstream weather, climate, or environmental analysis.
+- The scientific user is a researcher or data engineer using NOAA ISD station observations who needs documented handling of sentinel values, packed fields, and NOAA quality codes.
+- The package preserves QC context rather than silently filtering observations. This is supported by `docs/schema.md`, `docs/rule_provenance.md`, `README.md`, and tests such as `tests/test_cli.py::test_cli_clean_preserves_quality_code_when_sentinel_is_null`.
+- A minimal comparison exists in `examples/pandas_vs_noaa_spec.py`, showing that naive parsing can treat sentinel visibility as a numeric value while NOAA-Spec emits null plus QC reason.
+- Reviewer-facing examples exist in `docs/reviewer_cleaning_examples.md`, `docs/first_output_guide.md`, and the README minimal output tables.
+- The JOSS paper connects the package to NOAA ISD research preprocessing and reproducibility in `paper/paper.md`.
+- The 100-station validation artifact reports 100 successful stations, 15,699,389 input rows, 15,699,389 output rows, and 0 station failures in `artifacts/validation_100_station/build_20260518/summary.md`.
+
+Gaps:
+
+- The README has examples, but it is not yet shaped as a pyOpenSci user tutorial. It is heavily reviewer/reproducibility oriented.
+- `docs/first_output_guide.md` now gives a small bundled-fixture cleaning path and first-inspection columns. A fuller research workflow tutorial with downstream analysis remains future work.
+- The full 27k-station corpus is not documented in this checkout as a pyOpenSci-ready validation summary. The current 100-station artifact is the documented scale evidence.
+
+Proposed positioning statement:
+
+NOAA-Spec is a scientific Python package for deterministic canonical cleaning and validation of NOAA ISD / Global Hourly station observations, enabling reproducible downstream climate, weather, and environmental data analysis from documented, QC-preserving cleaned CSVs.
+
+Recommendation:
+
+Before inquiry, extend the existing first-output guide only if needed rather than creating a parallel tutorial. The remaining gap is a fuller research workflow example with downstream analysis.
+
+## 4. Technical Scope and Maintainability
+
+Verification performed during this audit:
+
+- `python3 -m pytest tests -q`: 1,995 passed in 69.05s.
+- `bash scripts/verify_reproducibility.sh`: all eight tracked fixture checks passed; final output was `PASS: reproducibility verification succeeded.`
+
+| Requirement / concern | Status | Evidence | Blocker? | Recommended fix |
+| --------------------- | ------ | -------- | -------: | --------------- |
+| Installable package | Pass | `pyproject.toml` uses setuptools, `src/` layout, `[project.scripts] noaa-spec = "noaa_spec.cli:main"`. | No | Add classifiers, project URLs, license metadata, and optional docs/test extras before public packaging. |
+| Python version support | Partial | `requires-python = ">=3.11,<3.13"`; CI tests only Python 3.12. | Yes | Test Python 3.11 and 3.12 in CI, or narrow support claims. |
+| Dependency declaration | Pass | Runtime dependency is `pandas>=3.0.0,<4.0.0`; dev group declares pytest tools. | No | Consider whether pandas 3 availability/support is acceptable for target users. |
+| Vendored dependency risk | Pass | No obvious vendored third-party package code; NOAA docs are checked in under `spec_sources/`. | No | Document why source documentation is vendored as provenance material, not a software dependency. |
+| Package complexity | Pass | Source has about 12.7k LOC across `src/noaa_spec/*.py`; largest files are `constants.py`, `validation.py`, and `cleaning.py`. | No | Consider splitting `constants.py` later only if maintainability suffers; do not refactor for submission alone. |
+| Public API clarity | Pass / needs monitoring | CLI is clear; `docs/public_api.md` declares the small public Python API and treats other modules as internal. | No | Keep this boundary current when adding public functions. |
+| CLI clarity | Pass | `src/noaa_spec/cli.py` provides `clean` and names maintainer commands under `dev`; README documents `noaa-spec clean`. | No | Add a dedicated CLI reference page with examples and error behavior. |
+| Deterministic output | Pass | `src/noaa_spec/deterministic_io.py`; CLI sorts by `STATION`, `DATE`; reproducibility checks pass. | No | Keep checksum fixture verification in CI. |
+| Tests | Pass | 1,995 tests passed locally; tests cover CLI, cleaning, QC, validation, deterministic I/O, reproducibility. | No | Add CI coverage report only if useful; not a submission blocker. |
+| Continuous integration | Partial | `.github/workflows/ci-tests.yml` runs tests, reproducibility fixture, and JOSS PDF build on Ubuntu/Python 3.12. | Yes | Add matrix for Python 3.11/3.12 and separate package build check. |
+| PyPI status | Unknown / likely missing | `pyproject.toml` is package-ready, but repo docs do not state PyPI publication; external spot search did not find an exact `noaa-spec` PyPI project. | Yes | Publish to PyPI or document planned release status before inquiry. |
+| Conda status | Missing | No conda-forge/conda recipe or documentation found. | No | Not required if PyPI is available, but note absence honestly. |
+| Release process | Partial | `CHANGELOG.md`, version metadata, Docker/reproducibility docs. | Yes | Add `docs/release_process.md` or a maintainer section covering version bump, tests, build, PyPI upload, tag, DOI artifacts. |
+| Versioning | Partial | Version is present in package metadata and citation; changelog has `1.0.0`. | No | State semantic versioning or schema/versioning policy. |
+| Changelog | Pass | `CHANGELOG.md` exists and is useful. | No | Keep it current. |
+| Issue templates | Missing | No `.github/ISSUE_TEMPLATE/` found. | No | Add bug report, documentation issue, and feature/request templates. |
+| Pull request template | Missing | No PR template found. | No | Add checklist for tests, docs, schema/provenance impact. |
+| Contributor onboarding | Partial | `CONTRIBUTING.md` has setup, tests, rule-change principles. | No | Add maintainer expectations, review norms, and how to add new field rules. |
+| Code of conduct | Partial | `CODE_OF_CONDUCT.md` exists but enforcement contact is generic. | No | Add explicit contact address or mechanism. |
+| Citation metadata | Pass | `CITATION.cff` includes title, repository, abstract, author, ORCID, version, release date. | No | Update release date/version when publishing. |
+| License | Pass | MIT license in `LICENSE`. | No | Add license classifier to `pyproject.toml`. |
+| Security policy | Missing | No `SECURITY.md` found. | No | Add a lightweight vulnerability/reporting policy. |
+| Maintenance handoff | Missing | pyOpenSci cares about long-term maintenance; no maintainer handoff/support policy found. | Yes | Add maintainer guide and support policy before inquiry. |
+| Overlap analysis | Pass / needs monitoring | README includes a concise comparison with `pandas`, `xarray`, `noaa-sdk`, `meteostat`, Herbie, and custom scripts; `paper/paper.md` has a longer JOSS-oriented comparison. | No | Keep README concise; expand only if pyOpenSci editors ask for deeper landscape detail. |
+| AI usage disclosure | Partial | `paper/paper.md` includes disclosure. | No | Consider adding repository-level disclosure if pyOpenSci asks. |
+
+## 5. Documentation Readiness
+
+| Documentation area | Status | Evidence | Recommended fix |
+| --- | --- | --- | --- |
+| README clarity | Partial | README clearly defines `noaa-spec clean`, supported core fields, reproducibility tiers, examples, and limitations. | Reframe part of README for normal scientific users, not only JOSS/reviewer evidence. |
+| Installation instructions | Pass | README has Docker and local install paths. | Add `pip install noaa-spec` after publishing. |
+| Quickstart | Pass | README gives one-station clean commands and fixture verification. | Add expected output interpretation immediately after the simplest command. |
+| Scientific worked example | Partial | `examples/pandas_vs_noaa_spec.py`, README tables, and `docs/first_output_guide.md` show sentinel/QC behavior and one bundled-fixture cleaning path. | Extend the existing guide only if a downstream research example is needed. |
+| API docs | Partial | `docs/public_api.md` documents the public API boundary for `clean_noaa_dataframe`, domain projections, and deterministic CSV writing. | Add generated reference docs later only if the Python API grows. |
+| CLI docs | Pass / sufficient for now | README documents the primary `noaa-spec clean` path, argparse provides command help, and maintainer commands are clearly separated under `noaa-spec dev`. | Do not create a duplicate CLI page unless the CLI grows or reviewers request one. |
+| Validation artifact docs | Pass | `docs/validation_100_station.md` and `artifacts/validation_100_station/README.md`. | Replace DOI placeholders when archives are final; keep the optional/evidence boundary. |
+| Full-corpus / 27k-station docs | Missing | No current repo document found summarizing 27k-station validation or all 1975-2025 station downloads. | Add a concise validation summary if this is to be used as evidence. |
+| Deterministic canonical cleaning explanation | Pass | README, `docs/design_rationale.md`, `docs/schema.md`, `docs/rule_provenance.md`. | Add a short conceptual diagram for pyOpenSci users if helpful. |
+| Sentinel normalization explanation | Pass | README examples, `docs/schema.md`, `docs/supported_fields.md`, tests. | No blocker. |
+| QC flag handling explanation | Pass | README, `docs/schema.md`, `docs/rule_provenance.md`, `docs/evidence_matrix.md`. | No blocker. |
+| Strict-token behavior | Pass | `docs/validation_100_station.md`, strict-token reports, `src/noaa_spec/cleaning.py`. | Add a user-facing explanation of warnings from `noaa-spec clean`. |
+| Comparison to existing tools | Pass / needs monitoring | README "Relationship to Existing NOAA Tools" now includes a concise user-facing comparison; `paper/paper.md` has the longer JOSS comparison. | Keep README concise; avoid creating a duplicate landscape page unless reviewers ask for it. |
+| Limitations | Pass | README, `REPRODUCIBILITY.md`, `docs/schema.md`, `paper/paper.md`. | Keep limitations prominent. |
+| Maintainer/contributor docs | Partial | `CONTRIBUTING.md` exists. | Add release, support, maintenance, and rule-addition workflow detail. |
+
+## 6. Testing, Validation, and Reliability
+
+Facts:
+
+- Test suite: 1,995 passing tests in local audit.
+- Reproducibility script: eight tracked fixture checks passed.
+- Tests include parser behavior, sentinel normalization, QC preservation, strict token validation, deterministic I/O, CLI behavior, validation artifacts, and reproducibility examples.
+- CI runs `pytest tests/ -v`, `scripts/verify_reproducibility.sh`, and JOSS PDF generation.
+- The documented 100-station validation artifact reports 100/100 station success and row-count parity over 15,699,389 rows.
+- Strict token diagnostics in the 100-station artifact are large: 4,438,272 token rejections affecting 71 stations. The docs characterize these as observability signals rather than row-loss failures.
+
+Assessment:
+
+NOAA-Spec has unusually strong test and validation evidence for a young package. This is the strongest argument in favor of pyOpenSci review. However, the validation story must stay disciplined. The 100-station artifact and 27k-station corpus should be used to show operational robustness, not to claim universal scientific correctness over NOAA ISD.
+
+Blockers:
+
+1. Full-corpus/27k evidence is not documented in a reviewer-facing artifact in this checkout.
+2. CI only exercises Python 3.12 despite package metadata claiming Python 3.11 and 3.12.
+3. DOI placeholders remain in validation artifact docs.
+
+Recommended fixes:
+
+1. Add a `docs/full_corpus_validation.md` or similar summary only after it has deterministic inputs, command provenance, checksums/manifests, row counts, and clear limitations.
+2. Add CI matrix for Python 3.11 and 3.12.
+3. Replace DOI placeholders or clearly mark the artifact as not yet archived.
+
+## 7. Usability
+
+Facts:
+
+- A new user can run `noaa-spec clean INPUT.csv OUTPUT.csv`.
+- Output interpretation is documented in `docs/schema.md` and `docs/first_output_guide.md`.
+- Domain projections exist in `src/noaa_spec/projections.py` and can be emitted with `--emit-domains`.
+- CLI warnings summarize strict parsing issues and direct users to `--verbose`.
+- The package intentionally does not download data.
+
+Risks:
+
+- Without a downloader, users must know how to obtain NOAA Global Hourly CSV files. That is acceptable, but docs should link to NOAA data access and make the boundary explicit.
+- Output is wide and can overwhelm new users. Existing first-output guidance now includes a small cleaning path, but pyOpenSci reviewers may still expect a fuller research workflow example.
+- Library API is not clearly documented as public/stable, which may make the package look CLI-only.
+- The package name `noaa-spec` may imply specification coverage broader than the documented supported field set. The README mitigates this, but all submission materials should repeat the bounded scope.
+
+Recommended fixes:
+
+1. Extend the existing first-output guide with a downstream pandas inspection only if needed.
+2. Keep the compact public API page current as the package evolves.
+3. Add an FAQ or limitations section that says "not a downloader, not an analysis package, not full NOAA coverage."
+
+## 8. Maintenance and Community Readiness
+
+Facts:
+
+- `CONTRIBUTING.md` documents setup, tests, and rule-change principles.
+- `CODE_OF_CONDUCT.md` exists.
+- `CHANGELOG.md` exists.
+- `CITATION.cff` exists.
+- MIT license exists.
+- CI exists.
+
+Missing or weak:
+
+- No issue templates found.
+- No PR template found.
+- No security policy found.
+- No explicit release process found.
+- No maintainer handoff/support policy found.
+- No PyPI/conda publication instructions or status in the repository.
+- Code of conduct does not give a precise reporting contact beyond "contact information published with the repository."
+
+Assessment:
+
+Maintenance readiness is currently the biggest practical blocker. pyOpenSci's review process is partly about long-term maintainability and discoverability. NOAA-Spec's technical internals may be strong, but the external package-maintenance surface is not yet ready enough for a smooth review.
+
+Recommended fixes before pyOpenSci inquiry:
+
+1. Publish to PyPI or document a concrete release plan and package name availability.
+2. Add release-process documentation.
+3. Add support/security/maintenance policy.
+4. Add issue and PR templates.
+5. Add CI Python matrix and build check.
+6. Keep the README overlap table current as packaging and scope evolve.
+
+## 9. Overlap and Landscape Risk
+
+Known overlap candidates from the task prompt:
+
+- `pandas`
+- `xarray`
+- `noaa-sdk`
+- `meteostat`
+- `herbie`
+- custom NOAA scripts
+- NOAA ISD parsers such as those discussed in `paper/paper.md`
+
+Facts:
+
+- `README.md` states that NOAA-Spec does not claim existing NOAA tools produce incorrect values and includes a concise comparison with `pandas`, `xarray`, `noaa-sdk`, `meteostat`, Herbie, and custom NOAA parsing scripts.
+- `paper/paper.md` includes a stronger comparison against local scripts and parsing-oriented tools.
+- `examples/pandas_vs_noaa_spec.py` demonstrates the value over naive pandas token splitting for sentinel-coded values.
+
+Assessment:
+
+Overlap is not fatal, but it remains a review issue to monitor. pyOpenSci explicitly asks packages with overlap to highlight differences from existing tools in the README and/or tutorials. NOAA-Spec's README now covers the main distinctions:
+
+- It is not a general dataframe library.
+- It is not a NOAA API client.
+- It is not primarily a parser exposing raw structures.
+- It is a deterministic cleaning contract with documented sentinel normalization, QC preservation, stable column naming, sidecar evidence, and checksum-backed reproducibility.
+
+Recommended fix:
+
+Do not create a separate landscape page now. Keep the README comparison concise and factual, and only add a deeper landscape document if pyOpenSci editors request it.
+
+## 10. Decision Options
+
+### Submit to pyOpenSci now
+
+Not recommended.
+
+Reasons:
+
+- Package distribution status is unclear.
+- Maintenance/release/support docs are incomplete.
+- Overlap analysis has been improved, but may still need editor feedback.
+- A minimal first-output guide and compact public API page exist, but a fuller research workflow example is still missing.
+- The repository is still framed around JOSS and validation artifacts more than pyOpenSci package review.
+
+### Open a pre-submission inquiry now
+
+Possible, but still not ideal.
+
+This could be reasonable if the question is only "is a deterministic NOAA ISD cleaning package in scope?" However, the inquiry will be more productive after the easy readiness fixes are done, because editors will then evaluate scope rather than obvious infrastructure gaps.
+
+### Fix blockers first
+
+Recommended.
+
+Fix the package-review blockers, then open a pre-submission inquiry. This uses pyOpenSci editors' time better and gives NOAA-Spec a stronger chance of being evaluated on its actual contribution.
+
+### Abandon pyOpenSci as the next path
+
+Not recommended yet.
+
+NOAA-Spec has a credible pyOpenSci fit as scientific data processing/validation software. The current gaps are fixable package-readiness issues, not fundamental scope failures.
+
+## 11. Must Fix Before Inquiry
+
+1. Confirm and document package distribution status.
+   - Publish to PyPI if possible.
+   - Add install docs for the published package.
+   - Add project URLs/classifiers/license metadata in `pyproject.toml`.
+
+2. Add maintenance/release infrastructure.
+   - Release process.
+   - Support/security policy.
+   - Maintainer handoff expectations.
+   - Issue and PR templates.
+
+3. Expand pyOpenSci-facing docs.
+   - Research workflow tutorial.
+   - Links to the existing public API reference where relevant.
+   - CLI reference.
+   - Links from beginner docs to the existing README overlap section where relevant.
+
+4. Harden CI for declared support.
+   - Test Python 3.11 and 3.12.
+   - Add package build/install verification.
+
+5. Document the full-corpus/27k evidence if it will be mentioned.
+   - Treat it as validation evidence only.
+   - Include exact command provenance, input scope, row/station counts, checksums/manifests, failure counts, and limitations.
+
+## 12. Nice to Fix
+
+1. Add a small gallery of cleaned output snippets for common fields.
+2. Add a glossary for NOAA sentinel, QC code, packed field, sidecar, and canonical output terminology.
+3. Add a "Which tool should I use?" page comparing NOAA-Spec with retrieval clients and general dataframe tools.
+4. Add a package architecture page explaining `cleaning.py`, `constants.py`, `deterministic_io.py`, `projections.py`, and maintainer-only validation modules.
+5. Add code coverage reporting if desired, but do not make coverage percentage the main quality argument.
+
+## 13. Final Assessment
+
+NOAA-Spec is a plausible pyOpenSci candidate after readiness work. Its best case is strong: it supports a real scientific workflow, has a focused environmental data domain, avoids novel analytical claims, has extensive tests, and provides reproducibility evidence that many young packages lack.
+
+The current submission risk is that reviewers may see a JOSS-oriented repository with validation artifacts and DOI placeholders rather than a polished scientific Python package ready for community review. Fix that framing and infrastructure first, then open a pre-submission inquiry.
